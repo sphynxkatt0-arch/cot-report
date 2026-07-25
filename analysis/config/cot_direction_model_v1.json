@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "model_version": "cot-direction-v1.1",
+  "minimum_history_weeks": 104,
+  "structural": {
+    "neutral_percentile_low": 40.0,
+    "neutral_percentile_high": 60.0,
+    "full_strength_percentile_low": 10.0,
+    "full_strength_percentile_high": 90.0
+  },
+  "tactical": {
+    "minimum_structural_magnitude": 0.25,
+    "other_reportable_trend13_weight": 0.55,
+    "nonreportable_trend13_weight": 0.25,
+    "noncommercial_flow4_alignment_weight": 0.20,
+    "modifier_cap": 0.25
+  },
+  "asset_manager_size": {
+    "normal_max_percentile": 80.0,
+    "warning_max_percentile": 90.0,
+    "warning_multiplier": 0.90,
+    "extreme_multiplier": 0.75
+  },
+  "macro_size": {
+    "strong_risk_on_min": 70.0,
+    "supportive_min": 55.0,
+    "neutral_min": 45.0,
+    "defensive_min": 30.0,
+    "strong_risk_on_multiplier": 1.05,
+    "supportive_multiplier": 1.00,
+    "neutral_multiplier": 0.90,
+    "defensive_multiplier": 0.75,
+    "risk_off_multiplier": 0.50
+  },
+  "execution": {
+    "waiting_band_pct": 0.25,
+    "sp500_invalidation_pct": 3.0,
+    "nq_invalidation_pct": 4.0,
+    "confirmed_multiplier": 1.0,
+    "waiting_multiplier": 0.50,
+    "contradicted_multiplier": 0.25,
+    "invalidated_multiplier": 0.0
+  },
+  "confidence": {
+    "nq_structural_base": 0.80,
+    "sp500_structural_base": 0.65,
+    "minimum_actionable": 0.45,
+    "missing_macro_penalty": 0.08,
+    "missing_tff_penalty": 0.12,
+    "missing_price_penalty": 0.15,
+    "scheduled_release_assumption_penalty": 0.05
+  }
+}
