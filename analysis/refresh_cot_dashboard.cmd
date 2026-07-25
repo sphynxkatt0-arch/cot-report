@@ -1,4 +1,7 @@
 @echo off
 cd /d "%~dp0"
-py serve_interactive_cot_dashboard.py --refresh-only
+py refresh_directional_cot_system.py
+if not %errorlevel%==0 (
+  echo Integrated directional refresh failed. Review model_output\directional_refresh_status.json and dashboard_refresh_logs.
+)
 pause
