@@ -24,6 +24,13 @@ OBSERVATION_WINDOW_DAYS = 14
 DELAY_GRACE_MINUTES = 10
 
 
+def aware_utc(value: datetime | None = None) -> datetime:
+    current = value or datetime.now(UTC)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=UTC)
+    return current.astimezone(UTC)
+
+
 def parse_date(value: str | date | datetime) -> date:
     if isinstance(value, datetime):
         return value.date()
@@ -41,12 +48,10 @@ def scheduled_release_datetime(report_date: str | date | datetime) -> datetime:
 
 def expected_latest_report_date(now: datetime | None = None) -> date:
     """Latest Tuesday report whose normal Friday release time has passed."""
-    current = now or datetime.now(UTC)
-    if current.tzinfo is None:
-        current = current.replace(tzinfo=UTC)
+    current = aware_utc(now)
     local = current.astimezone(NEW_YORK)
     candidate = local.date() - timedelta(days=(local.date().weekday() - 1) % 7)
-    while scheduled_release_datetime(candidate) > current:
+    while scheduled_release_datetime(candidate).astimezone(UTC) > current:
         candidate -= timedelta(days=7)
     return candidate
 
@@ -74,16 +79,17 @@ def observe_report(
     now: datetime | None = None,
     path: Path = DEFAULT_LEDGER,
 ) -> dict[str, Any] | None:
-    """Record first local observation for a recent report.
+    """Record first local observation for a genuinely current report.
 
-    Old reports are not backfilled with the current timestamp because that would
-    falsely imply a delayed historical release.
+    Stale reports during a delayed week and reports seen before the scheduled
+    release time are not recorded as new observations.
     """
-    current = now or datetime.now(UTC)
-    if current.tzinfo is None:
-        current = current.replace(tzinfo=UTC)
+    current = aware_utc(now)
     report = parse_date(report_date)
-    scheduled = scheduled_release_datetime(report)
+    scheduled = scheduled_release_datetime(report).astimezone(UTC)
+    expected = expected_latest_report_date(current)
+    if report < expected or current < scheduled:
+        return None
     if abs((current.date() - scheduled.date()).days) > OBSERVATION_WINDOW_DAYS:
         return None
 
@@ -91,17 +97,17 @@ def observe_report(
     reports = ledger["reports"]
     key = report.isoformat()
     if key not in reports:
-        delay_minutes = (current - scheduled.astimezone(UTC)).total_seconds() / 60.0
+        delay_minutes = (current - scheduled).total_seconds() / 60.0
         reports[key] = {
             "report_date": key,
-            "scheduled_release_utc": scheduled.astimezone(UTC).isoformat(),
+            "scheduled_release_utc": scheduled.isoformat(),
             "scheduled_release_stockholm": scheduled.astimezone(STOCKHOLM).isoformat(),
-            "first_seen_utc": current.astimezone(UTC).isoformat(),
+            "first_seen_utc": current.isoformat(),
             "first_seen_stockholm": current.astimezone(STOCKHOLM).isoformat(),
             "first_seen_delay_minutes": round(delay_minutes, 1),
             "observation_source": "local_refresh_first_seen",
         }
-        ledger["updated_at_utc"] = current.astimezone(UTC).isoformat()
+        ledger["updated_at_utc"] = current.isoformat()
         save_ledger(ledger, path)
     return reports[key]
 
@@ -112,9 +118,7 @@ def resolve_release_state(
     now: datetime | None = None,
     path: Path = DEFAULT_LEDGER,
 ) -> dict[str, Any]:
-    current = now or datetime.now(UTC)
-    if current.tzinfo is None:
-        current = current.replace(tzinfo=UTC)
+    current = aware_utc(now)
     report = parse_date(report_date)
     expected = expected_latest_report_date(current)
     scheduled = scheduled_release_datetime(report)
@@ -162,7 +166,7 @@ def report_is_overdue(
     *,
     now: datetime | None = None,
 ) -> bool:
-    current = now or datetime.now(UTC)
+    current = aware_utc(now)
     expected = expected_latest_report_date(current)
     latest = parse_date(latest_report_date)
     expected_release = scheduled_release_datetime(expected).astimezone(UTC)
