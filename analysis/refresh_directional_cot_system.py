@@ -69,6 +69,7 @@ def main() -> None:
             if not refresh_ok:
                 print("WARNING: public-data refresh failed; continuing only with existing validated local outputs.", file=sys.stderr)
         run("build_directional_cot_system.py")
+        run("price_execution_adapter.py")
         run("inject_directional_dashboard.py")
         run(
             "-m",
@@ -76,6 +77,7 @@ def main() -> None:
             "tests.test_cot_direction_model",
             "tests.test_release_and_macro",
             "tests.test_directional_system",
+            "tests.test_price_execution_adapter",
             "-v",
         )
     except Exception as exc:
