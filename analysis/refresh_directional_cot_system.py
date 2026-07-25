@@ -90,7 +90,7 @@ def main() -> None:
         run_model_tests()
         run("rebuild_directional_history.py")
         run("enrich_directional_history_context.py")
-        run("compare_directional_models.py")
+        run("compare_directional_models_v11.py")
         run("build_latest_directional_decisions.py")
         run("align_observed_release_price.py")
         run("price_execution_adapter.py")
