@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate raw COT and cleaned price inputs before running the directional model."""
+"""Validate raw COT, price, macro, and baseline-model inputs."""
 
 from __future__ import annotations
 
@@ -32,6 +32,10 @@ TFF_REQUIRED = {
     "asset_mgr_net_oi_pct",
     "other_reportable_net_oi_pct",
     "non_reportable_net_oi_pct",
+}
+BASELINE_HISTORIES = {
+    "old TFF regime": ROOT / "cot_regime_backtest_output" / "regime_score_history.csv",
+    "old Legacy regime": ROOT / "cot_legacy_regime_backtest_output" / "regime_score_history.csv",
 }
 
 
@@ -104,7 +108,49 @@ def validate_price_frame(
         failures.append(f"{label}: prices contain missing or non-positive values")
 
 
-def validate_market(market: str, config: dict[str, Any]) -> list[str]:
+def validate_baseline_history(
+    path: Path,
+    *,
+    label: str,
+    expected_latest: dict[str, pd.Timestamp],
+    minimum_rows: int,
+    failures: list[str],
+) -> None:
+    if not path.exists():
+        failures.append(f"{label}: missing {path}")
+        return
+    frame = pd.read_csv(path)
+    required = {"market", "report_date", "release_target_date", "signal_date", "score", "bucket"}
+    missing = sorted(required - set(frame.columns))
+    if missing:
+        failures.append(f"{label}: missing columns {missing}")
+        return
+    frame["report_date"] = pd.to_datetime(frame["report_date"], errors="coerce")
+    frame["release_target_date"] = pd.to_datetime(frame["release_target_date"], errors="coerce")
+    frame["signal_date"] = pd.to_datetime(frame["signal_date"], errors="coerce")
+    if frame[["report_date", "release_target_date", "signal_date"]].isna().any().any():
+        failures.append(f"{label}: contains invalid timing dates")
+    if frame.duplicated(["market", "report_date"]).any():
+        failures.append(f"{label}: contains duplicate market/report rows")
+    if (frame["release_target_date"] < frame["report_date"]).any():
+        failures.append(f"{label}: release target predates report date")
+    if (frame["signal_date"] < frame["release_target_date"]).any():
+        failures.append(f"{label}: signal date predates release target")
+    for market, expected in expected_latest.items():
+        subset = frame.loc[frame["market"] == market].sort_values("report_date")
+        if len(subset) < minimum_rows:
+            failures.append(f"{label} {market}: only {len(subset)} rows; need at least {minimum_rows}")
+            continue
+        actual = subset["report_date"].iloc[-1]
+        if actual != expected:
+            failures.append(
+                f"{label} {market}: latest report {actual.date()} does not match COT {expected.date()}"
+            )
+        if pd.to_numeric(subset["score"], errors="coerce").isna().any():
+            failures.append(f"{label} {market}: score contains missing/non-numeric values")
+
+
+def validate_market(market: str, config: dict[str, Any]) -> tuple[list[str], pd.Timestamp | None]:
     failures: list[str] = []
     meta = MARKETS[market]
     legacy_path = latest_file(meta["legacy_glob"])
@@ -135,6 +181,7 @@ def validate_market(market: str, config: dict[str, Any]) -> list[str]:
     )
     validate_price_frame(prices, label=f"{market} price", minimum_rows=260, failures=failures)
 
+    latest_common: pd.Timestamp | None = None
     if not legacy.empty and not tff.empty:
         legacy_latest = legacy["date"].iloc[-1]
         tff_latest = tff["date"].iloc[-1]
@@ -142,6 +189,8 @@ def validate_market(market: str, config: dict[str, Any]) -> list[str]:
             failures.append(
                 f"{market}: Legacy latest {legacy_latest.date()} does not match TFF latest {tff_latest.date()}"
             )
+        else:
+            latest_common = pd.Timestamp(legacy_latest)
         common = set(legacy["date"]).intersection(set(tff["date"]))
         if len(common) < minimum:
             failures.append(f"{market}: only {len(common)} common Legacy/TFF dates; need at least {minimum}")
@@ -149,14 +198,30 @@ def validate_market(market: str, config: dict[str, Any]) -> list[str]:
             failures.append(
                 f"{market}: latest price {prices['date'].iloc[-1].date()} predates COT row {min(legacy_latest, tff_latest).date()}"
             )
-    return failures
+    return failures, latest_common
 
 
 def main() -> None:
     config = load_config(ROOT / "config" / "cot_direction_model_v1.json")
     failures: list[str] = []
+    latest_dates: dict[str, pd.Timestamp] = {}
     for market in ("sp500", "nq"):
-        failures.extend(validate_market(market, config))
+        market_failures, latest = validate_market(market, config)
+        failures.extend(market_failures)
+        if latest is not None:
+            latest_dates[market] = latest
+
+    baseline_minimum = max(20, int(config["minimum_history_weeks"]) // 2)
+    if set(latest_dates) == {"sp500", "nq"}:
+        for label, path in BASELINE_HISTORIES.items():
+            validate_baseline_history(
+                path,
+                label=label,
+                expected_latest=latest_dates,
+                minimum_rows=baseline_minimum,
+                failures=failures,
+            )
+
     dashboard = ROOT / "interactive_cot_dashboard.html"
     if not dashboard.exists():
         failures.append("interactive_cot_dashboard.html is missing; macro context cannot be loaded")
