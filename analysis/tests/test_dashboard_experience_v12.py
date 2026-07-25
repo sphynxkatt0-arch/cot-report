@@ -49,14 +49,15 @@ class DashboardExperienceV12Tests(unittest.TestCase):
         self.assertIn('href="#macroLiquidityControlRoom"', block)
         self.assertIn('href="#fiscalCashPath"', block)
         self.assertIn("It does not calculate a new direction", block)
-        self.assertIn("Hide research", block)
+        self.assertIn("Show research", block)
+        self.assertIn("xp-research-hidden", block)
 
     def test_dashboard_experience_injection_is_idempotent(self):
         block = ux.build_block(
             self.decisions(),
             {"source_coverage_ratio": 0.5, "pillars": {"fiscal_cash_flow": {"state": "Defensive"}}},
         )
-        source = "<html><body><!-- FISCAL_CASH_PATH_END --><main></main></body></html>"
+        source = "<html><body><!-- DIRECTIONAL_DECISION_END --><main></main></body></html>"
         once = ux.inject(source, block)
         twice = ux.inject(once, block)
         self.assertEqual(twice.count(ux.START), 1)
