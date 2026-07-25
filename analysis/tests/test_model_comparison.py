@@ -10,12 +10,12 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from compare_directional_models import (  # noqa: E402
+from compare_directional_models_v11 import (  # noqa: E402
     agreement_rows,
     hac_slope_stats,
     model_summary_rows,
 )
-from inject_model_comparison_report import (  # noqa: E402
+from inject_model_comparison_report_v11 import (  # noqa: E402
     START,
     build_block,
     remove_existing,
@@ -28,13 +28,15 @@ class ModelComparisonTests(unittest.TestCase):
         for market_index, market in enumerate(("sp500", "nq")):
             for index in range(120):
                 base = np.sin(index / 7.0 + market_index)
+                tactical = np.clip(base + 0.15 * np.cos(index / 4.0), -1, 1)
                 row = {
                     "market": market,
                     "report_date": (pd.Timestamp("2020-01-07") + pd.Timedelta(weeks=index)).date().isoformat(),
                     "old_tff_score": base * 2.0,
                     "old_legacy_score": -base * 1.5,
                     "structural_score": base,
-                    "adjusted_cot_score": np.clip(base + 0.15 * np.cos(index / 4.0), -1, 1),
+                    "adjusted_cot_score": tactical,
+                    "release_decision_score": tactical * (0.75 + 0.15 * np.sin(index / 11.0)),
                 }
                 for horizon, scale in (("1w", 0.4), ("4w", 0.8), ("13w", 1.5), ("26w", 2.0)):
                     terminal = base * scale + scale * 0.25
@@ -51,22 +53,22 @@ class ModelComparisonTests(unittest.TestCase):
         self.assertGreater(result["slope"], 2.4)
         self.assertLess(result["hac_p"], 0.01)
 
-    def test_summary_contains_all_32_model_horizon_combinations(self):
+    def test_summary_contains_all_40_model_horizon_combinations(self):
         rows = model_summary_rows(self.aligned_frame())
-        self.assertEqual(len(rows), 32)
+        self.assertEqual(len(rows), 40)
         combinations = {(row["market"], row["horizon"], row["model"]) for row in rows}
-        self.assertEqual(len(combinations), 32)
+        self.assertEqual(len(combinations), 40)
         self.assertTrue(all(row["status"] == "exploratory_release_aligned_hac" for row in rows))
-        new_rows = [row for row in rows if row["model"] == "new_structural_tactical"]
+        new_rows = [row for row in rows if row["model"] in {"new_structural_tactical", "new_release_decision"}]
         self.assertTrue(all(row["observations"] == 120 for row in new_rows))
         self.assertTrue(all(row["directional_n"] > 0 for row in new_rows))
         self.assertTrue(all(row["avg_adverse_move"] <= 0 for row in new_rows))
         self.assertTrue(all(row["stability_subperiods"] == 3 for row in new_rows))
         self.assertTrue(all(row["score_hac_p"] is not None for row in new_rows))
 
-    def test_agreement_contains_six_pairs_per_market(self):
+    def test_agreement_contains_ten_pairs_per_market(self):
         rows = agreement_rows(self.aligned_frame())
-        self.assertEqual(len(rows), 12)
+        self.assertEqual(len(rows), 20)
         self.assertTrue(all(row["overlap_n"] == 120 for row in rows))
 
     def test_report_block_is_idempotent_when_replaced(self):
@@ -81,6 +83,7 @@ class ModelComparisonTests(unittest.TestCase):
         self.assertIn('id="modelComparisonPanel"', twice)
         self.assertIn("Old TFF regime", twice)
         self.assertIn("New NC + TFF tactical", twice)
+        self.assertIn("New full release decision", twice)
         self.assertIn("HAC p", twice)
         self.assertIn("Path utility", twice)
 
