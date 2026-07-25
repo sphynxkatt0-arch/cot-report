@@ -50,6 +50,7 @@ def run_model_tests() -> None:
         "unittest",
         "tests.test_cot_direction_model",
         "tests.test_release_and_macro",
+        "tests.test_release_tracker_pre_release",
         "tests.test_directional_system",
         "tests.test_price_execution_adapter",
         "tests.test_deterministic_history",
@@ -58,6 +59,11 @@ def run_model_tests() -> None:
         "tests.test_observed_release_price_alignment",
         "tests.test_historical_release_context",
         "tests.test_model_comparison",
+        "tests.test_model_evidence_grading",
+        "tests.test_model_evidence_actionability_guard",
+        "tests.test_release_actionability_guard",
+        "tests.test_dashboard_v11_injection",
+        "tests.test_weekly_position_change",
         "-v",
     )
 
@@ -67,7 +73,11 @@ def main() -> None:
     parser.add_argument("--start", type=int, default=2016)
     parser.add_argument("--end", type=int, default=datetime.now(UTC).year)
     parser.add_argument("--skip-public-refresh", action="store_true")
-    parser.add_argument("--strict-refresh", action="store_true", help="Stop when public-data refresh fails instead of using validated cached files.")
+    parser.add_argument(
+        "--strict-refresh",
+        action="store_true",
+        help="Stop when public-data refresh fails instead of using validated cached files.",
+    )
     parser.add_argument("--open", action="store_true")
     args = parser.parse_args()
 
@@ -85,18 +95,35 @@ def main() -> None:
                 allow_failure=not args.strict_refresh,
             )
             if not refresh_ok:
-                print("WARNING: public-data refresh failed; continuing only with existing validated local outputs.", file=sys.stderr)
+                print(
+                    "WARNING: public-data refresh failed; continuing only with existing validated local outputs.",
+                    file=sys.stderr,
+                )
+
+        # Validate raw inputs and code invariants before replacing generated artifacts.
         run("validate_directional_inputs.py")
         run_model_tests()
+
+        # Build deterministic evidence before the live decision.
         run("rebuild_directional_history.py")
         run("enrich_directional_history_context.py")
         run("compare_directional_models_v11.py")
+        run("grade_directional_model_evidence.py")
+
+        # Build and guard the live decision in strict priority order.
         run("build_latest_directional_decisions.py")
         run("align_observed_release_price.py")
         run("price_execution_adapter.py")
         run("macro_actionability_guard.py")
+        run("model_evidence_actionability_guard.py")
+        run("release_actionability_guard.py")
+
+        # Add transparent week-over-week positioning changes without changing direction.
+        run("weekly_position_change.py")
+
+        # Render the governed outputs and validate their contracts.
         run("inject_model_comparison_report_v11.py")
-        run("inject_directional_dashboard.py")
+        run("inject_directional_dashboard_v11.py")
         run("validate_directional_outputs_v11.py")
     except Exception as exc:
         write_status("failed", str(exc), refresh_ok)
@@ -104,7 +131,10 @@ def main() -> None:
 
     message = "Directional report and integrated macro dashboard rebuilt and validated successfully."
     if refresh_ok is False:
-        message += " Public-data refresh failed, so cached inputs were used; release and source-freshness guards remain active."
+        message += (
+            " Public-data refresh failed, so cached inputs were used; release and source-freshness "
+            "guards remain active."
+        )
     write_status("ok", message, refresh_ok)
     print(message)
     if args.open:
