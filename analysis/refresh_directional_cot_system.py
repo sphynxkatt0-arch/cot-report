@@ -94,11 +94,13 @@ def main() -> None:
         run("compare_directional_models_v11.py")
         run("grade_directional_model_evidence.py")
 
-        # Build and guard the live decision in strict priority order.
+        # Build and guard the live decision in strict priority order. The expanded
+        # plumbing guard can block exposure but never changes structural direction.
         run("build_latest_directional_decisions.py")
         run("align_observed_release_price.py")
         run("price_execution_adapter.py")
         run("macro_actionability_guard.py")
+        run("macro_liquidity_extension_guard.py")
         run("model_evidence_actionability_guard.py")
         run("release_actionability_guard.py")
 
