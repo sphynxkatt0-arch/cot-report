@@ -34,24 +34,31 @@ def validate_v12() -> None:
     if payload:
         if payload.get("model_version") != "macro-liquidity-control-room-v1.2":
             failures.append("macro-liquidity model_version must be v1.2")
-        pillar = (payload.get("pillars") or {}).get("fiscal_cash_flow")
-        if not isinstance(pillar, dict):
-            failures.append("macro-liquidity payload is missing fiscal_cash_flow pillar")
-        context = payload.get("treasury_cash_context")
-        if not isinstance(context, dict):
+        pillars = payload.get("pillars") or {}
+        for pillar_name in ("fiscal_cash_flow", "auction_absorption"):
+            if not isinstance(pillars.get(pillar_name), dict):
+                failures.append(f"macro-liquidity payload is missing {pillar_name} pillar")
+        if not isinstance(payload.get("treasury_cash_context"), dict):
             failures.append("macro-liquidity payload is missing treasury_cash_context")
+        if not isinstance(payload.get("treasury_auction_context"), dict):
+            failures.append("macro-liquidity payload is missing treasury_auction_context")
         sources = payload.get("sources") or []
         fiscal_keys = {
             source.get("key")
             for source in sources
             if isinstance(source, dict) and source.get("dataset") == "fiscaldata"
         }
-        if fiscal_keys != {"treasury_operating_cash", "treasury_cash_flows"}:
+        expected_fiscal_keys = {
+            "treasury_operating_cash",
+            "treasury_cash_flows",
+            "treasury_auction_absorption",
+        }
+        if fiscal_keys != expected_fiscal_keys:
             failures.append(f"Treasury Fiscal Data sources incomplete: {sorted(fiscal_keys)}")
 
     fiscal_rows = read_rows(FISCAL_SOURCES)
-    if len(fiscal_rows) != 2:
-        failures.append(f"Treasury source status expected 2 rows, found {len(fiscal_rows)}")
+    if len(fiscal_rows) != 3:
+        failures.append(f"Treasury source status expected 3 rows, found {len(fiscal_rows)}")
     else:
         for row in fiscal_rows:
             if row.get("dataset") != "fiscaldata":
@@ -66,7 +73,15 @@ def validate_v12() -> None:
         source = path.read_text(encoding="utf-8", errors="replace")
         if source.count('id="fiscalCashPath"') != 1:
             failures.append(f"{label} Daily Treasury cash path is missing or duplicated")
-        for text in ("Daily Treasury Cash Flow", "Private cash effect · 5d", "Tax deposits · 5d"):
+        if source.count('id="auctionAbsorption"') != 1:
+            failures.append(f"{label} Treasury auction absorption is missing or duplicated")
+        for text in (
+            "Daily Treasury Cash Flow",
+            "Private cash effect · 5d",
+            "Tax deposits · 5d",
+            "Treasury Auction Demand Quality",
+            "Average bid-to-cover delta",
+        ):
             if text not in source:
                 failures.append(f"{label} is missing {text}")
 
@@ -80,6 +95,7 @@ def validate_v12() -> None:
             'href="#directionalDecisionSummary"',
             'href="#macroLiquidityControlRoom"',
             'href="#fiscalCashPath"',
+            'href="#auctionAbsorption"',
             'href="#directionalDecisionQuality"',
         ):
             if anchor not in source:
