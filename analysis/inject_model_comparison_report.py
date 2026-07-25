@@ -38,8 +38,8 @@ def fmt(value: Any, digits: int = 3, suffix: str = "") -> str:
         return html.escape(str(value))
 
 
-def build_block(summary: list[dict[str, Any]], agreement: list[dict[str, Any]]) -> str:
-    ordered = sorted(
+def ordered_rows(summary: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return sorted(
         summary,
         key=lambda row: (
             str(row.get("market")),
@@ -47,19 +47,60 @@ def build_block(summary: list[dict[str, Any]], agreement: list[dict[str, Any]]) 
             list(MODEL_LABELS).index(str(row.get("model"))) if str(row.get("model")) in MODEL_LABELS else 99,
         ),
     )
-    rows = "".join(
-        f"<tr><td>{html.escape(str(row.get('market', '')).upper())}</td><td>{html.escape(str(row.get('horizon', '')))}</td><td>{html.escape(MODEL_LABELS.get(str(row.get('model')), str(row.get('model'))))}</td><td>{row.get('observations', 'n/a')}</td><td>{fmt(row.get('spearman_r'))}</td><td>{fmt(row.get('positive_minus_negative'), 2, ' pp')}</td><td>{fmt(row.get('directional_coverage_pct'), 1, '%')}</td></tr>"
+
+
+def model_name(row: dict[str, Any]) -> str:
+    value = str(row.get("model"))
+    return MODEL_LABELS.get(value, value)
+
+
+def build_block(summary: list[dict[str, Any]], agreement: list[dict[str, Any]]) -> str:
+    ordered = ordered_rows(summary)
+    evidence_rows = "".join(
+        f"<tr><td>{html.escape(str(row.get('market', '')).upper())}</td>"
+        f"<td>{html.escape(str(row.get('horizon', '')))}</td>"
+        f"<td>{html.escape(model_name(row))}</td>"
+        f"<td>{row.get('observations', 'n/a')}</td>"
+        f"<td>{fmt(row.get('spearman_r'))}</td>"
+        f"<td>{fmt(row.get('score_hac_p'), 4)}</td>"
+        f"<td>{fmt(row.get('positive_minus_negative'), 2, ' pp')}</td>"
+        f"<td>{fmt(row.get('edge_hac_p'), 4)}</td>"
+        f"<td>{fmt(row.get('subperiod_sign_agreement_pct'), 0, '%')}</td>"
+        f"<td>{fmt(row.get('drift_adjusted_accuracy_pct'), 1, '%')}</td></tr>"
         for row in ordered
-    ) or "<tr><td colspan='7'>Comparison output unavailable</td></tr>"
+    ) or "<tr><td colspan='10'>Comparison output unavailable</td></tr>"
+
+    path_rows = "".join(
+        f"<tr><td>{html.escape(str(row.get('market', '')).upper())}</td>"
+        f"<td>{html.escape(str(row.get('horizon', '')))}</td>"
+        f"<td>{html.escape(model_name(row))}</td>"
+        f"<td>{row.get('directional_n', 'n/a')}</td>"
+        f"<td>{fmt(row.get('avg_directional_return'), 2, '%')}</td>"
+        f"<td>{fmt(row.get('directional_hit_rate'), 1, '%')}</td>"
+        f"<td>{fmt(row.get('avg_adverse_move'), 2, '%')}</td>"
+        f"<td>{fmt(row.get('worst_adverse_move'), 2, '%')}</td>"
+        f"<td>{fmt(row.get('path_utility'), 2)}</td>"
+        f"<td>{fmt(row.get('directional_coverage_pct'), 1, '%')}</td></tr>"
+        for row in ordered
+    ) or "<tr><td colspan='10'>Path output unavailable</td></tr>"
+
     agreement_rows = "".join(
-        f"<tr><td>{html.escape(str(row.get('market', '')).upper())}</td><td>{html.escape(MODEL_LABELS.get(str(row.get('left_model')), str(row.get('left_model'))))}</td><td>{html.escape(MODEL_LABELS.get(str(row.get('right_model')), str(row.get('right_model'))))}</td><td>{row.get('directional_overlap_n', 'n/a')}</td><td>{fmt(row.get('directional_agreement_pct'), 1, '%')}</td></tr>"
+        f"<tr><td>{html.escape(str(row.get('market', '')).upper())}</td>"
+        f"<td>{html.escape(MODEL_LABELS.get(str(row.get('left_model')), str(row.get('left_model'))))}</td>"
+        f"<td>{html.escape(MODEL_LABELS.get(str(row.get('right_model')), str(row.get('right_model'))))}</td>"
+        f"<td>{row.get('directional_overlap_n', 'n/a')}</td>"
+        f"<td>{fmt(row.get('directional_agreement_pct'), 1, '%')}</td></tr>"
         for row in agreement
     ) or "<tr><td colspan='5'>Agreement output unavailable</td></tr>"
+
     return f"""{START}
 <section class="panel" id="modelComparisonPanel">
-  <div class="panel-head"><div><div class="kicker">Model governance</div><h3>Old versus new COT models</h3></div><span class="badge">Friday aligned</span></div>
-  <p>The same report dates and forward-return targets are used for all models. Positive-minus-negative compares average returns when each model is directionally positive versus directionally negative. This remains exploratory evidence, not sealed out-of-sample optimization.</p>
-  <div style="overflow:auto"><table><thead><tr><th>Market</th><th>Horizon</th><th>Model</th><th>N</th><th>Spearman</th><th>Positive − negative</th><th>Coverage</th></tr></thead><tbody>{rows}</tbody></table></div>
+  <div class="panel-head"><div><div class="kicker">Model governance</div><h3>Old versus new COT models</h3></div><span class="badge">Friday aligned + HAC</span></div>
+  <p>The same report dates, Friday-aligned price bases, forward returns, and within-horizon price paths are used for all models. HAC p-values use Newey–West lags matched to each forecast horizon. Stability is the share of three chronological subperiods whose Spearman sign agrees with the full sample. These remain exploratory diagnostics, not sealed out-of-sample optimization.</p>
+  <h4>Predictivity and stability</h4>
+  <div style="overflow:auto"><table><thead><tr><th>Market</th><th>Horizon</th><th>Model</th><th>N</th><th>Spearman</th><th>Score HAC p</th><th>Positive − negative</th><th>Edge HAC p</th><th>Stability</th><th>Drift-adjusted</th></tr></thead><tbody>{evidence_rows}</tbody></table></div>
+  <h4 style="margin-top:22px">Trade-path diagnostics</h4>
+  <div style="overflow:auto"><table><thead><tr><th>Market</th><th>Horizon</th><th>Model</th><th>Directional N</th><th>Avg directional return</th><th>Hit rate</th><th>Avg adverse</th><th>Worst adverse</th><th>Path utility</th><th>Coverage</th></tr></thead><tbody>{path_rows}</tbody></table></div>
   <h4 style="margin-top:22px">Directional agreement</h4>
   <div style="overflow:auto"><table><thead><tr><th>Market</th><th>Model A</th><th>Model B</th><th>Directional overlap</th><th>Agreement</th></tr></thead><tbody>{agreement_rows}</tbody></table></div>
 </section>
