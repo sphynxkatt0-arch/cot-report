@@ -24,6 +24,12 @@ PILLAR_SOURCE_RULES = {
             "repo_dvp_volume",
         },
         "minimum_fresh": 2,
+        "subset_keys": {
+            "repo_dvp_rate",
+            "repo_gcf_rate",
+            "repo_triparty_rate",
+        },
+        "minimum_subset_fresh": 2,
     },
     "dealer_absorption": {
         "keys": {
@@ -74,6 +80,8 @@ def pillar_freshness(key: str, statuses: dict[str, str]) -> dict[str, Any]:
             "fresh": False,
             "fresh_count": 0,
             "required_count": 0,
+            "subset_fresh_count": 0,
+            "required_subset_count": 0,
             "source_keys": [],
             "source_statuses": {},
         }
@@ -81,10 +89,17 @@ def pillar_freshness(key: str, statuses: dict[str, str]) -> dict[str, Any]:
     selected = {source_key: statuses.get(source_key, "unavailable") for source_key in source_keys}
     fresh_count = sum(status == "fresh" for status in selected.values())
     required_count = int(rule["minimum_fresh"])
+    subset_keys = set(rule.get("subset_keys") or [])
+    subset_fresh_count = sum(selected.get(source_key) == "fresh" for source_key in subset_keys)
+    required_subset_count = int(rule.get("minimum_subset_fresh", 0))
+    overall_ok = fresh_count >= required_count
+    subset_ok = required_subset_count == 0 or subset_fresh_count >= required_subset_count
     return {
-        "fresh": fresh_count >= required_count,
+        "fresh": overall_ok and subset_ok,
         "fresh_count": fresh_count,
         "required_count": required_count,
+        "subset_fresh_count": subset_fresh_count,
+        "required_subset_count": required_subset_count,
         "source_keys": source_keys,
         "source_statuses": selected,
     }
@@ -121,6 +136,8 @@ def evaluate_guard(macro: dict[str, Any], config: dict[str, Any]) -> dict[str, A
                 "fresh": freshness["fresh"],
                 "fresh_source_count": freshness["fresh_count"],
                 "required_fresh_source_count": freshness["required_count"],
+                "fresh_subset_source_count": freshness["subset_fresh_count"],
+                "required_fresh_subset_source_count": freshness["required_subset_count"],
                 "source_statuses": freshness["source_statuses"],
                 "severe": is_severe,
                 "reasons": pillar.get("reasons") or [],
