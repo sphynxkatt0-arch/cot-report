@@ -76,6 +76,18 @@ class ModelEvidenceActionabilityGuardTests(unittest.TestCase):
         self.assertEqual(row["final_action"], "Hedge / Risk Override")
         self.assertEqual(row["exposure_multiplier"], 0.0)
 
+    def test_liquidity_plumbing_block_is_not_replaced_by_evidence_guard(self):
+        decision = self.base_decision()
+        decision["final_action"] = "Wait — Liquidity Plumbing Stress"
+        decision["exposure_multiplier"] = 0.0
+        decision["liquidity_plumbing_guard_active"] = True
+        summary = self.rows({"4w": "Contradictory", "13w": "Supported", "26w": "Supported"})
+        row = apply_evidence_guard([decision], summary)[0]
+        self.assertEqual(row["historical_evidence_state"], "Contradictory")
+        self.assertEqual(row["final_action"], "Wait — Liquidity Plumbing Stress")
+        self.assertEqual(row["exposure_multiplier"], 0.0)
+        self.assertTrue(row["liquidity_plumbing_guard_active"])
+
     def test_delayed_release_has_priority(self):
         decision = self.base_decision()
         decision["release_status"] = "delayed"
