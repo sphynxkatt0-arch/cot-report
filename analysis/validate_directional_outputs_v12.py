@@ -70,6 +70,24 @@ def validate_v12() -> None:
             if text not in source:
                 failures.append(f"{label} is missing {text}")
 
+    if DASHBOARD.exists():
+        source = DASHBOARD.read_text(encoding="utf-8", errors="replace")
+        if source.count('id="marketPlaybook"') != 1:
+            failures.append("dashboard market playbook is missing or duplicated")
+        if source.count('id="xpResearchToggle"') != 1:
+            failures.append("dashboard research toggle is missing or duplicated")
+        for anchor in (
+            'href="#directionalDecisionSummary"',
+            'href="#macroLiquidityControlRoom"',
+            'href="#fiscalCashPath"',
+            'href="#directionalDecisionQuality"',
+        ):
+            if anchor not in source:
+                failures.append(f"dashboard navigation is missing {anchor}")
+        for text in ("What to do, what must confirm", "Next action", "Hide research"):
+            if text not in source:
+                failures.append(f"dashboard decision experience is missing {text}")
+
     if failures:
         raise RuntimeError("Directional v1.2 output validation failed:\n- " + "\n- ".join(failures))
 
