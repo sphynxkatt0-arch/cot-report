@@ -135,7 +135,7 @@ class MacroLiquidityExtensionGuardTests(unittest.TestCase):
         self.assertFalse(auction["available"])
         self.assertFalse(evaluation["active"])
 
-    def test_incomplete_repo_sources_cannot_count_funding_pillar(self):
+    def test_dvp_rate_plus_volume_cannot_replace_two_independent_rate_venues(self):
         evaluation = evaluate_guard(
             self.macro(
                 {
@@ -147,7 +147,6 @@ class MacroLiquidityExtensionGuardTests(unittest.TestCase):
                 source_overrides={
                     "repo_gcf_rate": "stale",
                     "repo_triparty_rate": "unavailable",
-                    "repo_dvp_volume": "stale",
                 },
             ),
             self.config(),
@@ -156,7 +155,9 @@ class MacroLiquidityExtensionGuardTests(unittest.TestCase):
             item for item in evaluation["pillar_evaluations"]
             if item["pillar"] == "funding_microstructure"
         )
-        self.assertEqual(funding["fresh_source_count"], 1)
+        self.assertEqual(funding["fresh_source_count"], 2)
+        self.assertEqual(funding["fresh_subset_source_count"], 1)
+        self.assertEqual(funding["required_fresh_subset_source_count"], 2)
         self.assertFalse(funding["available"])
         self.assertEqual(evaluation["severe_pillars"], [])
 
