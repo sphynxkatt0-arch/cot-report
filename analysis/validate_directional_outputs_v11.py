@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""Canonical v1.1 output validation for governed decisions and weekly changes."""
-
+"""Canonical v1.1 output validation for governed decisions, macro control room, and weekly changes."""
 from __future__ import annotations
 
 import csv
@@ -15,6 +14,8 @@ ALIGNED = OUT / "directional_model_comparison_aligned.csv"
 SUMMARY = OUT / "directional_model_comparison_summary.csv"
 DECISIONS = OUT / "cot_direction_latest.json"
 POSITION_CHANGES = OUT / "cot_position_changes_latest.csv"
+MACRO_EXPANSION = OUT / "macro_liquidity_expansion.json"
+MACRO_SOURCES = OUT / "macro_liquidity_source_status.csv"
 REPORT = ROOT / "directional_cot_report.html"
 DASHBOARD = ROOT / "interactive_cot_dashboard.html"
 
@@ -118,6 +119,48 @@ def validate_v11() -> None:
             f"weekly position-change CSV incomplete: got {len(combinations)} of {len(expected_combinations)} rows"
         )
 
+    try:
+        macro = json.loads(MACRO_EXPANSION.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        failures.append(f"cannot read macro-liquidity expansion: {exc}")
+        macro = {}
+    if macro:
+        if macro.get("schema_version") != 1:
+            failures.append("macro-liquidity expansion schema_version must be 1")
+        if "does not create or reverse COT direction" not in str(macro.get("role")):
+            failures.append("macro-liquidity extension role must remain explicitly non-directional")
+        required_pillars = {
+            "macro_regime",
+            "net_liquidity",
+            "bank_reserves",
+            "treasury_supply",
+            "repo_admin_spread",
+            "funding_microstructure",
+            "dealer_absorption",
+            "money_market_allocation",
+        }
+        pillars = set((macro.get("pillars") or {}).keys())
+        if not required_pillars.issubset(pillars):
+            failures.append(f"macro-liquidity pillars incomplete: {sorted(pillars)}")
+        coverage = macro.get("source_coverage_ratio")
+        try:
+            coverage_value = float(coverage)
+        except (TypeError, ValueError):
+            coverage_value = -1
+        if not 0 <= coverage_value <= 1:
+            failures.append("macro-liquidity source coverage must be between 0 and 1")
+
+    macro_source_rows = read_rows(MACRO_SOURCES)
+    if len(macro_source_rows) != 10:
+        failures.append(f"macro source status expected 10 rows, found {len(macro_source_rows)}")
+    else:
+        datasets = {row.get("dataset") for row in macro_source_rows}
+        if datasets != {"repo", "nypd", "mmf"}:
+            failures.append(f"macro source datasets incomplete: {sorted(datasets)}")
+        for row in macro_source_rows:
+            if row.get("status") not in {"fresh", "stale", "unavailable"}:
+                failures.append(f"invalid macro source status for {row.get('key')}: {row.get('status')}")
+
     if not REPORT.exists():
         failures.append("directional report is missing")
     else:
@@ -126,8 +169,11 @@ def validate_v11() -> None:
             failures.append("report is missing the full release-decision model label")
         if source.count("<!-- WEEKLY_POSITION_CHANGE_START -->") != 1:
             failures.append("standalone report weekly-change panel is missing or duplicated")
-        if "What changed this week" not in source:
-            failures.append("standalone report is missing weekly-change heading")
+        if source.count("<!-- MACRO_LIQUIDITY_CONTROL_ROOM_START -->") != 1:
+            failures.append("standalone report macro-liquidity control room is missing or duplicated")
+        for text in ("What changed this week", "Macro liquidity control room", "Current State"):
+            if text not in source:
+                failures.append(f"standalone report is missing {text}")
 
     if not DASHBOARD.exists():
         failures.append("interactive dashboard is missing")
@@ -135,13 +181,18 @@ def validate_v11() -> None:
         source = DASHBOARD.read_text(encoding="utf-8", errors="replace")
         if source.count('id="directionalDecisionQuality"') != 1:
             failures.append("dashboard evidence/weekly-change panel is missing or duplicated")
+        if source.count('id="macroLiquidityControlRoom"') != 1:
+            failures.append("dashboard macro-liquidity control room is missing or duplicated")
         for text in (
             "Historical validation",
             "Weekly signal",
             "Retail proxy (Nonreportables)",
+            "Funding microstructure",
+            "Dealer absorption",
+            "Official source health",
         ):
             if text not in source:
-                failures.append(f"dashboard quality panel missing {text}")
+                failures.append(f"dashboard governed panels missing {text}")
 
     if failures:
         raise RuntimeError("Directional v1.1 output validation failed:\n- " + "\n- ".join(failures))
