@@ -5,7 +5,6 @@ The Non-commercial structural sign remains authoritative. Historical evidence
 may preserve, reduce, or block exposure when the release-time full model is weak,
 unestimable, or contradictory at the relevant 4w/13w/26w horizons.
 """
-
 from __future__ import annotations
 
 import csv
@@ -98,7 +97,14 @@ def apply_evidence_guard(
         if release_status in {"delayed", "awaiting_release", "catch_up_delayed"}:
             output.append(row)
             continue
-        if action in {"Hedge / Risk Override", "Wait — Macro Data Incomplete", "No COT Trade", "No Trade"} or action.startswith("Wait for "):
+        higher_priority_actions = {
+            "Hedge / Risk Override",
+            "Wait — Macro Data Incomplete",
+            "Wait — Liquidity Plumbing Stress",
+            "No COT Trade",
+            "No Trade",
+        }
+        if action in higher_priority_actions or action.startswith("Wait for "):
             output.append(row)
             continue
 
