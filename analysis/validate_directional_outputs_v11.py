@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Canonical v1.1 output validation for governed decisions, macro control room, and weekly changes."""
+"""Canonical v1.1 validation for governed decisions and explicitly estimable evidence."""
 from __future__ import annotations
 
 import csv
 import json
 from pathlib import Path
+from typing import Any
 
 import validate_directional_outputs as engine
 
@@ -26,11 +27,9 @@ engine.COMPARISON_MODELS = {
     "new_structural_tactical",
     "new_release_decision",
 }
-engine.NEW_MODELS = {
-    "new_structural",
-    "new_structural_tactical",
-    "new_release_decision",
-}
+# The v1.1 validator below handles estimability explicitly. Disable the legacy
+# base validator's assumption that every new-model statistic must be finite.
+engine.NEW_MODELS = set()
 
 
 def read_rows(path: Path) -> list[dict[str, str]]:
@@ -38,6 +37,71 @@ def read_rows(path: Path) -> list[dict[str, str]]:
         return []
     with path.open("r", newline="", encoding="utf-8-sig") as handle:
         return list(csv.DictReader(handle))
+
+
+def finite(value: Any) -> float | None:
+    if value in {None, ""}:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number == number else None
+
+
+def truthy(value: Any) -> bool:
+    return str(value).strip().lower() in {"1", "true", "yes"}
+
+
+def validate_release_evidence(row: dict[str, str], failures: list[str]) -> None:
+    label = f"{row.get('market')} {row.get('horizon')} release decision"
+    required = {
+        "evidence_grade",
+        "evidence_reason",
+        "score_hac_estimable",
+        "edge_hac_estimable",
+        "stability_subperiods",
+        "drift_adjusted_n",
+        "directional_n",
+    }
+    missing = sorted(field for field in required if row.get(field) in {None, ""})
+    if missing:
+        failures.append(f"{label}: missing {missing}")
+        return
+
+    grade = str(row.get("evidence_grade"))
+    allowed_grades = {"Supported", "Tentative", "Weak/Mixed", "Contradictory", "Not estimable"}
+    if grade not in allowed_grades:
+        failures.append(f"{label}: invalid evidence grade {grade}")
+
+    score_estimable = truthy(row.get("score_hac_estimable"))
+    edge_estimable = truthy(row.get("edge_hac_estimable"))
+    if score_estimable:
+        if finite(row.get("score_hac_p")) is None or finite(row.get("score_slope_pp_per_unit")) is None:
+            failures.append(f"{label}: score HAC marked estimable without finite slope and p-value")
+    if edge_estimable:
+        if finite(row.get("edge_hac_p")) is None or finite(row.get("positive_minus_negative")) is None:
+            failures.append(f"{label}: edge HAC marked estimable without finite edge and p-value")
+    if grade == "Not estimable" and score_estimable and edge_estimable:
+        failures.append(f"{label}: Not estimable grade conflicts with two estimable HAC tests")
+
+    subperiods = int(finite(row.get("stability_subperiods")) or 0)
+    if subperiods not in {0, 3}:
+        failures.append(f"{label}: stability must contain zero or three subperiods, found {subperiods}")
+    if subperiods == 3 and finite(row.get("subperiod_sign_agreement_pct")) is None:
+        failures.append(f"{label}: three-subperiod stability is missing sign agreement")
+
+    drift_n = int(finite(row.get("drift_adjusted_n")) or 0)
+    if drift_n >= 20 and finite(row.get("drift_adjusted_accuracy_pct")) is None:
+        failures.append(f"{label}: estimable drift-adjusted sample is missing accuracy")
+
+    directional_n = int(finite(row.get("directional_n")) or 0)
+    if directional_n >= 20:
+        for field in ("avg_directional_return", "avg_adverse_move", "worst_adverse_move", "path_utility"):
+            if finite(row.get(field)) is None:
+                failures.append(f"{label}: directional sample is missing {field}")
+    if grade in {"Supported", "Tentative"} and directional_n < 20:
+        failures.append(f"{label}: positive evidence grade has directional sample {directional_n}<20")
 
 
 def validate_v11() -> None:
@@ -52,19 +116,7 @@ def validate_v11() -> None:
     if len(release_rows) != 8:
         failures.append(f"expected 8 release-decision summary rows, found {len(release_rows)}")
     for row in release_rows:
-        label = f"{row.get('market')} {row.get('horizon')} release decision"
-        for field in (
-            "evidence_grade",
-            "evidence_reason",
-            "score_hac_estimable",
-            "edge_hac_estimable",
-            "subperiod_sign_agreement_pct",
-            "drift_adjusted_accuracy_pct",
-            "avg_adverse_move",
-            "path_utility",
-        ):
-            if row.get(field) in {None, ""}:
-                failures.append(f"{label}: missing {field}")
+        validate_release_evidence(row, failures)
 
     try:
         decisions = json.loads(DECISIONS.read_text(encoding="utf-8"))
@@ -142,12 +194,8 @@ def validate_v11() -> None:
         pillars = set((macro.get("pillars") or {}).keys())
         if not required_pillars.issubset(pillars):
             failures.append(f"macro-liquidity pillars incomplete: {sorted(pillars)}")
-        coverage = macro.get("source_coverage_ratio")
-        try:
-            coverage_value = float(coverage)
-        except (TypeError, ValueError):
-            coverage_value = -1
-        if not 0 <= coverage_value <= 1:
+        coverage = finite(macro.get("source_coverage_ratio"))
+        if coverage is None or not 0 <= coverage <= 1:
             failures.append("macro-liquidity source coverage must be between 0 and 1")
 
     macro_source_rows = read_rows(MACRO_SOURCES)
