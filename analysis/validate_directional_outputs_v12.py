@@ -11,6 +11,7 @@ import validate_directional_outputs_v11 as v11
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "model_output"
 MACRO = OUT / "macro_liquidity_expansion.json"
+DECISIONS = OUT / "cot_direction_latest.json"
 FISCAL_SOURCES = OUT / "treasury_cash_source_status.csv"
 DASHBOARD = ROOT / "interactive_cot_dashboard.html"
 REPORT = ROOT / "directional_cot_report.html"
@@ -23,15 +24,19 @@ def read_rows(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
+def read_json(path: Path) -> object:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def validate_v12() -> None:
     failures: list[str] = []
     try:
-        payload = json.loads(MACRO.read_text(encoding="utf-8"))
+        payload = read_json(MACRO)
     except (OSError, json.JSONDecodeError) as exc:
         failures.append(f"cannot read macro-liquidity v1.2 payload: {exc}")
         payload = {}
 
-    if payload:
+    if isinstance(payload, dict) and payload:
         if payload.get("model_version") != "macro-liquidity-control-room-v1.2":
             failures.append("macro-liquidity model_version must be v1.2")
         pillars = payload.get("pillars") or {}
@@ -55,6 +60,8 @@ def validate_v12() -> None:
         }
         if fiscal_keys != expected_fiscal_keys:
             failures.append(f"Treasury Fiscal Data sources incomplete: {sorted(fiscal_keys)}")
+    elif not failures:
+        failures.append("macro-liquidity v1.2 payload must be a non-empty object")
 
     fiscal_rows = read_rows(FISCAL_SOURCES)
     if len(fiscal_rows) != 3:
@@ -65,6 +72,48 @@ def validate_v12() -> None:
                 failures.append(f"invalid Treasury source dataset for {row.get('key')}")
             if row.get("status") not in {"fresh", "stale", "unavailable"}:
                 failures.append(f"invalid Treasury source status for {row.get('key')}: {row.get('status')}")
+
+    try:
+        decisions = read_json(DECISIONS)
+    except (OSError, json.JSONDecodeError) as exc:
+        failures.append(f"cannot read governed decisions for v1.2 validation: {exc}")
+        decisions = []
+    if not isinstance(decisions, list) or len(decisions) != 2:
+        failures.append("v1.2 decisions must contain exactly S&P 500 and Nasdaq-100")
+    else:
+        for row in decisions:
+            market = str(row.get("market") or "unknown")
+            for field in (
+                "liquidity_plumbing_guard",
+                "liquidity_plumbing_guard_active",
+                "liquidity_plumbing_guard_reliable",
+            ):
+                if field not in row:
+                    failures.append(f"{market}: missing {field}")
+            evaluation = row.get("liquidity_plumbing_guard")
+            if not isinstance(evaluation, dict):
+                failures.append(f"{market}: liquidity plumbing guard must be an object")
+                continue
+            if evaluation.get("model_version") != "macro-liquidity-guard-v1.0":
+                failures.append(f"{market}: invalid liquidity plumbing guard model version")
+            active = bool(row.get("liquidity_plumbing_guard_active"))
+            reliable = bool(row.get("liquidity_plumbing_guard_reliable"))
+            severe = evaluation.get("severe_pillars") or []
+            minimum = int(evaluation.get("minimum_severe_pillars") or 0)
+            if active and not reliable:
+                failures.append(f"{market}: active plumbing guard cannot be unreliable")
+            if active and len(severe) < minimum:
+                failures.append(f"{market}: active plumbing guard has too few severe pillars")
+            if active and float(row.get("exposure_multiplier") or 0.0) != 0.0:
+                failures.append(f"{market}: active plumbing guard must set exposure to zero")
+            release = str(row.get("release_status") or "current")
+            action = str(row.get("final_action") or "")
+            if active and release == "current" and action not in {
+                "Wait — Liquidity Plumbing Stress",
+                "Hedge / Risk Override",
+                "Wait — Macro Data Incomplete",
+            }:
+                failures.append(f"{market}: active plumbing guard is not reflected in final action")
 
     for path, label in ((DASHBOARD, "dashboard"), (REPORT, "directional report")):
         if not path.exists():
@@ -100,7 +149,12 @@ def validate_v12() -> None:
         ):
             if anchor not in source:
                 failures.append(f"dashboard navigation is missing {anchor}")
-        for text in ("What to do, what must confirm", "Next action", "Show research"):
+        for text in (
+            "What to do, what must confirm",
+            "Next action",
+            "Plumbing guard",
+            "Show research",
+        ):
             if text not in source:
                 failures.append(f"dashboard decision experience is missing {text}")
         if "document.body.classList.add('xp-research-hidden')" not in source:
