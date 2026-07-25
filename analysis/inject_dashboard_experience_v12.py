@@ -26,10 +26,14 @@ def fmt(value: Any, digits: int = 1, suffix: str = "") -> str:
 
 
 def tone(value: Any) -> str:
-    text = str(value or "").lower()
+    text = str(value or "").lower().strip()
+    if text == "inactive":
+        return "neutral"
+    if text.startswith("active"):
+        return "negative"
     if "long" in text or "bull" in text or "support" in text or "confirm" in text:
         return "positive"
-    if "short" in text or "bear" in text or "defensive" in text or "invalid" in text or "override" in text or "active" in text:
+    if "short" in text or "bear" in text or "defensive" in text or "invalid" in text or "override" in text:
         return "negative"
     if "wait" in text or "reduced" in text or "partial" in text or "tentative" in text or "unavailable" in text:
         return "warning"
