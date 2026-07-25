@@ -106,11 +106,12 @@ def main() -> None:
         run("weekly_position_change.py")
 
         # Render the governed outputs, then add current-state, funding-capacity,
-        # daily fiscal cash-path, and source-health UX to both surfaces.
+        # daily fiscal cash-path, playbook, navigation, and source-health UX.
         run("inject_model_comparison_report_v11.py")
         run("inject_directional_dashboard_v11.py")
         run("inject_macro_liquidity_ux.py")
         run("inject_fiscal_cash_ux.py")
+        run("inject_dashboard_experience_v12.py")
         run("validate_directional_outputs_v12.py")
     except Exception as exc:
         write_status("failed", str(exc), refresh_ok)
