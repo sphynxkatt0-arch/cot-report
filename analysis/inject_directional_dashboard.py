@@ -30,12 +30,12 @@ def fmt(value: Any, digits: int = 2, suffix: str = "") -> str:
 
 def tone(value: str) -> str:
     lower = value.lower()
+    if "delayed" in lower or "awaiting" in lower:
+        return "warning"
     if "long" in lower or "bull" in lower:
         return "positive"
     if "short" in lower or "bear" in lower or "override" in lower:
         return "negative"
-    if "delayed" in lower or "awaiting" in lower:
-        return "warning"
     return "neutral"
 
 
@@ -71,6 +71,35 @@ def build_block(rows: list[dict[str, Any]]) -> str:
   {notice}
   <div class="directional-summary-grid">{''.join(cards)}</div>
 </section>
+<script>
+(function () {{
+  function setText(node, text) {{ if (node && node.textContent !== text) node.textContent = text; }}
+  function relabelResearchSurfaces() {{
+    document.querySelectorAll('.summary-card').forEach(function (card) {{
+      var label = card.querySelector('.summary-label');
+      if (label && label.textContent.trim() === 'Regime') setText(label, 'Selected-report research regime');
+    }});
+    document.querySelectorAll('.card-title').forEach(function (title) {{
+      var value = title.textContent.trim();
+      if (value === 'Weekly Desk Scanner') setText(title, 'Participant Research Scanner');
+      if (value === 'Signal Regime Panel') setText(title, 'Selected-Report Regime Research');
+    }});
+    document.querySelectorAll('.card-meta').forEach(function (meta) {{
+      var value = meta.textContent.trim();
+      if (value.indexOf('Ranks local SP/NQ/VIX setups') === 0) setText(meta, 'Exploratory participant ranking; the headline direction is fixed by the decision panel above.');
+      if (value.indexOf('COT + factor percentile-score engine') === 0) setText(meta, 'Research-only selected-report score; it does not replace the headline directional model.');
+    }});
+    var datasetLabel = document.querySelector('label[for="dataset"]');
+    if (datasetLabel) setText(datasetLabel, 'Research report view');
+  }}
+  window.addEventListener('DOMContentLoaded', function () {{
+    relabelResearchSurfaces();
+    var observer = new MutationObserver(relabelResearchSurfaces);
+    observer.observe(document.body, {{ childList: true, subtree: true }});
+    window.setTimeout(relabelResearchSurfaces, 250);
+  }});
+}}());
+</script>
 {END}"""
 
 
