@@ -70,7 +70,14 @@ def main() -> None:
                 print("WARNING: public-data refresh failed; continuing only with existing validated local outputs.", file=sys.stderr)
         run("build_directional_cot_system.py")
         run("inject_directional_dashboard.py")
-        run("-m", "unittest", "tests.test_cot_direction_model", "tests.test_release_and_macro")
+        run(
+            "-m",
+            "unittest",
+            "tests.test_cot_direction_model",
+            "tests.test_release_and_macro",
+            "tests.test_directional_system",
+            "-v",
+        )
     except Exception as exc:
         write_status("failed", str(exc), refresh_ok)
         raise
