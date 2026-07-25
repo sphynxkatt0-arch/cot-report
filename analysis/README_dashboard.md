@@ -1,141 +1,180 @@
-# COT Direction Report and Macro Liquidity Dashboard
+# Directional COT and Macro Liquidity Dashboard
 
-This project has two connected surfaces:
+The project has two connected surfaces:
 
-1. **Directional COT Report** — the priority decision layer for S&P 500 and Nasdaq-100.
-2. **COT Macro Monitor** — the advanced workbench for raw TFF/Legacy positioning, macro liquidity, funding stress, rates, credit, dollar, volatility, calendars, backtests, and source detail.
+1. **Directional COT Report** — the governed decision layer for S&P 500 and Nasdaq-100.
+2. **COT Macro Monitor** — the advanced workbench for positioning, liquidity plumbing, funding stress, Treasury cash flows, auction absorption, rates, credit, dollar, volatility, calendars, and historical evidence.
 
-The directional report does not replace the research dashboard. It imposes one hierarchy so parallel research scores cannot compete to define the headline trade.
+The dashboard is decision-first. Research-only scores remain available but are hidden by default so they cannot compete with the governed output.
 
-## Recommended workflow
+## Start the system
 
-From the `analysis` directory, double-click either:
+From the `analysis` directory, double-click:
 
 ```text
 start_directional_cot_report.cmd
 start_cot_dashboard.cmd
 ```
 
-Both launchers route through the same governed refresh. To refresh without opening a page:
-
-```text
-refresh_cot_dashboard.cmd
-```
-
-Manual equivalent:
+Both launchers use the same refresh pipeline. Manual commands:
 
 ```powershell
+py refresh_directional_cot_system.py --skip-public-refresh --open
 py refresh_directional_cot_system.py --strict-refresh --open
 ```
 
-A non-strict run may use existing validated cached files when a public source fails:
+The strict command stops when the core public-data refresh fails. The cached command may continue only with validated local inputs and explicit freshness warnings.
 
-```powershell
-py refresh_directional_cot_system.py --open
-```
-
-The run status is written to:
+Run status:
 
 ```text
 model_output\directional_refresh_status.json
 ```
 
-## Mandatory decision hierarchy
+## Governed decision hierarchy
 
-The integrated refresh applies these layers in order:
+1. **Legacy Non-commercials set structural direction.**
+2. **TFF categories modify conviction but cannot create or reverse direction.**
+3. **Asset Manager crowding changes position size only.**
+4. **Fresh macro conditions change size or block execution.**
+5. **Price action controls execution.**
+6. **Historical evidence caps exposure.**
+7. **CFTC release completeness has final actionability priority.**
+8. **Weekly participant changes explain movement without casting another vote.**
 
-1. **Legacy Non-commercials set structural direction.** Equity-index calibration is contrarian: historically low positioning is bullish support; historically high positioning is a long-crowding warning.
-2. **TFF modifies conviction only.** Other Reportables and Nonreportables use 13-week trend ranks; Legacy Non-commercial four-week flow provides additional tactical context.
-3. **Asset Managers modify size only.** They cannot reverse the Legacy structural sign.
-4. **Macro modifies size or blocks execution.** Stale inputs are excluded rather than treated as neutral.
-5. **Price controls execution.** Post-release response, 20-business-day trend, and 65-day context determine confirmation, waiting, contradiction, or invalidation.
-6. **Historical evidence caps exposure.** Evidence grades never create or reverse direction.
-7. **CFTC release completeness has final actionability priority.** Delayed, awaiting, and catch-up reports cannot create new exposure.
-8. **Weekly position changes explain the result.** This descriptive layer shows what changed but never casts another directional vote.
+Commercials are not counted as independent confirmation because they are mechanically related to the other Legacy categories. Dealer/Intermediary is treated as structural inventory rather than a directional player. Nonreportables are labelled as a **small-trader/retail proxy**, not verified retail.
 
-Commercials are not counted as independent directional confirmation because their positioning is mechanically related to other participant categories. Dealer / Intermediary remains excluded from directional scoring as structural offset inventory.
+## Dashboard reading order
 
-Nonreportables are labelled **Retail proxy (Nonreportables)** or **small-trader/retail proxy**. CFTC does not identify this residual category as verified pure retail.
+The integrated dashboard is ordered:
 
-## What changed this week
+1. **Directional COT Decision**
+2. **Market Playbook**
+3. **Macro Liquidity Control Room**
+4. **Daily Treasury Cash Flow**
+5. **Treasury Auction Demand Quality**
+6. **Positioning Changes and Evidence Quality**
+7. **Research Workbench**
 
-The final JSON, standalone report, and integrated dashboard compare the latest two common Legacy/TFF report dates and show:
+A sticky navigator links to each governed section. Research panels are hidden by default and restored with **Show research**.
 
-- Legacy Non-commercial net-contract change and net/open-interest change;
-- Asset Manager change;
-- Leveraged Money change;
-- Other Reportables change;
-- Retail proxy / Nonreportables change;
-- structural-score change;
-- tactical-modifier change;
-- adjusted COT-score change;
-- whether the COT signal strengthened, weakened, neutralized, flipped, or remained little changed.
+## Macro liquidity architecture
 
-This section is descriptive. It does not alter `final_action` or `exposure_multiplier`.
+Macro liquidity is not one score. The control room separates:
 
-## Publication timing and delays
+### Current state
 
-COT observations are Tuesday as-of positions but normally become public Friday at 15:30 New York time. The decision layer begins at the first eligible market close on or after the effective release date, never from Tuesday.
+- Federal Reserve total assets
+- Treasury General Account
+- overnight reverse repo
+- bank reserves
+- SOFR, EFFR, and IORB
+- real yields
+- credit spreads
+- dollar
+- VIX
 
-The release tracker stores:
+### Funding capacity
 
-- scheduled release in UTC and Stockholm time;
-- expected latest report date;
-- the first local observation of a genuinely current report;
-- the expected report gap;
-- `current`, `awaiting_release`, `delayed`, and `catch_up_delayed` states.
+Official Office of Financial Research Short-term Funding Monitor inputs:
 
-A first-observed timestamp is local evidence, not an asserted official CFTC publication timestamp.
+- DVP overnight/open repo rate
+- GCF overnight/open repo rate
+- tri-party overnight/open repo rate
+- DVP transaction volume
+- primary-dealer Treasury positions
+- primary-dealer Treasury repo financing
+- primary-dealer Treasury settlement fails
+- money-market-fund assets
+- MMF Treasury holdings
+- MMF repo holdings
 
-Delayed states have final priority:
+Configured OFR mnemonics are verified by a usable data response. Metadata search is the fallback. The original 30+ day term-repo configuration has been corrected to overnight/open series.
+
+### Forward cash path
+
+Official Daily Treasury Statement inputs:
+
+- daily TGA / operating cash
+- deposits into operating cash
+- withdrawals from operating cash
+- tax deposits
+- largest cash-flow categories
+
+Sign convention:
 
 ```text
-Hold Prior Signal — CFTC Report Delayed
-Hold Prior Signal — Awaiting Friday Release
-Wait — CFTC Catch-Up Still Behind
+Treasury withdrawal = positive private-sector cash effect
+Treasury deposit     = negative private-sector cash effect
+Rising TGA           = private-sector liquidity drain
+Falling TGA          = private-sector liquidity injection
 ```
 
-A multi-week catch-up report may be displayed for positioning context, but it remains non-actionable while a newer expected CFTC report is missing.
+The dashboard displays five-day and twenty-day private cash effect, five-day TGA change, taxes, total deposits, total withdrawals, and category detail.
 
-Historical audit rows always use deterministic scheduled-Friday alignment and never read the live release ledger.
+### Supply absorption
 
-## Macro structure and freshness
+Official Treasury auction results provide:
 
-The directional adapter groups the existing macro evidence into:
+- bid-to-cover ratio
+- primary-dealer accepted amount
+- indirect-bidder accepted amount
+- direct-bidder accepted amount
+- total accepted amount
+- security type and term
 
-- **Liquidity plumbing:** net liquidity, bank reserves, SOFR–IORB funding pressure, and SLR/balance-sheet load.
-- **Market transmission:** real yields, credit spreads, dollar, and VIX.
-- **Supply pressure:** Treasury issuance-calendar pressure.
+Each coupon auction is compared with prior auctions of the same tenor. Lower bid-to-cover, higher dealer share, and lower indirect share reduce relative absorption quality. The system does not claim an auction tail because it does not have a reviewed when-issued benchmark.
 
-Daily and weekly inputs that breach their configured freshness limits are removed from available weight. The final JSON lists every stale or missing factor.
+## Publication timing
 
-New exposure is blocked when reliable macro coverage is below 60%. Severe macro overrides are suppressed when their supporting sources are stale.
+COT observations are Tuesday positions normally released Friday at 15:30 New York time. The actionable price base begins at the first valid close on or after the effective release date, never Tuesday.
 
-Macro changes exposure or blocks execution; it does not manufacture the opposite COT thesis.
+Release states:
 
-## Historical evidence governance
+```text
+current
+awaiting_release
+delayed
+catch_up_delayed
+```
 
-Five models are compared on identical Friday-aligned dates and outcomes:
+A delayed or incomplete report cannot create new exposure. A local first-seen timestamp is not represented as an official CFTC timestamp.
 
-1. old TFF regime;
-2. old Legacy regime;
-3. new Non-commercial structure;
-4. new structure plus TFF tactical layer;
-5. new full release-time decision model.
+## Price execution
 
-The comparison reports:
+The execution layer uses cash-index closes:
 
-- Pearson and Spearman association;
-- Newey–West HAC slope and p-value with horizon-matched lags;
-- positive-minus-negative edge and HAC p-value;
-- three chronological subperiod sign stability;
-- drift-adjusted accuracy;
-- directional coverage and hit rate;
-- average and worst adverse movement;
-- path utility;
-- pairwise directional agreement.
+- **Confirmed:** post-release response and 20-day trend align with the structural side.
+- **Waiting:** movement remains inside the configured band.
+- **Contradicted:** price or trend opposes the structural side.
+- **Invalidated:** the adverse move exceeds the configured market threshold.
+- **Unavailable:** required price history is missing.
 
-Evidence is explicitly graded:
+The post-report anchor is an anchored mean, not futures VWAP, because the cash-index series does not contain futures volume.
+
+## Historical governance
+
+Five models are evaluated on identical Friday-aligned dates:
+
+1. old TFF regime
+2. old Legacy regime
+3. new Non-commercial structural model
+4. new structural plus TFF tactical model
+5. new full release-time decision model
+
+Outputs include:
+
+- Pearson and Spearman association
+- Newey–West HAC slope and p-value
+- directional edge and HAC p-value
+- three-subperiod sign stability
+- drift-adjusted accuracy
+- directional coverage and hit rate
+- average and worst adverse movement
+- path utility
+- pairwise directional agreement
+
+Evidence grades:
 
 ```text
 Supported
@@ -145,115 +184,84 @@ Contradictory
 Not estimable
 ```
 
-Historical evidence only caps exposure:
-
-- Supported: maximum 1.25x;
-- Tentative: maximum 0.75x;
-- Not validated: maximum 0.35x;
-- Contradictory: 0.00x and wait on the existing structural side.
-
-## Price execution
-
-The execution layer uses daily cash-index closes:
-
-- **Confirmed:** release response and trend structure align with the COT side.
-- **Waiting:** movement remains inside the configured band.
-- **Contradicted:** release response or trend structure opposes the COT side.
-- **Invalidated:** an adverse move breaches the configured market threshold.
-- **Unavailable:** required price history is missing.
-
-This is not futures VWAP or intraday order flow. The existing post-report anchor remains an anchored mean unless a volume-bearing futures source is added.
+Historical evidence can cap exposure but cannot reverse direction.
 
 ## Generated outputs
 
 ```text
 model_output\cot_direction_latest.json
 model_output\cot_direction_latest.csv
-model_output\cot_position_changes_latest.csv
 model_output\cot_direction_history.csv
 model_output\cot_direction_validation_summary.csv
-model_output\directional_model_comparison_aligned.csv
 model_output\directional_model_comparison_summary.csv
-model_output\directional_model_agreement.csv
+model_output\cot_position_changes_latest.csv
 model_output\macro_direction_context.json
+model_output\macro_liquidity_expansion.json
+model_output\macro_liquidity_source_status.csv
+model_output\treasury_cash_source_status.csv
 model_output\cftc_release_observations.json
 model_output\directional_refresh_status.json
 directional_cot_report.html
 interactive_cot_dashboard.html
 ```
 
-The macro dashboard receives an injected top decision panel and a decision-quality panel containing historical evidence and weekly participant changes. Older TFF/Legacy regime surfaces remain available but are explicitly labelled as research-only.
+Every new macro source is classified:
+
+```text
+fresh
+stale
+unavailable
+```
+
+Missing data lowers coverage. It is never replaced with a neutral score.
 
 ## Validation
 
-Every integrated refresh validates raw inputs and discovers every test automatically:
+Every test module is discovered automatically:
 
 ```powershell
 py -m unittest discover -s tests -p "test_*.py" -v
 ```
 
-The test suite covers:
+The integrated refresh additionally validates:
 
-- Friday release alignment and Stockholm release time;
-- pre-release rejection, delayed reports, and multi-week catch-ups;
-- contrarian Non-commercial direction;
-- weak-structure and tactical sign protection;
-- Asset Manager sizing-only behavior;
-- macro decomposition, stale-source exclusion, and reliable overrides;
-- price confirmation and delayed-release price alignment;
-- deterministic historical alignment and no-look-ahead macro context;
-- five-model HAC, stability, path, and evidence grading;
-- evidence, macro, and release actionability guards;
-- weekly participant-change calculations;
-- idempotent standalone-report and dashboard injection;
-- generated JSON, CSV, comparison, and HTML contracts.
+- raw CFTC contracts and dates
+- Friday release alignment
+- COT structural-sign invariants
+- macro freshness and overrides
+- Daily Treasury cash-flow sign convention
+- same-tenor auction comparison
+- weekly positioning-change completeness
+- JSON and CSV schemas
+- idempotent dashboard/report injection
+- focused default UX and section navigation
 
-The repository's GitHub Actions environment currently fails before any workflow steps or logs are produced. The integrated local refresh therefore remains the required execution path until that repository-level Actions problem is repaired.
+GitHub Actions currently fails before producing any steps or logs. Repository issue #4 tracks that platform-level problem. Until it is repaired, the two local refresh commands remain the required end-to-end validation gate.
 
-## Full research dashboard
-
-To serve the already-built integrated dashboard without refreshing:
-
-```powershell
-py serve_interactive_cot_dashboard.py --skip-refresh --open
-```
-
-Raw data contracts remain official CFTC Futures Only consolidated rows:
-
-- S&P 500 Consolidated, code `13874+`, index × $50.
-- Nasdaq-100 Consolidated, code `20974+`, index × $20.
-- VIX Futures, code `1170E1`, index × $1,000.
-
-Legacy and TFF are parallel classifications, not interchangeable mappings.
-
-## Setup
-
-```powershell
-py -m pip install -r requirements.txt
-```
-
-Provide a FRED API key through either:
+## Configuration and methodology
 
 ```text
-config\fred_api_key.txt
-```
-
-or the `FRED_API_KEY` environment variable.
-
-## Methodology and configuration
-
-```text
-docs\cot_direction_model_v1.md
 config\cot_direction_model_v1.json
+config\macro_liquidity_sources_v1.json
+docs\cot_direction_model_v1.md
+docs\macro_liquidity_control_room_v12.md
+docs\directional_cot_validation_runbook.md
 ```
 
-Current model version: `cot-direction-v1.1`.
+Current versions:
 
-## Remaining limitations
+```text
+cot-direction-v1.1
+macro-liquidity-control-room-v1.2
+```
 
-- Historical exact official CFTC publication timestamps are unavailable.
-- Public COT data cannot isolate verified retail positioning.
-- Treasury and agency calendars do not perfectly estimate settlement drain, dealer balance-sheet usage, or auction demand.
-- The SLR layer is a public H.8 proxy, not bank-level regulatory filing data.
-- Intraday repo, cross-currency basis, CDX, options gamma, Treasury depth, and bank-level constraints require separate sources.
-- Model weights are transparent versioned starting values, not a claim of sealed out-of-sample optimization.
+## Limitations
+
+- Exact historical CFTC publication timestamps are unavailable; historical audit uses scheduled Friday availability.
+- Daily Treasury data is not intraday.
+- Modified-cash Treasury flows are not direct equity-purchase estimates.
+- OFR rate series are informational and not contract reference rates.
+- Dealer data is aggregate rather than dealer-specific.
+- MMF data is lower frequency than repo data.
+- Cross-currency basis, Treasury market depth, SFOS reserve-comfort estimates, and bank-level regulatory capacity require future source modules.
+- Model weights are transparent starting values, not sealed out-of-sample optimization.
