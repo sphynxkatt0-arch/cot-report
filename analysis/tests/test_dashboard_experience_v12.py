@@ -55,7 +55,7 @@ class DashboardExperienceV12Tests(unittest.TestCase):
         self.assertIn('href="#auctionAbsorption"', block)
         self.assertIn("It does not calculate a new direction", block)
         self.assertIn("Plumbing guard", block)
-        self.assertIn("Inactive", block)
+        self.assertIn('class="neutral">Inactive</strong>', block)
         self.assertIn("Active — blocks exposure", block)
         self.assertIn("fewer than two reliable plumbing pillars", block)
         self.assertIn("Show research", block)
