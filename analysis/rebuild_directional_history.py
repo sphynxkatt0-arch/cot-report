@@ -3,6 +3,8 @@
 
 Live first-observed release metadata belongs in the latest decision. Historical
 rows remain deterministic and never inherit the local observation ledger.
+Forward outcomes include terminal returns and the best/worst path reached before
+each horizon so model comparison can account for adverse movement.
 """
 
 from __future__ import annotations
@@ -31,6 +33,33 @@ from cot_direction_model import (
 )
 
 ROOT = Path(__file__).resolve().parent
+HORIZONS = (("1w", 5), ("4w", 20), ("13w", 65), ("26w", 130))
+
+
+def path_outcomes(
+    prices: pd.DataFrame,
+    base_index: int | None,
+    trading_days: int,
+) -> tuple[float | None, float | None, float | None]:
+    if base_index is None:
+        return None, None, None
+    target_index = base_index + trading_days
+    if target_index >= len(prices):
+        return None, None, None
+    base_price = float(prices.iloc[base_index]["price"])
+    if base_price <= 0:
+        return None, None, None
+    path = pd.to_numeric(
+        prices.iloc[base_index : target_index + 1]["price"],
+        errors="coerce",
+    ).dropna()
+    if path.empty:
+        return None, None, None
+    path_returns = (path / base_price - 1.0) * 100.0
+    terminal = float(path_returns.iloc[-1])
+    worst = float(path_returns.min())
+    best = float(path_returns.max())
+    return terminal, worst, best
 
 
 def build_deterministic_history_for_market(
@@ -69,13 +98,11 @@ def build_deterministic_history_for_market(
             "signal_price_date": prices.iloc[base_index]["date"].date().isoformat() if base_index is not None else None,
             "signal_price": base_price,
         }
-        for label, trading_days in (("1w", 5), ("4w", 20), ("13w", 65), ("26w", 130)):
-            target_index = base_index + trading_days if base_index is not None else None
-            if target_index is not None and target_index < len(prices) and base_price not in (None, 0):
-                target_price = float(prices.iloc[target_index]["price"])
-                row[f"forward_return_{label}"] = (target_price / base_price - 1.0) * 100.0
-            else:
-                row[f"forward_return_{label}"] = None
+        for label, trading_days in HORIZONS:
+            terminal, worst, best = path_outcomes(prices, base_index, trading_days)
+            row[f"forward_return_{label}"] = terminal
+            row[f"forward_worst_path_return_{label}"] = worst
+            row[f"forward_best_path_return_{label}"] = best
         rows.append(row)
     return rows
 
