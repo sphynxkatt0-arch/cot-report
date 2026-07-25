@@ -9,6 +9,7 @@
     "full_strength_percentile_high": 90.0
   },
   "tactical": {
+    "minimum_structural_magnitude": 0.25,
     "other_reportable_trend13_weight": 0.55,
     "nonreportable_trend13_weight": 0.25,
     "noncommercial_flow4_alignment_weight": 0.20,
