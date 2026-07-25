@@ -18,11 +18,16 @@ DASHBOARD_HTML = ROOT / "interactive_cot_dashboard.html"
 
 
 def run(script: str, *args: str, allow_failure: bool = False) -> bool:
-    command = [sys.executable, str(ROOT / script), *args]
+    if script == "-m":
+        command = [sys.executable, "-m", *args]
+        label = "python -m " + " ".join(args)
+    else:
+        command = [sys.executable, str(ROOT / script), *args]
+        label = script
     print("$", " ".join(command), flush=True)
     result = subprocess.run(command, cwd=ROOT)
     if result.returncode and not allow_failure:
-        raise RuntimeError(f"{script} failed with exit code {result.returncode}")
+        raise RuntimeError(f"{label} failed with exit code {result.returncode}")
     return result.returncode == 0
 
 
@@ -65,7 +70,7 @@ def main() -> None:
                 print("WARNING: public-data refresh failed; continuing only with existing validated local outputs.", file=sys.stderr)
         run("build_directional_cot_system.py")
         run("inject_directional_dashboard.py")
-        run("-m", "unittest", "tests.test_cot_direction_model", "tests.test_release_and_macro", allow_failure=False)
+        run("-m", "unittest", "tests.test_cot_direction_model", "tests.test_release_and_macro")
     except Exception as exc:
         write_status("failed", str(exc), refresh_ok)
         raise
