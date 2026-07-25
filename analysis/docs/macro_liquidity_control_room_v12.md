@@ -2,11 +2,12 @@
 
 ## Purpose
 
-The control room answers three separate questions:
+The control room answers four separate questions:
 
 1. **Current state:** Is system liquidity presently supportive, neutral, or defensive?
-2. **Funding capacity:** Can dealers and money markets absorb Treasury collateral and funding demand without visible stress?
+2. **Funding capacity:** Can dealers and money markets fund collateral without visible stress?
 3. **Forward cash path:** Are Treasury cash operations injecting money into, or withdrawing money from, the private sector?
+4. **Supply absorption:** Are coupon auctions clearing with normal demand, or are primary dealers absorbing unusually large shares?
 
 It is a risk and sizing layer. It does **not** create or reverse the Legacy Non-commercial COT structural direction.
 
@@ -18,10 +19,11 @@ The integrated dashboard is intentionally ordered:
 2. Market playbook
 3. Macro liquidity control room
 4. Daily Treasury cash path
-5. Weekly positioning changes and evidence quality
-6. Research-only TFF, Legacy, macro, and backtest surfaces
+5. Treasury auction demand quality
+6. Weekly positioning changes and evidence quality
+7. Research-only TFF, Legacy, macro, and backtest surfaces
 
-A sticky section navigator links to the governed panels. The research toggle hides exploratory panels without removing their data.
+A sticky section navigator links to each governed panel. Research-only surfaces are hidden by default and can be restored with **Show research**.
 
 ## Existing macro evidence
 
@@ -52,7 +54,7 @@ The OFR public API supplies:
 - DVP overnight/open repo rate;
 - GCF overnight/open repo rate;
 - tri-party overnight/open repo rate;
-- DVP transaction volume;
+- DVP overnight/open transaction volume;
 - primary-dealer Treasury positions;
 - primary-dealer Treasury repo financing;
 - primary-dealer Treasury settlement fails;
@@ -62,7 +64,7 @@ The OFR public API supplies:
 
 Configured mnemonics are accepted only after a usable series response. If a configured series is unavailable, metadata search is attempted and the selected mnemonic is recorded in `macro_liquidity_source_status.csv`.
 
-The control room never substitutes a neutral score for a missing or stale source.
+The original 30+ day term-repo configuration was corrected to official overnight/open series. The control room never substitutes a neutral score for a missing or stale source.
 
 ### U.S. Treasury Daily Treasury Statement
 
@@ -84,6 +86,19 @@ Falling TGA          = private-sector liquidity injection
 ```
 
 The dashboard reports the five-day and twenty-day private cash effect, five-day TGA change, tax deposits, total deposits, total withdrawals, and the largest cash-flow categories.
+
+### Treasury Securities Auctions Data
+
+The Fiscal Data auction endpoint supplies:
+
+- bid-to-cover ratio;
+- primary-dealer accepted amount;
+- indirect-bidder accepted amount;
+- direct-bidder accepted amount;
+- total accepted amount;
+- security type and original term.
+
+Auction quality is evaluated relative to prior auctions of the **same tenor**. Lower bid-to-cover, higher dealer share, and lower indirect share reduce the score. This avoids applying one universal threshold to bills, notes, bonds, and TIPS.
 
 ## Pillars
 
@@ -119,7 +134,19 @@ Shows whether cash is accumulating in MMFs and whether holdings are directed tow
 
 ### Daily fiscal cash flow
 
-Combines the actual Daily Treasury Statement flow with the daily TGA path. A supportive reading means withdrawals have injected cash and/or the TGA has fallen. A defensive reading means deposits, tax receipts, or TGA rebuilding have drained private cash.
+Combines the Daily Treasury Statement flow with the daily TGA path. A supportive reading means withdrawals injected cash and/or the TGA fell. A defensive reading means deposits, tax receipts, or TGA rebuilding drained private cash.
+
+### Treasury auction absorption
+
+Uses recent coupon auctions and their same-tenor history. The panel displays:
+
+- latest bid-to-cover;
+- bid-to-cover change from the prior same-tenor average;
+- indirect-bidder share;
+- primary-dealer share;
+- relative quality score.
+
+Auction quality is descriptive supply-absorption evidence. It cannot cast an independent equity-direction vote.
 
 ## Source and freshness governance
 
@@ -156,9 +183,9 @@ Coverage is displayed in the dashboard. Missing data lowers coverage; it is not 
 The extension is descriptive. It may support future exposure caps or hard-risk guards only after release-aligned historical validation. In v1.2:
 
 - COT direction remains authoritative;
-- macro can reduce size or block execution through the existing governed macro layer;
-- new OFR and Daily Treasury diagnostics explain the state and forward pressure;
-- the new diagnostics do not cast an independent bullish or bearish vote.
+- the existing governed macro layer may reduce size or block execution;
+- OFR, Daily Treasury, and auction diagnostics explain state and forward pressure;
+- none of the new diagnostics creates or reverses direction.
 
 ## Refresh
 
@@ -178,4 +205,5 @@ The refresh runs test discovery, builds the OFR and Treasury source contracts, r
 - OFR repo rate series are informational and should not be treated as contract reference rates.
 - Dealer aggregates do not reveal individual dealer constraints.
 - MMF data is lower frequency than repo data.
-- Cross-currency basis, Treasury market depth, auction tails, bid-to-cover, dealer auction takedown, and bank-level regulatory capacity remain future source modules.
+- Auction results do not include a reliable when-issued yield benchmark, so the system does not claim to calculate an auction tail.
+- Cross-currency basis, Treasury market depth, Senior Financial Officer Survey reserve-comfort estimates, and bank-level regulatory capacity remain future source modules.
