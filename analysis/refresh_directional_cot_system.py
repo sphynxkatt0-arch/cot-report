@@ -95,7 +95,7 @@ def main() -> None:
         run("align_observed_release_price.py")
         run("price_execution_adapter.py")
         run("macro_actionability_guard.py")
-        run("inject_model_comparison_report.py")
+        run("inject_model_comparison_report_v11.py")
         run("inject_directional_dashboard.py")
         run("validate_directional_outputs.py")
     except Exception as exc:
