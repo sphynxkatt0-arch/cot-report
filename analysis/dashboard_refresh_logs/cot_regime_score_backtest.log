@@ -1,0 +1,19 @@
+Scored 874 walk-forward COT observations.
+S&P 500: latest 2026-07-21 signal 2026-07-24 score -3.50 (Caution); observations 426
+NASDAQ-100: latest 2026-07-21 signal 2026-07-24 score +0.50 (Mixed); observations 448
+
+Regime bucket summary, 4w horizon:
+market  bucket  observations  avg_return_pct  hit_rate_pct  diff_vs_unconditional_pct  welch_t_stat_vs_rest
+ sp500   Mixed           198        1.418485     71.212121                   0.310877              1.188287
+ sp500 Caution           174        0.296584     64.942529                  -0.811025             -2.761037
+ sp500 Risk-On            49        2.731380     71.428571                   1.623771              2.193119
+    nq   Mixed           333        1.672140     66.066066                   0.059924              0.380443
+    nq Risk-On            78        2.107166     65.384615                   0.494951              0.882534
+    nq Caution            32       -0.217814     56.250000                  -1.830029             -1.771307
+
+Score/return correlation summary, 4w horizon:
+market  observations  score_return_corr  score_return_hac_p_value  risk_on_minus_caution_avg_return_pct  risk_on_minus_caution_hac_p_value  drift_adjusted_accuracy_pct evidence_grade
+ sp500           421           0.125231                  0.079246                              2.434796                           0.077622                    50.825083      Tentative
+    nq           443           0.066576                  0.231030                              2.324980                           0.164460                    59.126984        Unclear
+
+Saved outputs to A:\work\trading\cot report\analysis\cot_regime_backtest_output
