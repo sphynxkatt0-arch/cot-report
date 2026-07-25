@@ -17,6 +17,7 @@ from cot_direction_model import clamp, final_action, load_config
 ROOT = Path(__file__).resolve().parent
 DECISION_JSON = OUT_DIR / "cot_direction_latest.json"
 DECISION_CSV = OUT_DIR / "cot_direction_latest.csv"
+MACRO_CONTEXT_JSON = OUT_DIR / "macro_direction_context.json"
 HTML_OUT = ROOT / "directional_cot_report.html"
 
 
@@ -115,9 +116,42 @@ def read_validation() -> list[dict[str, Any]]:
         return rows
 
 
-def refine_decisions(decisions: list[dict[str, Any]], config: dict[str, Any]) -> list[dict[str, Any]]:
+def load_macro_context() -> dict[str, Any]:
+    if not MACRO_CONTEXT_JSON.exists():
+        return {}
+    try:
+        payload = json.loads(MACRO_CONTEXT_JSON.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def apply_macro_quality(decision: dict[str, Any], macro_context: dict[str, Any]) -> dict[str, Any]:
+    out = dict(decision)
+    stale = list(macro_context.get("stale_factors") or [])
+    missing = list(macro_context.get("missing_factors") or [])
+    out["macro_stale_factors"] = stale
+    out["macro_missing_factors"] = missing
+    out["macro_available_weight"] = macro_context.get("available_weight")
+    out["macro_total_weight"] = macro_context.get("total_weight")
+    reasons = list(out.get("reasons") or [])
+    if stale:
+        reasons.append(f"Macro freshness warning: {len(stale)} stale factor(s) excluded")
+    if missing:
+        reasons.append(f"Macro availability warning: {len(missing)} missing factor(s)")
+    out["reasons"] = reasons
+    return out
+
+
+def refine_decisions(
+    decisions: list[dict[str, Any]],
+    config: dict[str, Any],
+    macro_context: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    context = macro_context or {}
     refined: list[dict[str, Any]] = []
-    for decision in decisions:
+    for raw_decision in decisions:
+        decision = apply_macro_quality(raw_decision, context)
         market = str(decision["market"])
         meta = MARKETS[market]
         prices = read_prices(meta["price_path"], meta["price_col"])
@@ -135,10 +169,11 @@ def refine_decisions(decisions: list[dict[str, Any]], config: dict[str, Any]) ->
 
         release_status = str(decision.get("release_status") or "current")
         if release_status in {"delayed", "awaiting_release"}:
+            decision["price_trend_20d_pct"] = round(trend_20d, 3) if trend_20d is not None else None
+            decision["price_trend_65d_pct"] = round(trend_65d, 3) if trend_65d is not None else None
             refined.append(decision)
             continue
 
-        decision = dict(decision)
         decision["execution_state"] = execution["state"]
         decision["execution_multiplier"] = execution["multiplier"]
         decision["price_alignment"] = execution["alignment"]
@@ -179,7 +214,7 @@ def main() -> None:
         raise FileNotFoundError(f"Missing {DECISION_JSON}; run build_directional_cot_system.py first")
     config = load_config(ROOT / "config" / "cot_direction_model_v1.json")
     decisions = json.loads(DECISION_JSON.read_text(encoding="utf-8"))
-    refined = refine_decisions(decisions, config)
+    refined = refine_decisions(decisions, config, load_macro_context())
     DECISION_JSON.write_text(json.dumps(refined, indent=2) + "\n", encoding="utf-8")
     write_csv(DECISION_CSV, refined)
     HTML_OUT.write_text(render_html(refined, read_validation()), encoding="utf-8")
