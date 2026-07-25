@@ -14,6 +14,7 @@ from cot_direction_model import (  # noqa: E402
     preserve_structural_sign,
     scheduled_release_date,
     structural_score_from_percentile,
+    tactical_modifier,
 )
 
 
@@ -34,6 +35,12 @@ class DirectionModelTests(unittest.TestCase):
     def test_tactical_modifier_cannot_reverse_structural_sign(self):
         self.assertGreater(preserve_structural_sign(0.20, -0.25), 0.0)
         self.assertLess(preserve_structural_sign(-0.20, 0.25), 0.0)
+
+    def test_contrarian_tactical_signal_is_relative_to_structural_side(self):
+        bullish, _ = tactical_modifier(0.8, 1.0, 0.0, 0.0, self.config)
+        bearish, _ = tactical_modifier(-0.8, 1.0, 0.0, 0.0, self.config)
+        self.assertLess(bullish, 0.0)
+        self.assertGreater(bearish, 0.0)
 
     def test_asset_manager_is_size_only(self):
         multiplier, state = asset_manager_multiplier(95, self.config)
