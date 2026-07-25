@@ -1,5 +1,6 @@
 {
-  "model_version": "cot-direction-v1.0",
+  "schema_version": 1,
+  "model_version": "cot-direction-v1.1",
   "minimum_history_weeks": 104,
   "structural": {
     "neutral_percentile_low": 40.0,
