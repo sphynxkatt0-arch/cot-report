@@ -23,10 +23,12 @@ class DashboardExperienceV12Tests(unittest.TestCase):
                 "historical_evidence_state": "Not validated",
                 "release_status": "current",
                 "execution_state": "Waiting",
+                "liquidity_plumbing_guard_active": False,
+                "liquidity_plumbing_guard_reliable": True,
             },
             {
                 "market_label": "NASDAQ-100",
-                "final_action": "Wait for Long",
+                "final_action": "Wait — Liquidity Plumbing Stress",
                 "structural_bias": "Bullish",
                 "weekly_signal_change": "COT signal little changed",
                 "macro_regime_score": 48,
@@ -34,6 +36,8 @@ class DashboardExperienceV12Tests(unittest.TestCase):
                 "historical_evidence_state": "Tentative",
                 "release_status": "current",
                 "execution_state": "Waiting",
+                "liquidity_plumbing_guard_active": True,
+                "liquidity_plumbing_guard_reliable": True,
             },
         ]
 
@@ -50,8 +54,21 @@ class DashboardExperienceV12Tests(unittest.TestCase):
         self.assertIn('href="#fiscalCashPath"', block)
         self.assertIn('href="#auctionAbsorption"', block)
         self.assertIn("It does not calculate a new direction", block)
+        self.assertIn("Plumbing guard", block)
+        self.assertIn("Inactive", block)
+        self.assertIn("Active — blocks exposure", block)
+        self.assertIn("fewer than two reliable plumbing pillars", block)
         self.assertIn("Show research", block)
         self.assertIn("xp-research-hidden", block)
+
+    def test_unreliable_guard_is_shown_as_unavailable(self):
+        decision = self.decisions()[0]
+        decision["liquidity_plumbing_guard_reliable"] = False
+        block = ux.build_block(
+            [decision],
+            {"source_coverage_ratio": 0.4, "pillars": {"fiscal_cash_flow": {"state": "Unavailable"}}},
+        )
+        self.assertIn("Unavailable — insufficient coverage", block)
 
     def test_dashboard_experience_injection_is_idempotent(self):
         block = ux.build_block(
