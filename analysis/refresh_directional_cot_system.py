@@ -56,6 +56,7 @@ def run_model_tests() -> None:
         "tests.test_macro_actionability_guard",
         "tests.test_directional_input_validation",
         "tests.test_observed_release_price_alignment",
+        "tests.test_historical_release_context",
         "tests.test_model_comparison",
         "-v",
     )
@@ -88,6 +89,7 @@ def main() -> None:
         run("validate_directional_inputs.py")
         run_model_tests()
         run("rebuild_directional_history.py")
+        run("enrich_directional_history_context.py")
         run("compare_directional_models.py")
         run("build_latest_directional_decisions.py")
         run("align_observed_release_price.py")
