@@ -71,6 +71,7 @@ def main() -> None:
         run("build_directional_cot_system.py")
         run("rebuild_directional_history.py")
         run("price_execution_adapter.py")
+        run("macro_actionability_guard.py")
         run("inject_directional_dashboard.py")
         run(
             "-m",
@@ -80,6 +81,7 @@ def main() -> None:
             "tests.test_directional_system",
             "tests.test_price_execution_adapter",
             "tests.test_deterministic_history",
+            "tests.test_macro_actionability_guard",
             "-v",
         )
     except Exception as exc:
