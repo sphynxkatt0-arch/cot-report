@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Canonical macro-liquidity v1.2 builder with Daily Treasury cash flows."""
+"""Canonical macro-liquidity v1.2 builder with Treasury cash and auction absorption."""
 from __future__ import annotations
 
 import json
@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import macro_liquidity_expansion as base
+from treasury_auction_absorption import fetch_auction_context
 from treasury_cash_flow_extension import fetch_treasury_cash_context, fiscal_pillar
 
 FISCAL_CSV = base.OUT_DIR / "treasury_cash_source_status.csv"
@@ -46,7 +47,20 @@ def build_payload(*, now: datetime | None = None) -> dict:
     fiscal_results, fiscal_context = fetch_treasury_cash_context(now=current)
     fiscal_by_key = {result.key: result for result in fiscal_results}
     pillars["fiscal_cash_flow"] = fiscal_pillar(fiscal_context, fiscal_by_key)
-    all_results = [*ofr_results, *fiscal_results]
+
+    auction_result, auction_context = fetch_auction_context(now=current)
+    pillars["auction_absorption"] = {
+        "label": "Treasury auction absorption",
+        "score": auction_context.get("score"),
+        "state": auction_context.get("state", "Unavailable"),
+        "coverage": auction_context.get("coverage", 0),
+        "reasons": auction_context.get("reasons") or [auction_result.error or "Auction data unavailable"],
+        "average_bid_to_cover_delta": auction_context.get("average_bid_to_cover_delta"),
+        "average_dealer_share_delta_pp": auction_context.get("average_dealer_share_delta_pp"),
+        "average_indirect_share_delta_pp": auction_context.get("average_indirect_share_delta_pp"),
+    }
+
+    all_results = [*ofr_results, *fiscal_results, auction_result]
     fresh = sum(result.status == "fresh" for result in all_results)
     coverage = fresh / max(1, len(all_results))
 
@@ -59,11 +73,13 @@ def build_payload(*, now: datetime | None = None) -> dict:
         "source_coverage_label": "Good" if coverage >= 0.75 else "Partial" if coverage >= 0.40 else "Low",
         "existing_macro_latest": macro_latest,
         "treasury_cash_context": fiscal_context,
+        "treasury_auction_context": auction_context,
         "pillars": pillars,
         "sources": base.source_rows(all_results),
         "source_notes": [
             "Treasury Daily Treasury Statement provides daily operating cash plus deposits and withdrawals on a modified-cash basis.",
             "Positive fiscal cash flow means Treasury withdrawals injected cash into the private sector; deposits and tax receipts are drains.",
+            "Treasury auction absorption compares bid-to-cover, dealer share, and indirect share against prior auctions of the same tenor.",
             "OFR Short-term Funding Monitor provides repo, primary-dealer, and money-market-fund series.",
             "Configured OFR mnemonics are verified by their data response; metadata search is the automatic fallback.",
             "Missing or stale series reduce coverage and are never filled with a neutral score.",
