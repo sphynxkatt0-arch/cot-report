@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Refresh data, build the directional model, and integrate the main dashboard."""
+"""Refresh data, validate the model, build outputs, and integrate the dashboard."""
 
 from __future__ import annotations
 
@@ -44,6 +44,20 @@ def write_status(status: str, message: str, refresh_ok: bool | None = None) -> N
     STATUS.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
+def run_model_tests() -> None:
+    run(
+        "-m",
+        "unittest",
+        "tests.test_cot_direction_model",
+        "tests.test_release_and_macro",
+        "tests.test_directional_system",
+        "tests.test_price_execution_adapter",
+        "tests.test_deterministic_history",
+        "tests.test_macro_actionability_guard",
+        "-v",
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--start", type=int, default=2016)
@@ -68,29 +82,20 @@ def main() -> None:
             )
             if not refresh_ok:
                 print("WARNING: public-data refresh failed; continuing only with existing validated local outputs.", file=sys.stderr)
+        run_model_tests()
         run("build_directional_cot_system.py")
         run("rebuild_directional_history.py")
         run("price_execution_adapter.py")
         run("macro_actionability_guard.py")
         run("inject_directional_dashboard.py")
-        run(
-            "-m",
-            "unittest",
-            "tests.test_cot_direction_model",
-            "tests.test_release_and_macro",
-            "tests.test_directional_system",
-            "tests.test_price_execution_adapter",
-            "tests.test_deterministic_history",
-            "tests.test_macro_actionability_guard",
-            "-v",
-        )
+        run("validate_directional_outputs.py")
     except Exception as exc:
         write_status("failed", str(exc), refresh_ok)
         raise
 
-    message = "Directional report and integrated macro dashboard rebuilt successfully."
+    message = "Directional report and integrated macro dashboard rebuilt and validated successfully."
     if refresh_ok is False:
-        message += " Public-data refresh failed, so cached inputs were used and should be reviewed for freshness."
+        message += " Public-data refresh failed, so cached inputs were used; release and source-freshness guards remain active."
     write_status("ok", message, refresh_ok)
     print(message)
     if args.open:
