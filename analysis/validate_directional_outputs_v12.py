@@ -84,9 +84,11 @@ def validate_v12() -> None:
         ):
             if anchor not in source:
                 failures.append(f"dashboard navigation is missing {anchor}")
-        for text in ("What to do, what must confirm", "Next action", "Hide research"):
+        for text in ("What to do, what must confirm", "Next action", "Show research"):
             if text not in source:
                 failures.append(f"dashboard decision experience is missing {text}")
+        if "document.body.classList.add('xp-research-hidden')" not in source:
+            failures.append("dashboard must hide research-only surfaces by default")
 
     if failures:
         raise RuntimeError("Directional v1.2 output validation failed:\n- " + "\n- ".join(failures))
