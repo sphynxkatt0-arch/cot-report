@@ -13,7 +13,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 import pandas as pd
 
@@ -42,11 +42,38 @@ MARKETS = {
 }
 
 
+def contained_latest_date(path: Path) -> pd.Timestamp | None:
+    """Return the newest date contained in a CSV, independent of filesystem mtime."""
+    try:
+        frame = pd.read_csv(path)
+    except Exception:
+        return None
+    frame.columns = [str(column).strip().lstrip("\ufeff") for column in frame.columns]
+    for column in ("date", "report_date", "source_latest_date", "latest_date", "observation_date"):
+        if column not in frame.columns:
+            continue
+        values = pd.to_datetime(frame[column], errors="coerce").dropna()
+        if not values.empty:
+            return pd.Timestamp(values.max())
+    return None
+
+
+def select_latest_file(paths: Iterable[Path]) -> Path:
+    candidates = list(paths)
+    if not candidates:
+        raise FileNotFoundError("No candidate files were provided")
+    ranked = []
+    for path in candidates:
+        latest = contained_latest_date(path)
+        ranked.append((latest if latest is not None else pd.Timestamp.min, path.name, path))
+    return max(ranked, key=lambda item: (item[0], item[1]))[2]
+
+
 def latest_file(pattern: str) -> Path:
-    matches = sorted(ROOT.glob(pattern), key=lambda path: path.stat().st_mtime)
+    matches = list(ROOT.glob(pattern))
     if not matches:
         raise FileNotFoundError(f"No file matched {ROOT / pattern}")
-    return matches[-1]
+    return select_latest_file(matches)
 
 
 def read_position_file(path: Path) -> pd.DataFrame:
