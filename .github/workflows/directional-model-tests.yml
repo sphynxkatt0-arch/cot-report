@@ -27,13 +27,13 @@ jobs:
         shell: bash
         env:
           REPOSITORY: ${{ github.repository }}
-          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SHA: ${{ github.sha }}
           TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          git init .
+          git init --initial-branch=ci .
           git remote add origin "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
-          git fetch --depth=1 origin "${SHA}"
+          git fetch --no-tags --depth=1 origin "${SHA}"
           git checkout --detach FETCH_HEAD
 
       - name: Install Python dependencies
