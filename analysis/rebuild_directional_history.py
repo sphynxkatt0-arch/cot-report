@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""Rebuild canonical COT history using scheduled Friday release dates only.
+
+Live first-observed release metadata belongs in the latest decision. Historical
+rows remain deterministic and never inherit the local observation ledger.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+import pandas as pd
+
+from build_directional_cot_system import (
+    HISTORY_OUT,
+    VALIDATION_OUT,
+    build_validation_summary,
+    common_report_dates,
+    feature_snapshot,
+    load_market_inputs,
+    price_index_at_or_after,
+    write_csv,
+)
+from cftc_release_tracker import scheduled_release_datetime
+from cot_direction_model import (
+    load_config,
+    preserve_structural_sign,
+    structural_score_from_percentile,
+    tactical_modifier,
+)
+
+ROOT = Path(__file__).resolve().parent
+
+
+def build_deterministic_history_for_market(
+    market: str,
+    legacy: pd.DataFrame,
+    tff: pd.DataFrame,
+    prices: pd.DataFrame,
+    config: dict[str, Any],
+) -> list[dict[str, Any]]:
+    minimum = int(config["minimum_history_weeks"])
+    rows: list[dict[str, Any]] = []
+    for report_ts in common_report_dates(legacy, tff):
+        snapshot = feature_snapshot(legacy, tff, report_ts, minimum)
+        structural = structural_score_from_percentile(snapshot["noncommercial_percentile"], config)
+        tactical, _ = tactical_modifier(
+            structural,
+            snapshot["other_reportable_trend13_rank"],
+            snapshot["nonreportable_trend13_rank"],
+            snapshot["noncommercial_flow4_rank"],
+            config,
+        )
+        adjusted = preserve_structural_sign(structural, tactical)
+        release_date = pd.Timestamp(scheduled_release_datetime(report_ts.date()).date())
+        base_index = price_index_at_or_after(prices, release_date)
+        base_price = float(prices.iloc[base_index]["price"]) if base_index is not None else None
+        row: dict[str, Any] = {
+            "market": market,
+            "model_version": str(config["model_version"]),
+            "report_date": report_ts.date().isoformat(),
+            "scheduled_release_date": release_date.date().isoformat(),
+            "release_date_source": "scheduled_history",
+            **snapshot,
+            "structural_score": structural,
+            "tactical_modifier": tactical,
+            "adjusted_cot_score": adjusted,
+            "signal_price_date": prices.iloc[base_index]["date"].date().isoformat() if base_index is not None else None,
+            "signal_price": base_price,
+        }
+        for label, trading_days in (("1w", 5), ("4w", 20), ("13w", 65), ("26w", 130)):
+            target_index = base_index + trading_days if base_index is not None else None
+            if target_index is not None and target_index < len(prices) and base_price not in (None, 0):
+                target_price = float(prices.iloc[target_index]["price"])
+                row[f"forward_return_{label}"] = (target_price / base_price - 1.0) * 100.0
+            else:
+                row[f"forward_return_{label}"] = None
+        rows.append(row)
+    return rows
+
+
+def main() -> None:
+    config = load_config(ROOT / "config" / "cot_direction_model_v1.json")
+    history: list[dict[str, Any]] = []
+    for market in ("sp500", "nq"):
+        legacy, tff, prices = load_market_inputs(market)
+        history.extend(build_deterministic_history_for_market(market, legacy, tff, prices, config))
+    validation = build_validation_summary(history)
+    write_csv(HISTORY_OUT, history)
+    write_csv(VALIDATION_OUT, validation)
+    print(f"Wrote deterministic history: {HISTORY_OUT}")
+    print(f"Wrote validation summary: {VALIDATION_OUT}")
+
+
+if __name__ == "__main__":
+    main()
