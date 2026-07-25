@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate COT and price inputs before running the directional model."""
+"""Validate raw COT and cleaned price inputs before running the directional model."""
 
 from __future__ import annotations
 
@@ -35,6 +35,14 @@ TFF_REQUIRED = {
 }
 
 
+def read_raw_position_file(path: Path) -> pd.DataFrame:
+    frame = pd.read_csv(path)
+    frame.columns = [str(column).strip().lstrip("\ufeff") for column in frame.columns]
+    if "date" in frame.columns:
+        frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
+    return frame
+
+
 def ensure_columns(frame: pd.DataFrame, required: set[str], label: str, failures: list[str]) -> None:
     missing = sorted(required - set(frame.columns))
     if missing:
@@ -53,12 +61,14 @@ def validate_frame(
     ensure_columns(frame, required, label, failures)
     if len(frame) < minimum_rows:
         failures.append(f"{label}: only {len(frame)} rows; need at least {minimum_rows}")
-    if frame["date"].isna().any():
-        failures.append(f"{label}: contains invalid dates")
-    if frame["date"].duplicated().any():
-        failures.append(f"{label}: contains duplicate report dates")
-    if not frame["date"].is_monotonic_increasing:
-        failures.append(f"{label}: dates are not sorted")
+    if "date" in frame.columns:
+        if frame["date"].isna().any():
+            failures.append(f"{label}: contains invalid dates")
+        valid_dates = frame["date"].dropna()
+        if valid_dates.duplicated().any():
+            failures.append(f"{label}: contains duplicate report dates")
+        if not valid_dates.is_monotonic_increasing:
+            failures.append(f"{label}: dates are not sorted")
     if "contract" in frame.columns:
         contracts = sorted(str(value).strip() for value in frame["contract"].dropna().unique())
         if contracts != [expected_contract]:
@@ -99,6 +109,8 @@ def validate_market(market: str, config: dict[str, Any]) -> list[str]:
     meta = MARKETS[market]
     legacy_path = latest_file(meta["legacy_glob"])
     tff_path = latest_file(meta["tff_glob"])
+    legacy_raw = read_raw_position_file(legacy_path)
+    tff_raw = read_raw_position_file(tff_path)
     legacy = read_position_file(legacy_path)
     tff = read_position_file(tff_path)
     prices = read_prices(meta["price_path"], meta["price_col"])
@@ -106,16 +118,16 @@ def validate_market(market: str, config: dict[str, Any]) -> list[str]:
     expected = EXPECTED_CONTRACTS[market]
 
     validate_frame(
-        legacy,
-        label=f"{market} Legacy",
+        legacy_raw,
+        label=f"{market} Legacy raw",
         required=LEGACY_REQUIRED,
         expected_contract=expected,
         minimum_rows=minimum,
         failures=failures,
     )
     validate_frame(
-        tff,
-        label=f"{market} TFF",
+        tff_raw,
+        label=f"{market} TFF raw",
         required=TFF_REQUIRED,
         expected_contract=expected,
         minimum_rows=minimum,
