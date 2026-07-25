@@ -44,7 +44,7 @@ def write_status(status: str, message: str, refresh_ok: bool | None = None) -> N
 
 
 def run_model_tests() -> None:
-    """Run every directional test module so new tests cannot be silently omitted."""
+    """Run every test module so future tests cannot be silently omitted."""
     run("-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py", "-v")
 
 
@@ -61,7 +61,7 @@ def main() -> None:
     parser.add_argument("--open", action="store_true")
     args = parser.parse_args()
 
-    write_status("running", "Directional COT refresh is in progress.")
+    write_status("running", "Directional COT and macro-liquidity refresh is in progress.")
     refresh_ok: bool | None = None
     try:
         if not args.skip_public_refresh:
@@ -84,9 +84,9 @@ def main() -> None:
         run("validate_directional_inputs.py")
         run_model_tests()
 
-        # Expand macro-liquidity diagnosis from the refreshed dashboard. Network/source
-        # failures remain explicit source statuses and do not become neutral scores.
-        run("macro_liquidity_expansion.py")
+        # Build the source-backed macro control room from the refreshed base dashboard.
+        # OFR and Treasury failures remain explicit stale/unavailable statuses.
+        run("macro_liquidity_expansion_v12.py")
 
         # Build deterministic evidence before the live decision.
         run("rebuild_directional_history.py")
@@ -105,17 +105,18 @@ def main() -> None:
         # Add transparent week-over-week positioning changes without changing direction.
         run("weekly_position_change.py")
 
-        # Render the governed outputs, then add the macro-liquidity control room to
-        # both the standalone decision report and the advanced dashboard.
+        # Render the governed outputs, then add current-state, funding-capacity,
+        # daily fiscal cash-path, and source-health UX to both surfaces.
         run("inject_model_comparison_report_v11.py")
         run("inject_directional_dashboard_v11.py")
         run("inject_macro_liquidity_ux.py")
-        run("validate_directional_outputs_v11.py")
+        run("inject_fiscal_cash_ux.py")
+        run("validate_directional_outputs_v12.py")
     except Exception as exc:
         write_status("failed", str(exc), refresh_ok)
         raise
 
-    message = "Directional report and integrated macro dashboard rebuilt and validated successfully."
+    message = "Directional report and integrated macro-liquidity dashboard rebuilt and validated successfully."
     if refresh_ok is False:
         message += (
             " Public-data refresh failed, so cached inputs were used; release and source-freshness "
