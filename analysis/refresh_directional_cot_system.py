@@ -55,6 +55,7 @@ def run_model_tests() -> None:
         "tests.test_deterministic_history",
         "tests.test_macro_actionability_guard",
         "tests.test_directional_input_validation",
+        "tests.test_observed_release_price_alignment",
         "-v",
     )
 
@@ -87,6 +88,7 @@ def main() -> None:
         run_model_tests()
         run("build_directional_cot_system.py")
         run("rebuild_directional_history.py")
+        run("align_observed_release_price.py")
         run("price_execution_adapter.py")
         run("macro_actionability_guard.py")
         run("inject_directional_dashboard.py")
