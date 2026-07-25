@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Refresh data, validate the model, build outputs, and integrate the dashboard."""
+"""Refresh data, validate inputs/model, build outputs, and integrate the dashboard."""
 
 from __future__ import annotations
 
@@ -54,6 +54,7 @@ def run_model_tests() -> None:
         "tests.test_price_execution_adapter",
         "tests.test_deterministic_history",
         "tests.test_macro_actionability_guard",
+        "tests.test_directional_input_validation",
         "-v",
     )
 
@@ -82,6 +83,7 @@ def main() -> None:
             )
             if not refresh_ok:
                 print("WARNING: public-data refresh failed; continuing only with existing validated local outputs.", file=sys.stderr)
+        run("validate_directional_inputs.py")
         run_model_tests()
         run("build_directional_cot_system.py")
         run("rebuild_directional_history.py")
