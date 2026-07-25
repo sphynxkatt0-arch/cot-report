@@ -14,9 +14,14 @@ LATEST_JSON = OUT / "cot_direction_latest.json"
 HISTORY_CSV = OUT / "cot_direction_history.csv"
 VALIDATION_CSV = OUT / "cot_direction_validation_summary.csv"
 MACRO_JSON = OUT / "macro_direction_context.json"
+COMPARISON_ALIGNED_CSV = OUT / "directional_model_comparison_aligned.csv"
+COMPARISON_SUMMARY_CSV = OUT / "directional_model_comparison_summary.csv"
+COMPARISON_AGREEMENT_CSV = OUT / "directional_model_agreement.csv"
 DIRECTIONAL_HTML = ROOT / "directional_cot_report.html"
 DASHBOARD_HTML = ROOT / "interactive_cot_dashboard.html"
 ALLOWED_RELEASE_STATES = {"current", "awaiting_release", "delayed"}
+COMPARISON_MODELS = {"old_tff", "old_legacy", "new_structural", "new_structural_tactical"}
+HORIZONS = {"1w", "4w", "13w", "26w"}
 REQUIRED_DECISION_FIELDS = {
     "model_version",
     "market",
@@ -24,6 +29,7 @@ REQUIRED_DECISION_FIELDS = {
     "report_date",
     "release_status",
     "expected_report_date",
+    "release_date_source",
     "structural_bias",
     "structural_score",
     "tactical_modifier",
@@ -43,8 +49,15 @@ def load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def read_csv(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+    with path.open("r", newline="", encoding="utf-8-sig") as handle:
+        return list(csv.DictReader(handle))
+
+
 def same_sign(left: Any, right: Any) -> bool:
-    if left is None or right is None:
+    if left in {None, ""} or right in {None, ""}:
         return True
     a = float(left)
     b = float(right)
@@ -65,7 +78,7 @@ def validate_decisions(failures: list[str]) -> None:
     if markets != {"sp500", "nq"}:
         failures.append(f"unexpected latest decision markets: {sorted(markets)}")
     versions = {str(row.get("model_version")) for row in rows}
-    if len(versions) != 1 or "cot-direction-v1.1" not in versions:
+    if versions != {"cot-direction-v1.1"}:
         failures.append(f"unexpected model versions: {sorted(versions)}")
 
     for row in rows:
@@ -87,10 +100,16 @@ def validate_decisions(failures: list[str]) -> None:
         if status == "delayed":
             if row.get("new_signal_available") is not False:
                 failures.append(f"{market}: delayed report marked as new signal")
-            if "Delayed" not in str(row.get("final_action")):
-                failures.append(f"{market}: delayed report does not preserve prior signal")
+            action = str(row.get("final_action"))
+            if "Delayed" not in action and "Delayed Release Price" not in action:
+                failures.append(f"{market}: delayed report does not preserve/block signal correctly")
         if status == "awaiting_release" and row.get("new_signal_available") is not False:
             failures.append(f"{market}: awaiting report marked as new signal")
+        if row.get("release_date_source") == "first_observed_delayed":
+            target = str(row.get("effective_signal_target_date") or "")
+            signal = str(row.get("signal_price_date") or "")
+            if signal and target and signal < target:
+                failures.append(f"{market}: delayed signal price predates effective observed target")
         if not bool(row.get("macro_reliable_for_action")):
             if status == "current" and str(row.get("final_action")) != "Wait — Macro Data Incomplete":
                 failures.append(f"{market}: unreliable macro data did not block action")
@@ -99,13 +118,9 @@ def validate_decisions(failures: list[str]) -> None:
 
 
 def validate_history(failures: list[str]) -> None:
-    if not HISTORY_CSV.exists():
-        failures.append(f"missing {HISTORY_CSV}")
-        return
-    with HISTORY_CSV.open("r", newline="", encoding="utf-8-sig") as handle:
-        rows = list(csv.DictReader(handle))
+    rows = read_csv(HISTORY_CSV)
     if not rows:
-        failures.append("directional history is empty")
+        failures.append(f"missing or empty {HISTORY_CSV}")
         return
     markets = {row.get("market") for row in rows}
     if markets != {"sp500", "nq"}:
@@ -119,21 +134,56 @@ def validate_history(failures: list[str]) -> None:
         if signal and signal < release:
             failures.append(f"history row {index}: signal price predates release")
             break
-        if not same_sign(row.get("structural_score") or None, row.get("adjusted_cot_score") or None):
+        if not same_sign(row.get("structural_score"), row.get("adjusted_cot_score")):
             failures.append(f"history row {index}: tactical sign reversal")
             break
 
 
 def validate_summary(failures: list[str]) -> None:
-    if not VALIDATION_CSV.exists():
-        failures.append(f"missing {VALIDATION_CSV}")
-        return
-    with VALIDATION_CSV.open("r", newline="", encoding="utf-8-sig") as handle:
-        rows = list(csv.DictReader(handle))
+    rows = read_csv(VALIDATION_CSV)
     combinations = {(row.get("market"), row.get("horizon")) for row in rows}
-    expected = {(market, horizon) for market in ("sp500", "nq") for horizon in ("1w", "4w", "13w", "26w")}
+    expected = {(market, horizon) for market in ("sp500", "nq") for horizon in HORIZONS}
     if combinations != expected:
         failures.append(f"validation summary combinations incomplete: {sorted(combinations)}")
+
+
+def validate_model_comparison(failures: list[str]) -> None:
+    aligned = read_csv(COMPARISON_ALIGNED_CSV)
+    if not aligned:
+        failures.append(f"missing or empty {COMPARISON_ALIGNED_CSV}")
+    else:
+        markets = {row.get("market") for row in aligned}
+        if markets != {"sp500", "nq"}:
+            failures.append(f"comparison aligned markets incomplete: {sorted(markets)}")
+        required = {"old_tff_score", "old_legacy_score", "structural_score", "adjusted_cot_score"}
+        missing_columns = sorted(required - set(aligned[0]))
+        if missing_columns:
+            failures.append(f"comparison aligned file missing columns {missing_columns}")
+
+    summary = read_csv(COMPARISON_SUMMARY_CSV)
+    combinations = {
+        (row.get("market"), row.get("horizon"), row.get("model"))
+        for row in summary
+    }
+    expected = {
+        (market, horizon, model)
+        for market in ("sp500", "nq")
+        for horizon in HORIZONS
+        for model in COMPARISON_MODELS
+    }
+    if combinations != expected:
+        failures.append(
+            f"model comparison summary incomplete: got {len(combinations)} of {len(expected)} combinations"
+        )
+    for row in summary:
+        if row.get("status") != "exploratory_release_aligned":
+            failures.append("model comparison row is not labelled exploratory_release_aligned")
+            break
+
+    agreement = read_csv(COMPARISON_AGREEMENT_CSV)
+    expected_pairs = len(COMPARISON_MODELS) * (len(COMPARISON_MODELS) - 1) // 2 * 2
+    if len(agreement) != expected_pairs:
+        failures.append(f"model agreement expected {expected_pairs} rows, found {len(agreement)}")
 
 
 def validate_macro(failures: list[str]) -> None:
@@ -162,6 +212,10 @@ def validate_html(failures: list[str]) -> None:
             failures.append("standalone directional report title missing")
         if "Exploratory model validation" not in source:
             failures.append("standalone validation section missing")
+        if source.count("<!-- MODEL_COMPARISON_START -->") != 1:
+            failures.append("model comparison report injection missing or duplicated")
+        if "id=\"modelComparisonPanel\"" not in source:
+            failures.append("model comparison panel ID missing")
     if not DASHBOARD_HTML.exists():
         failures.append(f"missing {DASHBOARD_HTML}")
     else:
@@ -179,6 +233,7 @@ def main() -> None:
     validate_decisions(failures)
     validate_history(failures)
     validate_summary(failures)
+    validate_model_comparison(failures)
     validate_macro(failures)
     validate_html(failures)
     if failures:
