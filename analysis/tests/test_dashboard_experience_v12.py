@@ -48,6 +48,7 @@ class DashboardExperienceV12Tests(unittest.TestCase):
         self.assertIn("What to do, what must confirm", block)
         self.assertIn('href="#macroLiquidityControlRoom"', block)
         self.assertIn('href="#fiscalCashPath"', block)
+        self.assertIn('href="#auctionAbsorption"', block)
         self.assertIn("It does not calculate a new direction", block)
         self.assertIn("Show research", block)
         self.assertIn("xp-research-hidden", block)
