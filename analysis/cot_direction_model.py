@@ -95,7 +95,8 @@ def tactical_modifier(
         if value is None:
             return 0.0
         normalized = clamp(float(value), -1.0, 1.0)
-        support = -normalized if invert else structural_sign * normalized
+        directional_signal = -normalized if invert else normalized
+        support = structural_sign * directional_signal
         contribution = float(weight) * support
         components.append({
             "label": label,
