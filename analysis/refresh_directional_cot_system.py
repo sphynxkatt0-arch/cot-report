@@ -97,7 +97,7 @@ def main() -> None:
         run("macro_actionability_guard.py")
         run("inject_model_comparison_report_v11.py")
         run("inject_directional_dashboard.py")
-        run("validate_directional_outputs.py")
+        run("validate_directional_outputs_v11.py")
     except Exception as exc:
         write_status("failed", str(exc), refresh_ok)
         raise
