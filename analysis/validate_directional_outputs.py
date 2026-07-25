@@ -21,6 +21,7 @@ DIRECTIONAL_HTML = ROOT / "directional_cot_report.html"
 DASHBOARD_HTML = ROOT / "interactive_cot_dashboard.html"
 ALLOWED_RELEASE_STATES = {"current", "awaiting_release", "delayed"}
 COMPARISON_MODELS = {"old_tff", "old_legacy", "new_structural", "new_structural_tactical"}
+NEW_MODELS = {"new_structural", "new_structural_tactical"}
 HORIZONS = {"1w", "4w", "13w", "26w"}
 REQUIRED_DECISION_FIELDS = {
     "model_version",
@@ -56,11 +57,21 @@ def read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
+def finite_number(value: Any) -> float | None:
+    if value in {None, ""}:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number == number else None
+
+
 def same_sign(left: Any, right: Any) -> bool:
-    if left in {None, ""} or right in {None, ""}:
+    a = finite_number(left)
+    b = finite_number(right)
+    if a is None or b is None:
         return True
-    a = float(left)
-    b = float(right)
     if abs(a) < 1e-12 or abs(b) < 1e-12:
         return True
     return (a > 0) == (b > 0)
@@ -91,10 +102,10 @@ def validate_decisions(failures: list[str]) -> None:
             failures.append(f"{market}: invalid release status {status}")
         if not same_sign(row.get("structural_score"), row.get("adjusted_cot_score")):
             failures.append(f"{market}: tactical layer reversed structural sign")
-        exposure = float(row.get("exposure_multiplier") or 0.0)
+        exposure = finite_number(row.get("exposure_multiplier")) or 0.0
         if exposure < 0 or exposure > 1.25:
             failures.append(f"{market}: exposure multiplier out of range {exposure}")
-        confidence = float(row.get("confidence_score") or 0.0)
+        confidence = finite_number(row.get("confidence_score")) or 0.0
         if confidence < 0 or confidence > 1:
             failures.append(f"{market}: confidence out of range {confidence}")
         if status == "delayed":
@@ -125,6 +136,14 @@ def validate_history(failures: list[str]) -> None:
     markets = {row.get("market") for row in rows}
     if markets != {"sp500", "nq"}:
         failures.append(f"history markets incomplete: {sorted(markets)}")
+    required_path_columns = {
+        f"forward_{kind}_path_return_{horizon}"
+        for horizon in HORIZONS
+        for kind in ("worst", "best")
+    }
+    missing_path = sorted(required_path_columns - set(rows[0]))
+    if missing_path:
+        failures.append(f"history missing path columns {missing_path}")
     for index, row in enumerate(rows):
         if row.get("release_date_source") != "scheduled_history":
             failures.append(f"history row {index}: non-deterministic release source")
@@ -155,7 +174,17 @@ def validate_model_comparison(failures: list[str]) -> None:
         markets = {row.get("market") for row in aligned}
         if markets != {"sp500", "nq"}:
             failures.append(f"comparison aligned markets incomplete: {sorted(markets)}")
-        required = {"old_tff_score", "old_legacy_score", "structural_score", "adjusted_cot_score"}
+        required = {
+            "old_tff_score",
+            "old_legacy_score",
+            "structural_score",
+            "adjusted_cot_score",
+            *{
+                f"forward_{kind}_path_return_{horizon}"
+                for horizon in HORIZONS
+                for kind in ("worst", "best")
+            },
+        }
         missing_columns = sorted(required - set(aligned[0]))
         if missing_columns:
             failures.append(f"comparison aligned file missing columns {missing_columns}")
@@ -175,10 +204,44 @@ def validate_model_comparison(failures: list[str]) -> None:
         failures.append(
             f"model comparison summary incomplete: got {len(combinations)} of {len(expected)} combinations"
         )
+    required_fields = {
+        "score_hac_p",
+        "edge_hac_p",
+        "drift_adjusted_accuracy_pct",
+        "subperiod_sign_agreement_pct",
+        "directional_n",
+        "avg_directional_return",
+        "avg_adverse_move",
+        "worst_adverse_move",
+        "path_utility",
+    }
     for row in summary:
-        if row.get("status") != "exploratory_release_aligned":
-            failures.append("model comparison row is not labelled exploratory_release_aligned")
-            break
+        label = f"{row.get('market')} {row.get('horizon')} {row.get('model')}"
+        if row.get("status") != "exploratory_release_aligned_hac":
+            failures.append(f"{label}: invalid comparison status")
+            continue
+        missing_fields = sorted(required_fields - set(row))
+        if missing_fields:
+            failures.append(f"{label}: missing comparison fields {missing_fields}")
+            continue
+        observations = finite_number(row.get("observations")) or 0
+        if observations < 20:
+            failures.append(f"{label}: insufficient comparison observations {observations}")
+        if row.get("model") in NEW_MODELS:
+            if observations < 100:
+                failures.append(f"{label}: new model has fewer than 100 observations")
+            if finite_number(row.get("score_hac_p")) is None:
+                failures.append(f"{label}: missing score HAC p-value")
+            if finite_number(row.get("edge_hac_p")) is None:
+                failures.append(f"{label}: missing edge HAC p-value")
+            if (finite_number(row.get("subperiod_sign_agreement_pct")) is None
+                    or (finite_number(row.get("stability_subperiods")) or 0) != 3):
+                failures.append(f"{label}: incomplete chronological stability")
+            if (finite_number(row.get("drift_adjusted_n")) or 0) < 20:
+                failures.append(f"{label}: insufficient drift-adjusted sample")
+            for field in ("avg_directional_return", "avg_adverse_move", "worst_adverse_move", "path_utility"):
+                if finite_number(row.get(field)) is None:
+                    failures.append(f"{label}: missing {field}")
 
     agreement = read_csv(COMPARISON_AGREEMENT_CSV)
     expected_pairs = len(COMPARISON_MODELS) * (len(COMPARISON_MODELS) - 1) // 2 * 2
@@ -216,6 +279,9 @@ def validate_html(failures: list[str]) -> None:
             failures.append("model comparison report injection missing or duplicated")
         if "id=\"modelComparisonPanel\"" not in source:
             failures.append("model comparison panel ID missing")
+        for text in ("HAC p", "Path utility", "Drift-adjusted", "Directional agreement"):
+            if text not in source:
+                failures.append(f"model comparison report missing {text}")
     if not DASHBOARD_HTML.exists():
         failures.append(f"missing {DASHBOARD_HTML}")
     else:
