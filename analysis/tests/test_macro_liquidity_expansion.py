@@ -30,6 +30,16 @@ class MacroLiquidityExpansionTests(unittest.TestCase):
         self.assertGreater(model.candidate_score(good, spec), model.candidate_score(bad, spec))
         self.assertLess(model.candidate_score(other, spec), -1000)
 
+    def test_repo_source_config_is_overnight_open_not_30_day_term(self):
+        config = model.load_config(ROOT / "config" / "macro_liquidity_sources_v1.json")
+        repo_rates = [item for item in config["indicators"] if item["key"].endswith("_rate")]
+        self.assertEqual(len(repo_rates), 3)
+        for item in repo_rates:
+            mnemonics = " ".join(item.get("preferred_mnemonics") or [])
+            self.assertIn("_OO-", mnemonics)
+            self.assertNotIn("_G30-", mnemonics)
+            self.assertIn("overnight", item["label"].lower())
+
     def test_repo_pillar_detects_dispersion_without_direction_vote(self):
         rows = {
             "repo_dvp_rate": model.IndicatorResult("repo_dvp_rate", "DVP", "repo", "OFR", "%", "fresh", latest_value=4.10, change_short=0.02),
