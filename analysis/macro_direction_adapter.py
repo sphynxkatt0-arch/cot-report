@@ -20,6 +20,7 @@ from build_directional_cot_report import extract_js_object
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT_DASHBOARD = ROOT / "interactive_cot_dashboard.html"
+MINIMUM_RELIABLE_AVAILABILITY = 0.60
 
 PLUMBING_FACTORS = {
     "score_net_liquidity": 26.0,
@@ -36,8 +37,6 @@ TRANSMISSION_FACTORS = {
 SUPPLY_FACTORS = {"score_treasury_supply": 10.0}
 ALL_FACTOR_WEIGHTS = {**PLUMBING_FACTORS, **TRANSMISSION_FACTORS, **SUPPLY_FACTORS}
 
-# Score factor -> metadata dates used to establish whether the underlying public
-# inputs are fresh enough to influence the decision layer.
 FACTOR_SOURCE_DATES = {
     "score_net_liquidity": (
         ("liquidity_latest", "fed_balance_sheet", 12),
@@ -54,7 +53,6 @@ FACTOR_SOURCE_DATES = {
     "score_credit": (("factor_latest", "hy_oas", 5),),
     "score_dollar": (("factor_latest", "dollar_index", 5),),
     "score_vix": (("factor_latest", "fred_vix", 5),),
-    # The Treasury supply calendar is regenerated with the dashboard itself.
     "score_treasury_supply": (("generated_at_utc", "", 2),),
 }
 
@@ -68,8 +66,10 @@ class MacroDirectionContext:
     availability_ratio: float
     available_weight: float
     total_weight: float
+    reliable_for_action: bool
     regime_label: str
     hard_override: bool
+    hard_override_suppressed_by_freshness: bool
     severe_alert_count: int
     severe_alerts: list[str]
     stale_factors: list[str]
@@ -169,8 +169,10 @@ def unavailable_context(source: str) -> MacroDirectionContext:
         availability_ratio=0.0,
         available_weight=0.0,
         total_weight=sum(ALL_FACTOR_WEIGHTS.values()),
+        reliable_for_action=False,
         regime_label="Unavailable",
         hard_override=False,
+        hard_override_suppressed_by_freshness=False,
         severe_alert_count=0,
         severe_alerts=[],
         stale_factors=[],
@@ -233,6 +235,8 @@ def load_macro_direction_context(
     available_weight = plumbing_weight + transmission_weight + supply_weight
     total_weight = sum(ALL_FACTOR_WEIGHTS.values())
     availability = available_weight / total_weight if total_weight else 0.0
+    reliable = availability >= MINIMUM_RELIABLE_AVAILABILITY
+    raw_override = len(severe) >= 2
 
     return MacroDirectionContext(
         macro_regime_score=round(macro_score, 2) if macro_score is not None else None,
@@ -242,8 +246,10 @@ def load_macro_direction_context(
         availability_ratio=round(availability, 4),
         available_weight=round(available_weight, 2),
         total_weight=round(total_weight, 2),
+        reliable_for_action=reliable,
         regime_label=regime_label(macro_score),
-        hard_override=len(severe) >= 2,
+        hard_override=raw_override and reliable,
+        hard_override_suppressed_by_freshness=raw_override and not reliable,
         severe_alert_count=len(severe),
         severe_alerts=severe,
         stale_factors=stale_factors,
