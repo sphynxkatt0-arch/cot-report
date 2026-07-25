@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -9,6 +11,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from build_directional_cot_report import select_latest_file  # noqa: E402
 from validate_directional_inputs import (  # noqa: E402
     LEGACY_REQUIRED,
     TFF_REQUIRED,
@@ -95,6 +98,16 @@ class DirectionalInputValidationTests(unittest.TestCase):
         failures: list[str] = []
         validate_price_frame(frame, label="nq price", minimum_rows=260, failures=failures)
         self.assertTrue(any("non-positive" in failure for failure in failures))
+
+    def test_latest_file_selection_uses_contained_date_not_mtime(self):
+        with tempfile.TemporaryDirectory() as directory:
+            older = Path(directory) / "z_newer_mtime.csv"
+            newer = Path(directory) / "a_older_mtime.csv"
+            pd.DataFrame({"date": ["2026-07-14"], "value": [1]}).to_csv(older, index=False)
+            pd.DataFrame({"date": ["2026-07-21"], "value": [1]}).to_csv(newer, index=False)
+            os.utime(older, (2_000_000_000, 2_000_000_000))
+            os.utime(newer, (1_000_000_000, 1_000_000_000))
+            self.assertEqual(select_latest_file([older, newer]), newer)
 
 
 if __name__ == "__main__":
