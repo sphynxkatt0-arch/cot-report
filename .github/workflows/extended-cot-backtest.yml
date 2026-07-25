@@ -1,0 +1,50 @@
+name: Extended COT predictivity backtest
+
+on:
+  pull_request:
+    paths:
+      - "analysis/cot_extended_predictivity.py"
+      - "analysis/cot_exact_output/**"
+      - "analysis/cot_legacy_output/**"
+      - "data/SP500.csv"
+      - "data/NASDAQ100.csv"
+      - ".github/workflows/extended-cot-backtest.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install analysis dependencies
+        run: python -m pip install --upgrade pip numpy pandas
+
+      - name: Compile backtest
+        run: python -m py_compile analysis/cot_extended_predictivity.py
+
+      - name: Run extended COT backtest
+        run: >-
+          python analysis/cot_extended_predictivity.py
+          --min-history 104
+          --ridge-min-train 156
+          --ridge-alpha 8.0
+
+      - name: Upload complete result set
+        uses: actions/upload-artifact@v4
+        with:
+          name: cot-extended-predictivity-results
+          path: analysis/cot_extended_predictivity_output/
+          if-no-files-found: error
+          retention-days: 30
