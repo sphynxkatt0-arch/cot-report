@@ -1,35 +1,24 @@
 name: Extended COT predictivity backtest
 
 on:
-  pull_request:
-    paths:
-      - "analysis/cot_extended_predictivity.py"
-      - "analysis/cot_exact_output/**"
-      - "analysis/cot_legacy_output/**"
-      - "data/SP500.csv"
-      - "data/NASDAQ100.csv"
-      - ".github/workflows/extended-cot-backtest.yml"
   workflow_dispatch:
 
 permissions:
   contents: write
-  pull-requests: read
 
 jobs:
   backtest:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Clone pull-request branch
+      - name: Clone selected branch
         env:
           GH_TOKEN: ${{ github.token }}
-          HEAD_BRANCH: ${{ github.head_ref }}
           REF_BRANCH: ${{ github.ref_name }}
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
-          BRANCH="${HEAD_BRANCH:-$REF_BRANCH}"
-          git clone --depth 1 --branch "$BRANCH" \
+          git clone --depth 1 --branch "$REF_BRANCH" \
             "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.git" repo
 
       - name: Install analysis dependencies
@@ -48,14 +37,12 @@ jobs:
           --ridge-min-train 156
           --ridge-alpha 8.0
 
-      - name: Commit real-data results to pull-request branch
+      - name: Commit real-data results to selected branch
         working-directory: repo
         env:
-          HEAD_BRANCH: ${{ github.head_ref }}
           REF_BRANCH: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          BRANCH="${HEAD_BRANCH:-$REF_BRANCH}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add analysis/cot_extended_predictivity_output/
@@ -64,4 +51,4 @@ jobs:
             exit 0
           fi
           git commit -m "Add extended COT backtest results"
-          git push origin "HEAD:${BRANCH}"
+          git push origin "HEAD:${REF_BRANCH}"
