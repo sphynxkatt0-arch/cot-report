@@ -11,6 +11,19 @@ from macro_liquidity_extension_guard import apply_guard, evaluate_guard  # noqa:
 
 
 class MacroLiquidityExtensionGuardTests(unittest.TestCase):
+    SOURCE_KEYS = (
+        "repo_dvp_rate",
+        "repo_gcf_rate",
+        "repo_triparty_rate",
+        "repo_dvp_volume",
+        "dealer_treasury_positions",
+        "dealer_treasury_financing",
+        "dealer_treasury_fails",
+        "treasury_operating_cash",
+        "treasury_cash_flows",
+        "treasury_auction_absorption",
+    )
+
     def config(self) -> dict:
         return {
             "schema_version": 1,
@@ -39,7 +52,13 @@ class MacroLiquidityExtensionGuardTests(unittest.TestCase):
             "reasons": [],
         }
 
-    def macro(self, scores: dict[str, float | None], coverage: float = 0.8) -> dict:
+    def macro(
+        self,
+        scores: dict[str, float | None],
+        coverage: float = 0.8,
+        source_overrides: dict[str, str] | None = None,
+    ) -> dict:
+        overrides = source_overrides or {}
         return {
             "source_coverage_ratio": coverage,
             "pillars": {
@@ -50,6 +69,10 @@ class MacroLiquidityExtensionGuardTests(unittest.TestCase):
                 }
                 for key, value in scores.items()
             },
+            "sources": [
+                {"key": key, "status": overrides.get(key, "fresh")}
+                for key in self.SOURCE_KEYS
+            ],
         }
 
     def test_one_severe_pillar_is_not_enough(self):
@@ -89,6 +112,53 @@ class MacroLiquidityExtensionGuardTests(unittest.TestCase):
         self.assertEqual(guarded["structural_score"], decision["structural_score"])
         self.assertEqual(guarded["adjusted_cot_score"], decision["adjusted_cot_score"])
         self.assertEqual(guarded["pre_liquidity_plumbing_action"], "Long — Reduced Size")
+
+    def test_stale_auction_score_cannot_count_as_severe(self):
+        evaluation = evaluate_guard(
+            self.macro(
+                {
+                    "funding_microstructure": 50,
+                    "dealer_absorption": 50,
+                    "fiscal_cash_flow": 20,
+                    "auction_absorption": 10,
+                },
+                source_overrides={"treasury_auction_absorption": "stale"},
+            ),
+            self.config(),
+        )
+        self.assertEqual(evaluation["severe_pillars"], ["fiscal_cash_flow"])
+        auction = next(
+            item for item in evaluation["pillar_evaluations"]
+            if item["pillar"] == "auction_absorption"
+        )
+        self.assertFalse(auction["fresh"])
+        self.assertFalse(auction["available"])
+        self.assertFalse(evaluation["active"])
+
+    def test_incomplete_repo_sources_cannot_count_funding_pillar(self):
+        evaluation = evaluate_guard(
+            self.macro(
+                {
+                    "funding_microstructure": 10,
+                    "dealer_absorption": 50,
+                    "fiscal_cash_flow": 50,
+                    "auction_absorption": 50,
+                },
+                source_overrides={
+                    "repo_gcf_rate": "stale",
+                    "repo_triparty_rate": "unavailable",
+                    "repo_dvp_volume": "stale",
+                },
+            ),
+            self.config(),
+        )
+        funding = next(
+            item for item in evaluation["pillar_evaluations"]
+            if item["pillar"] == "funding_microstructure"
+        )
+        self.assertEqual(funding["fresh_source_count"], 1)
+        self.assertFalse(funding["available"])
+        self.assertEqual(evaluation["severe_pillars"], [])
 
     def test_low_source_coverage_cannot_activate_guard(self):
         guarded = apply_guard(
