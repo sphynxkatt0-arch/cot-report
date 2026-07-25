@@ -2,9 +2,9 @@
 """Transparent, release-aligned COT direction model for equity indices.
 
 Legacy Non-commercial positioning determines structural direction. TFF data may
-strengthen or weaken conviction but cannot reverse the structural sign. Asset
-Manager positioning and macro conditions modify position size. Price action
-controls execution.
+strengthen or weaken an already actionable structural signal but cannot create
+or reverse it. Asset Managers and macro conditions modify size. Price controls
+execution.
 """
 
 from __future__ import annotations
@@ -17,7 +17,6 @@ from typing import Any, Iterable
 
 import numpy as np
 import pandas as pd
-
 
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent / "config" / "cot_direction_model_v1.json"
 
@@ -34,8 +33,83 @@ def finite(value: Any) -> float | None:
     return number if np.isfinite(number) else None
 
 
+def validate_config(config: dict[str, Any]) -> None:
+    required = {"schema_version", "model_version", "minimum_history_weeks", "structural", "tactical", "asset_manager_size", "macro_size", "execution", "confidence"}
+    missing = sorted(required - set(config))
+    if missing:
+        raise ValueError(f"Direction model config missing sections: {missing}")
+    if int(config["minimum_history_weeks"]) < 26:
+        raise ValueError("minimum_history_weeks must be at least 26")
+
+    structural = config["structural"]
+    full_low = float(structural["full_strength_percentile_low"])
+    neutral_low = float(structural["neutral_percentile_low"])
+    neutral_high = float(structural["neutral_percentile_high"])
+    full_high = float(structural["full_strength_percentile_high"])
+    if not 0 <= full_low < neutral_low < neutral_high < full_high <= 100:
+        raise ValueError("Structural percentile thresholds must be strictly ordered inside 0..100")
+
+    tactical = config["tactical"]
+    minimum_structural = float(tactical["minimum_structural_magnitude"])
+    cap = float(tactical["modifier_cap"])
+    weights = [
+        float(tactical["other_reportable_trend13_weight"]),
+        float(tactical["nonreportable_trend13_weight"]),
+        float(tactical["noncommercial_flow4_alignment_weight"]),
+    ]
+    if not 0 <= minimum_structural <= 1:
+        raise ValueError("minimum_structural_magnitude must be inside 0..1")
+    if not 0 <= cap <= 1:
+        raise ValueError("modifier_cap must be inside 0..1")
+    if any(weight < 0 for weight in weights):
+        raise ValueError("Tactical weights cannot be negative")
+
+    am = config["asset_manager_size"]
+    if not 0 <= float(am["normal_max_percentile"]) <= float(am["warning_max_percentile"]) <= 100:
+        raise ValueError("Asset Manager percentile thresholds are invalid")
+    for key in ("warning_multiplier", "extreme_multiplier"):
+        if not 0 <= float(am[key]) <= 1.25:
+            raise ValueError(f"{key} must be inside 0..1.25")
+
+    macro = config["macro_size"]
+    thresholds = [
+        float(macro["strong_risk_on_min"]),
+        float(macro["supportive_min"]),
+        float(macro["neutral_min"]),
+        float(macro["defensive_min"]),
+    ]
+    if thresholds != sorted(thresholds, reverse=True):
+        raise ValueError("Macro regime thresholds must be descending")
+    for key in (
+        "strong_risk_on_multiplier",
+        "supportive_multiplier",
+        "neutral_multiplier",
+        "defensive_multiplier",
+        "risk_off_multiplier",
+    ):
+        if not 0 <= float(macro[key]) <= 1.25:
+            raise ValueError(f"{key} must be inside 0..1.25")
+
+    execution = config["execution"]
+    if float(execution["waiting_band_pct"]) < 0:
+        raise ValueError("waiting_band_pct cannot be negative")
+    for key in ("sp500_invalidation_pct", "nq_invalidation_pct"):
+        if float(execution[key]) <= 0:
+            raise ValueError(f"{key} must be positive")
+    for key in ("confirmed_multiplier", "waiting_multiplier", "contradicted_multiplier", "invalidated_multiplier"):
+        if not 0 <= float(execution[key]) <= 1.25:
+            raise ValueError(f"{key} must be inside 0..1.25")
+
+    confidence = config["confidence"]
+    for key in ("nq_structural_base", "sp500_structural_base", "minimum_actionable"):
+        if not 0 <= float(confidence[key]) <= 1:
+            raise ValueError(f"{key} must be inside 0..1")
+
+
 def load_config(path: Path | str = DEFAULT_CONFIG_PATH) -> dict[str, Any]:
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    config = json.loads(Path(path).read_text(encoding="utf-8"))
+    validate_config(config)
+    return config
 
 
 def scheduled_release_date(report_date: str | date | pd.Timestamp) -> date:
@@ -73,8 +147,8 @@ def structural_score_from_percentile(percentile: float | None, config: dict[str,
     if low_neutral <= p <= high_neutral:
         return 0.0
     if p < low_neutral:
-        return clamp((low_neutral - p) / max(low_neutral - full_low, 1.0), 0.0, 1.0)
-    return -clamp((p - high_neutral) / max(full_high - high_neutral, 1.0), 0.0, 1.0)
+        return clamp((low_neutral - p) / (low_neutral - full_low), 0.0, 1.0)
+    return -clamp((p - high_neutral) / (full_high - high_neutral), 0.0, 1.0)
 
 
 def tactical_modifier(
@@ -84,10 +158,13 @@ def tactical_modifier(
     noncommercial_flow4_rank: float | None,
     config: dict[str, Any],
 ) -> tuple[float, list[dict[str, Any]]]:
-    """Return a capped conviction modifier, never a standalone direction."""
-    if structural_score is None or abs(structural_score) < 1e-12:
+    """Return a capped conviction modifier for an already actionable structure."""
+    if structural_score is None:
         return 0.0, []
     cfg = config["tactical"]
+    minimum = float(cfg["minimum_structural_magnitude"])
+    if abs(structural_score) < minimum:
+        return 0.0, []
     structural_sign = 1.0 if structural_score > 0 else -1.0
     components: list[dict[str, Any]] = []
 
@@ -107,7 +184,6 @@ def tactical_modifier(
         return contribution
 
     raw = 0.0
-    # High OR and small-trader 13w accumulation has historically been a contrarian warning.
     raw += add(
         "Other Reportables 13w trend",
         other_reportable_trend13_rank,
@@ -124,10 +200,8 @@ def tactical_modifier(
         "Non-commercial 4w flow alignment",
         noncommercial_flow4_rank,
         float(cfg["noncommercial_flow4_alignment_weight"]),
-        invert=False,
     )
-    cap = float(cfg["modifier_cap"])
-    return clamp(raw, -cap, cap), components
+    return clamp(raw, -float(cfg["modifier_cap"]), float(cfg["modifier_cap"])), components
 
 
 def preserve_structural_sign(structural_score: float | None, modifier: float) -> float | None:
@@ -144,7 +218,7 @@ def asset_manager_multiplier(percentile: float | None, config: dict[str, Any]) -
     if percentile is None:
         return 1.0, "Unavailable"
     cfg = config["asset_manager_size"]
-    p = float(percentile)
+    p = clamp(float(percentile), 0.0, 100.0)
     if p <= float(cfg["normal_max_percentile"]):
         return 1.0, "Normal"
     if p <= float(cfg["warning_max_percentile"]):
@@ -156,7 +230,7 @@ def macro_multiplier(score: float | None, config: dict[str, Any]) -> tuple[float
     if score is None:
         return 1.0, "Unavailable"
     cfg = config["macro_size"]
-    s = float(score)
+    s = clamp(float(score), 0.0, 100.0)
     if s >= float(cfg["strong_risk_on_min"]):
         return float(cfg["strong_risk_on_multiplier"]), "Strong supportive"
     if s >= float(cfg["supportive_min"]):
@@ -177,9 +251,11 @@ def execution_state(
 ) -> tuple[str, float, float | None]:
     if structural_score is None or abs(structural_score) < 1e-12:
         return "No structural signal", 0.0, None
-    if signal_price is None or latest_price is None or signal_price == 0:
+    signal = finite(signal_price)
+    latest = finite(latest_price)
+    if signal is None or latest is None or signal <= 0 or latest <= 0:
         return "Unavailable", 0.0, None
-    change_pct = (float(latest_price) / float(signal_price) - 1.0) * 100.0
+    change_pct = (latest / signal - 1.0) * 100.0
     signed_change = change_pct if structural_score > 0 else -change_pct
     cfg = config["execution"]
     invalidation = float(cfg["nq_invalidation_pct"] if market == "nq" else cfg["sp500_invalidation_pct"])
@@ -334,23 +410,26 @@ def build_decision(
     adjusted = preserve_structural_sign(structural, tactical)
     am_mult, am_state = asset_manager_multiplier(asset_manager_percentile_value, cfg)
     macro_mult, macro_state = macro_multiplier(macro_score_value, cfg)
-    execution, execution_mult, price_change = execution_state(
-        market, adjusted, signal_price, latest_price, cfg
-    )
-    exposure = abs(float(adjusted or 0.0)) * am_mult * macro_mult * execution_mult
+    execution, execution_mult, price_change = execution_state(market, adjusted, signal_price, latest_price, cfg)
+    exposure = clamp(abs(float(adjusted or 0.0)) * am_mult * macro_mult * execution_mult, 0.0, 1.25)
     confidence = confidence_score(
         market,
         structural,
-        has_tff=asset_manager_percentile_value is not None or other_reportable_trend13_rank is not None,
+        has_tff=any(value is not None for value in (asset_manager_percentile_value, other_reportable_trend13_rank, nonreportable_trend13_rank)),
         has_macro=macro_score_value is not None,
-        has_price=signal_price is not None and latest_price is not None,
+        has_price=finite(signal_price) is not None and finite(latest_price) is not None,
         release_date_source=release_date_source,
         config=cfg,
     )
     action = final_action(adjusted, execution, exposure, confidence, macro_override, cfg)
+    tactical_reason = (
+        f"Tactical modifier {tactical:+.2f}"
+        if components
+        else "Tactical layer inactive because Legacy structure is neutral/weak or TFF inputs are unavailable"
+    )
     reasons = [
         f"Legacy Non-commercial percentile {noncommercial_percentile:.1f}%" if noncommercial_percentile is not None else "Legacy Non-commercial percentile unavailable",
-        f"Tactical modifier {tactical:+.2f}",
+        tactical_reason,
         f"Asset Manager crowding {am_state}; size x{am_mult:.2f}",
         f"Macro {macro_state}; size x{macro_mult:.2f}",
         f"Price execution {execution}",
