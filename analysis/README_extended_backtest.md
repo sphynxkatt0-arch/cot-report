@@ -1,15 +1,31 @@
 # Extended COT predictivity backtest
 
-Run locally from the repository root:
+## Run on Windows
+
+From the repository root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File analysis/run_extended_backtest.ps1
+```
+
+## Run with Python directly
 
 ```bash
 python -m pip install numpy pandas
 python analysis/cot_extended_predictivity.py
 ```
 
-The script writes its results to `analysis/cot_extended_predictivity_output/`.
+The script writes all reports and CSVs to:
 
-The GitHub Actions workflow `.github/workflows/extended-cot-backtest.yml` runs the same analysis for pull requests and can also be started manually. The workflow uploads the complete result directory as the `cot-extended-predictivity-results` artifact.
+```text
+analysis/cot_extended_predictivity_output/
+```
+
+## Run through GitHub Actions
+
+The workflow `.github/workflows/extended-cot-backtest.yml` is manual. Open the Actions tab, select **Extended COT predictivity backtest**, choose the branch to run, and start the workflow. When GitHub-hosted runner capacity is available, the workflow executes the same analysis and commits the generated result directory back to the selected branch.
+
+The workflow is intentionally manual because unavailable GitHub-hosted runner capacity can otherwise leave a permanently failing pull-request check. Three attempted runs on July 25, 2026 terminated before exposing ordinary workflow steps or logs; no statistical output was produced by those runner attempts.
 
 ## What is tested
 
