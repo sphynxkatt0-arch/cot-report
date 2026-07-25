@@ -15,6 +15,34 @@ DECISION_CSV = OUT_DIR / "cot_direction_latest.csv"
 MACRO_JSON = OUT_DIR / "macro_liquidity_expansion.json"
 CONFIG = ROOT / "config" / "macro_liquidity_guard_v1.json"
 
+PILLAR_SOURCE_RULES = {
+    "funding_microstructure": {
+        "keys": {
+            "repo_dvp_rate",
+            "repo_gcf_rate",
+            "repo_triparty_rate",
+            "repo_dvp_volume",
+        },
+        "minimum_fresh": 2,
+    },
+    "dealer_absorption": {
+        "keys": {
+            "dealer_treasury_positions",
+            "dealer_treasury_financing",
+            "dealer_treasury_fails",
+        },
+        "minimum_fresh": 2,
+    },
+    "fiscal_cash_flow": {
+        "keys": {"treasury_operating_cash", "treasury_cash_flows"},
+        "minimum_fresh": 2,
+    },
+    "auction_absorption": {
+        "keys": {"treasury_auction_absorption"},
+        "minimum_fresh": 1,
+    },
+}
+
 
 def finite(value: Any) -> float | None:
     try:
@@ -28,19 +56,59 @@ def load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def source_statuses(macro: dict[str, Any]) -> dict[str, str]:
+    output: dict[str, str] = {}
+    for source in macro.get("sources") or []:
+        if not isinstance(source, dict):
+            continue
+        key = str(source.get("key") or "")
+        if key:
+            output[key] = str(source.get("status") or "unavailable").lower()
+    return output
+
+
+def pillar_freshness(key: str, statuses: dict[str, str]) -> dict[str, Any]:
+    rule = PILLAR_SOURCE_RULES.get(key)
+    if not rule:
+        return {
+            "fresh": False,
+            "fresh_count": 0,
+            "required_count": 0,
+            "source_keys": [],
+            "source_statuses": {},
+        }
+    source_keys = sorted(rule["keys"])
+    selected = {source_key: statuses.get(source_key, "unavailable") for source_key in source_keys}
+    fresh_count = sum(status == "fresh" for status in selected.values())
+    required_count = int(rule["minimum_fresh"])
+    return {
+        "fresh": fresh_count >= required_count,
+        "fresh_count": fresh_count,
+        "required_count": required_count,
+        "source_keys": source_keys,
+        "source_statuses": selected,
+    }
+
+
 def evaluate_guard(macro: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
     coverage = finite(macro.get("source_coverage_ratio")) or 0.0
     minimum_coverage = float(config["minimum_source_coverage"])
     threshold = float(config["severe_score_threshold"])
     eligible = list(config["eligible_pillars"])
     pillars = macro.get("pillars") or {}
+    statuses = source_statuses(macro)
     evaluations: list[dict[str, Any]] = []
     severe: list[str] = []
     for key in eligible:
         pillar = pillars.get(key) or {}
         score = finite(pillar.get("score"))
         state = str(pillar.get("state") or "Unavailable")
-        available = score is not None and state.lower() != "unavailable"
+        freshness = pillar_freshness(key, statuses)
+        available = bool(
+            score is not None
+            and state.lower() != "unavailable"
+            and freshness["fresh"]
+        )
         is_severe = bool(available and score <= threshold)
         if is_severe:
             severe.append(key)
@@ -50,6 +118,10 @@ def evaluate_guard(macro: dict[str, Any], config: dict[str, Any]) -> dict[str, A
                 "score": score,
                 "state": state,
                 "available": available,
+                "fresh": freshness["fresh"],
+                "fresh_source_count": freshness["fresh_count"],
+                "required_fresh_source_count": freshness["required_count"],
+                "source_statuses": freshness["source_statuses"],
                 "severe": is_severe,
                 "reasons": pillar.get("reasons") or [],
             }
@@ -66,6 +138,7 @@ def evaluate_guard(macro: dict[str, Any], config: dict[str, Any]) -> dict[str, A
         "minimum_source_coverage": minimum_coverage,
         "severe_score_threshold": threshold,
         "minimum_severe_pillars": required,
+        "available_pillar_count": available_count,
         "severe_pillars": severe,
         "pillar_evaluations": evaluations,
     }
