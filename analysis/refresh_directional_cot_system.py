@@ -45,25 +45,15 @@ def write_status(status: str, message: str, refresh_ok: bool | None = None) -> N
 
 
 def run_model_tests() -> None:
+    """Run every directional test module so new tests cannot be silently omitted."""
     run(
         "-m",
         "unittest",
-        "tests.test_cot_direction_model",
-        "tests.test_release_and_macro",
-        "tests.test_release_tracker_pre_release",
-        "tests.test_directional_system",
-        "tests.test_price_execution_adapter",
-        "tests.test_deterministic_history",
-        "tests.test_macro_actionability_guard",
-        "tests.test_directional_input_validation",
-        "tests.test_observed_release_price_alignment",
-        "tests.test_historical_release_context",
-        "tests.test_model_comparison",
-        "tests.test_model_evidence_grading",
-        "tests.test_model_evidence_actionability_guard",
-        "tests.test_release_actionability_guard",
-        "tests.test_dashboard_v11_injection",
-        "tests.test_weekly_position_change",
+        "discover",
+        "-s",
+        "tests",
+        "-p",
+        "test_*.py",
         "-v",
     )
 
