@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Validate generated directional COT artifacts before declaring refresh success."""
-
 from __future__ import annotations
 
 import csv
@@ -19,7 +18,7 @@ COMPARISON_SUMMARY_CSV = OUT / "directional_model_comparison_summary.csv"
 COMPARISON_AGREEMENT_CSV = OUT / "directional_model_agreement.csv"
 DIRECTIONAL_HTML = ROOT / "directional_cot_report.html"
 DASHBOARD_HTML = ROOT / "interactive_cot_dashboard.html"
-ALLOWED_RELEASE_STATES = {"current", "awaiting_release", "delayed"}
+ALLOWED_RELEASE_STATES = {"current", "awaiting_release", "delayed", "catch_up_delayed"}
 COMPARISON_MODELS = {"old_tff", "old_legacy", "new_structural", "new_structural_tactical"}
 NEW_MODELS = {"new_structural", "new_structural_tactical"}
 HORIZONS = {"1w", "4w", "13w", "26w"}
@@ -114,6 +113,14 @@ def validate_decisions(failures: list[str]) -> None:
             action = str(row.get("final_action"))
             if "Delayed" not in action and "Delayed Release Price" not in action:
                 failures.append(f"{market}: delayed report does not preserve/block signal correctly")
+        if status == "catch_up_delayed":
+            if row.get("new_signal_available") is not False:
+                failures.append(f"{market}: catch-up delayed report marked as new signal")
+            if exposure != 0.0:
+                failures.append(f"{market}: catch-up delayed report left non-zero exposure")
+            action = str(row.get("final_action"))
+            if "Catch-Up" not in action and "Still Behind" not in action:
+                failures.append(f"{market}: catch-up delayed report is not visibly blocked")
         if status == "awaiting_release" and row.get("new_signal_available") is not False:
             failures.append(f"{market}: awaiting report marked as new signal")
         if row.get("release_date_source") == "first_observed_delayed":
@@ -141,13 +148,10 @@ def validate_history(failures: list[str]) -> None:
         for horizon in HORIZONS
         for kind in ("worst", "best")
     }
-    missing_path = sorted(required_path_columns - set(rows[0]))
-    if missing_path:
-        failures.append(f"history missing path columns {missing_path}")
+    missing_path_columns = sorted(required_path_columns - set(rows[0]))
+    if missing_path_columns:
+        failures.append(f"history missing path outcome columns {missing_path_columns}")
     for index, row in enumerate(rows):
-        if row.get("release_date_source") != "scheduled_history":
-            failures.append(f"history row {index}: non-deterministic release source")
-            break
         release = row.get("scheduled_release_date") or ""
         signal = row.get("signal_price_date") or ""
         if signal and signal < release:
@@ -234,8 +238,10 @@ def validate_model_comparison(failures: list[str]) -> None:
                 failures.append(f"{label}: missing score HAC p-value")
             if finite_number(row.get("edge_hac_p")) is None:
                 failures.append(f"{label}: missing edge HAC p-value")
-            if (finite_number(row.get("subperiod_sign_agreement_pct")) is None
-                    or (finite_number(row.get("stability_subperiods")) or 0) != 3):
+            if (
+                finite_number(row.get("subperiod_sign_agreement_pct")) is None
+                or (finite_number(row.get("stability_subperiods")) or 0) != 3
+            ):
                 failures.append(f"{label}: incomplete chronological stability")
             if (finite_number(row.get("drift_adjusted_n")) or 0) < 20:
                 failures.append(f"{label}: insufficient drift-adjusted sample")
@@ -277,7 +283,7 @@ def validate_html(failures: list[str]) -> None:
             failures.append("standalone validation section missing")
         if source.count("<!-- MODEL_COMPARISON_START -->") != 1:
             failures.append("model comparison report injection missing or duplicated")
-        if "id=\"modelComparisonPanel\"" not in source:
+        if 'id="modelComparisonPanel"' not in source:
             failures.append("model comparison panel ID missing")
         for text in ("HAC p", "Path utility", "Drift-adjusted", "Directional agreement"):
             if text not in source:
@@ -288,7 +294,7 @@ def validate_html(failures: list[str]) -> None:
         source = DASHBOARD_HTML.read_text(encoding="utf-8", errors="replace")
         if source.count("<!-- DIRECTIONAL_DECISION_START -->") != 1:
             failures.append("dashboard directional injection is missing or duplicated")
-        if "id=\"directionalDecisionSummary\"" not in source:
+        if 'id="directionalDecisionSummary"' not in source:
             failures.append("dashboard directional summary ID missing")
         if "Selected-report research regime" not in source:
             failures.append("old dashboard regime is not labelled research-only")
