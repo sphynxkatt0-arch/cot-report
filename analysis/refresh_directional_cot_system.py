@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Refresh data, validate inputs/model, build outputs, and integrate the dashboard."""
-
 from __future__ import annotations
 
 import argparse
@@ -46,16 +45,7 @@ def write_status(status: str, message: str, refresh_ok: bool | None = None) -> N
 
 def run_model_tests() -> None:
     """Run every directional test module so new tests cannot be silently omitted."""
-    run(
-        "-m",
-        "unittest",
-        "discover",
-        "-s",
-        "tests",
-        "-p",
-        "test_*.py",
-        "-v",
-    )
+    run("-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py", "-v")
 
 
 def main() -> None:
@@ -94,6 +84,10 @@ def main() -> None:
         run("validate_directional_inputs.py")
         run_model_tests()
 
+        # Expand macro-liquidity diagnosis from the refreshed dashboard. Network/source
+        # failures remain explicit source statuses and do not become neutral scores.
+        run("macro_liquidity_expansion.py")
+
         # Build deterministic evidence before the live decision.
         run("rebuild_directional_history.py")
         run("enrich_directional_history_context.py")
@@ -111,9 +105,11 @@ def main() -> None:
         # Add transparent week-over-week positioning changes without changing direction.
         run("weekly_position_change.py")
 
-        # Render the governed outputs and validate their contracts.
+        # Render the governed outputs, then add the macro-liquidity control room to
+        # both the standalone decision report and the advanced dashboard.
         run("inject_model_comparison_report_v11.py")
         run("inject_directional_dashboard_v11.py")
+        run("inject_macro_liquidity_ux.py")
         run("validate_directional_outputs_v11.py")
     except Exception as exc:
         write_status("failed", str(exc), refresh_ok)
