@@ -60,7 +60,7 @@ def existing_series(dest: Path, series_id: str) -> dict[str, str]:
 
 def write_price_series(dest: Path, series_id: str, symbol: str) -> None:
     encoded = urllib.parse.quote(symbol, safe="")
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{encoded}?range=10y&interval=1d"
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{encoded}?range=max&interval=1d"
     result = (fetch_url_json(url).get("chart", {}).get("result") or [None])[0]
     if not result:
         raise RuntimeError(f"Yahoo returned no data for {symbol}")
