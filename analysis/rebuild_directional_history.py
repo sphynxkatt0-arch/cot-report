@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""Rebuild canonical COT history using scheduled Friday release dates only.
-
-Live first-observed release metadata belongs in the latest decision. Historical
-rows remain deterministic and never inherit the local observation ledger.
-Forward outcomes include terminal returns and the best/worst path reached before
-each horizon so model comparison can account for adverse movement.
-"""
-
+"""Rebuild deterministic release-aligned COT history for every governed market."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -25,22 +18,14 @@ from build_directional_cot_system import (
     write_csv,
 )
 from cftc_release_tracker import scheduled_release_datetime
-from cot_direction_model import (
-    load_config,
-    preserve_structural_sign,
-    structural_score_from_percentile,
-    tactical_modifier,
-)
+from cot_direction_model import load_config, preserve_structural_sign, structural_score_from_percentile, tactical_modifier
+from cot_market_registry import DIRECTIONAL_MARKETS, MARKETS
 
 ROOT = Path(__file__).resolve().parent
 HORIZONS = (("1w", 5), ("4w", 20), ("13w", 65), ("26w", 130))
 
 
-def path_outcomes(
-    prices: pd.DataFrame,
-    base_index: int | None,
-    trading_days: int,
-) -> tuple[float | None, float | None, float | None]:
+def path_outcomes(prices: pd.DataFrame, base_index: int | None, trading_days: int) -> tuple[float | None, float | None, float | None]:
     if base_index is None:
         return None, None, None
     target_index = base_index + trading_days
@@ -49,30 +34,24 @@ def path_outcomes(
     base_price = float(prices.iloc[base_index]["price"])
     if base_price <= 0:
         return None, None, None
-    path = pd.to_numeric(
-        prices.iloc[base_index : target_index + 1]["price"],
-        errors="coerce",
-    ).dropna()
+    path = pd.to_numeric(prices.iloc[base_index : target_index + 1]["price"], errors="coerce").dropna()
     if path.empty:
         return None, None, None
     path_returns = (path / base_price - 1.0) * 100.0
-    terminal = float(path_returns.iloc[-1])
-    worst = float(path_returns.min())
-    best = float(path_returns.max())
-    return terminal, worst, best
+    return float(path_returns.iloc[-1]), float(path_returns.min()), float(path_returns.max())
 
 
 def build_deterministic_history_for_market(
     market: str,
     legacy: pd.DataFrame,
-    tff: pd.DataFrame,
+    secondary: pd.DataFrame,
     prices: pd.DataFrame,
     config: dict[str, Any],
 ) -> list[dict[str, Any]]:
     minimum = int(config["minimum_history_weeks"])
     rows: list[dict[str, Any]] = []
-    for report_ts in common_report_dates(legacy, tff):
-        snapshot = feature_snapshot(legacy, tff, report_ts, minimum)
+    for report_ts in common_report_dates(legacy, secondary):
+        snapshot = feature_snapshot(legacy, secondary, report_ts, minimum, market)
         structural = structural_score_from_percentile(snapshot["noncommercial_percentile"], config)
         tactical, _ = tactical_modifier(
             structural,
@@ -87,6 +66,7 @@ def build_deterministic_history_for_market(
         base_price = float(prices.iloc[base_index]["price"]) if base_index is not None else None
         row: dict[str, Any] = {
             "market": market,
+            "market_label": MARKETS[market]["label"],
             "model_version": str(config["model_version"]),
             "report_date": report_ts.date().isoformat(),
             "scheduled_release_date": release_date.date().isoformat(),
@@ -110,9 +90,9 @@ def build_deterministic_history_for_market(
 def main() -> None:
     config = load_config(ROOT / "config" / "cot_direction_model_v1.json")
     history: list[dict[str, Any]] = []
-    for market in ("sp500", "nq"):
-        legacy, tff, prices = load_market_inputs(market)
-        history.extend(build_deterministic_history_for_market(market, legacy, tff, prices, config))
+    for market in DIRECTIONAL_MARKETS:
+        legacy, secondary, prices = load_market_inputs(market)
+        history.extend(build_deterministic_history_for_market(market, legacy, secondary, prices, config))
     validation = build_validation_summary(history)
     write_csv(HISTORY_OUT, history)
     write_csv(VALIDATION_OUT, validation)
