@@ -6,7 +6,6 @@ This repository root is a Vercel-native COT dashboard.
 - `/api/cot` queries the official CFTC Public Reporting Environment.
 - `vercel.json` calls `/api/cot` every day at 20:35 UTC.
 - Responses are cached at the Vercel edge for 23 hours with one hour of stale-while-revalidate.
-- `/full-report` opens the existing research dashboard in `analysis/interactive_cot_dashboard.html`.
 
 ## Data
 
