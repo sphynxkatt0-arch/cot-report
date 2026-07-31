@@ -1,0 +1,34 @@
+name: Package COT Dashboard
+
+on:
+  pull_request:
+    paths:
+      - "analysis/interactive_cot_dashboard.html"
+      - ".github/cot-deploy-trigger"
+      - ".github/workflows/package-cot-dashboard.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Prepare Vercel artifact
+        shell: bash
+        run: |
+          test -s analysis/interactive_cot_dashboard.html
+          mkdir -p deploy
+          cp analysis/interactive_cot_dashboard.html deploy/index.html
+
+      - name: Upload dashboard artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cot-dashboard-vercel
+          path: deploy/index.html
+          if-no-files-found: error
+          retention-days: 1
