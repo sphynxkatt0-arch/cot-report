@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Daily-refreshed CFTC Commitments of Traders dashboard for S&P 500 and Nasdaq-100 consolidated futures." />
+  <title>COT Positioning Report</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">CFTC · FUTURES ONLY · CONSOLIDATED</p>
+        <h1>COT Positioning Report</h1>
+        <p class="lede">S&P 500 and Nasdaq-100 positioning through Legacy non-commercials, TFF participants, 3-year percentiles, and weekly changes.</p>
+      </div>
+      <div class="hero-status" aria-live="polite">
+        <span id="status-dot" class="status-dot loading"></span>
+        <div>
+          <strong id="status-label">Loading official data</strong>
+          <span id="status-detail">Connecting to the CFTC</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="summary-grid" aria-label="Report summary">
+      <article class="summary-card">
+        <span>Report date</span>
+        <strong id="report-date">—</strong>
+      </article>
+      <article class="summary-card">
+        <span>Last API fetch</span>
+        <strong id="fetched-at">—</strong>
+      </article>
+      <article class="summary-card">
+        <span>Refresh policy</span>
+        <strong>Daily · 20:35 UTC</strong>
+      </article>
+      <article class="summary-card">
+        <span>Official sources</span>
+        <strong>TFF + Legacy</strong>
+      </article>
+    </section>
+
+    <main id="markets" class="market-grid" aria-live="polite"></main>
+
+    <section class="methodology">
+      <div>
+        <p class="eyebrow">METHODOLOGY</p>
+        <h2>Exact consolidated contracts only</h2>
+      </div>
+      <p>The dashboard filters the official CFTC Public Reporting Environment to contract codes <code>13874+</code> and <code>20974+</code>. Net position equals long minus short. The 3-year percentile ranks the current net position against up to 156 weekly observations.</p>
+      <div class="source-links">
+        <a href="/full-report">Full research dashboard →</a>
+        <a href="https://publicreporting.cftc.gov/Commitments-of-Traders/TFF-Futures-Only/gpe5-46if" target="_blank" rel="noreferrer">TFF dataset ↗</a>
+        <a href="https://publicreporting.cftc.gov/Commitments-of-Traders/Legacy-Futures-Only/6dca-aqww" target="_blank" rel="noreferrer">Legacy dataset ↗</a>
+      </div>
+    </section>
+  </div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
