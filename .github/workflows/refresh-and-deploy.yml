@@ -79,7 +79,11 @@ jobs:
           fi
           echo "Dashboard size: $(du -h analysis/interactive_cot_dashboard.html | cut -f1)"
 
-      # ── 6. Deploy to gh-pages branch (Bypasses artifact storage limits) ──
+      # ── 6. Prepare index.html for GitHub Pages ───────────────────────────
+      - name: Prepare index.html
+        run: cp analysis/interactive_cot_dashboard.html analysis/index.html
+
+      # ── 7. Deploy to gh-pages branch (Bypasses artifact storage limits) ──
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:
