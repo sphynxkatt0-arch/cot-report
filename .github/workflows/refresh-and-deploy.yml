@@ -15,11 +15,9 @@ on:
   schedule:
     - cron: "35 19 * * 5"      # Every Friday at 19:35 UTC (21:35 Stockholm CEST)
 
-# ── Permissions required for GitHub Pages deployment ─────────────────────────
+# ── Permissions required for deployment ────────────────────────────────────
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 # ── Prevent overlapping deployments ──────────────────────────────────────────
 concurrency:
@@ -29,10 +27,6 @@ concurrency:
 jobs:
   refresh-and-deploy:
     runs-on: ubuntu-latest
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
 
     steps:
       # ── 1. Checkout with full history (needed for any git-log analysis) ──
@@ -85,15 +79,10 @@ jobs:
           fi
           echo "Dashboard size: $(du -h analysis/interactive_cot_dashboard.html | cut -f1)"
 
-      # ── 6. Deploy to GitHub Pages ────────────────────────────────────────
-      - name: Setup GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      # ── 6. Deploy to gh-pages branch (Bypasses artifact storage limits) ──
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: analysis/
-
-      - name: Deploy to GitHub Pages
-        id: deploy
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./analysis
+          force_orphan: true    # Overwrites history with a single commit to prevent repo bloat
