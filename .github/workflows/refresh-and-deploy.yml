@@ -11,7 +11,9 @@
 name: Refresh and Deploy
 
 on:
-  workflow_dispatch:           # Manual "Run workflow" button only
+  workflow_dispatch:           # Manual "Run workflow" button
+  schedule:
+    - cron: "35 19 * * 5"      # Every Friday at 19:35 UTC (21:35 Stockholm CEST)
 
 # ── Permissions required for GitHub Pages deployment ─────────────────────────
 permissions:
