@@ -62,7 +62,7 @@ jobs:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: |
           python analysis/serve_interactive_cot_dashboard.py \
-            --refresh-only --no-legacy
+            --refresh-only
 
       - name: Warn if refresh failed
         if: steps.refresh.outcome == 'failure'
@@ -90,3 +90,12 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./analysis
           force_orphan: true    # Overwrites history with a single commit to prevent repo bloat
+
+      # ── 8. Trigger GitHub Pages Rebuild ──────────────────────────────────
+      # Pushes made with the default GITHUB_TOKEN do not trigger the internal
+      # Pages build workflow for security reasons. We trigger it manually here.
+      - name: Trigger Pages rebuild
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api -X POST /repos/${{ github.repository }}/pages/builds
