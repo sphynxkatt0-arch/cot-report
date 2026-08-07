@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Build an interactive COT dashboard from the generated analysis CSVs.
 
@@ -66,6 +66,9 @@ YAHOO_INDEX_PRICE_SERIES = {
     "SP500": "^GSPC",
     "NASDAQ100": "^NDX",
     "VIXCLS": "^VIX",
+    "RUT": "^RUT",
+    "DJIA": "^DJI",
+    "GOLD": "GC=F",
 }
 TREASURY_XML_URL = "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml"
 TREASURY_XML_YEAR_LOOKBACK = 4
@@ -103,12 +106,18 @@ MARKET_LABELS = {
     "sp500": "S&P 500",
     "nq": "NASDAQ-100",
     "vix": "VIX Futures",
+    "rty": "Russell 2000",
+    "dow": "Dow Jones",
+    "gold": "Gold",
 }
 
 EXPECTED_CONTRACTS = {
     "sp500": "S&P 500 Consolidated - CHICAGO MERCANTILE EXCHANGE",
     "nq": "NASDAQ-100 Consolidated - CHICAGO MERCANTILE EXCHANGE",
     "vix": "VIX FUTURES - CBOE FUTURES EXCHANGE",
+    "rty": "RUSSELL E-MINI - CHICAGO MERCANTILE EXCHANGE",
+    "dow": "DJIA Consolidated - CHICAGO BOARD OF TRADE",
+    "gold": "GOLD - COMMODITY EXCHANGE INC.",
 }
 
 DATASET_LABELS = {
@@ -144,6 +153,9 @@ COLORS = {
     "sp500_price": "#991b1b",
     "nq_price": "#111827",
     "vix_price": "#7c3aed",
+    "rty_price": "#b45309",
+    "dow_price": "#1d4ed8",
+    "gold_price": "#d97706",
     "cnn_fear_greed": "#f59e0b",
     "cnn_vix": "#7c3aed",
     "fred_vix": "#0f766e",
@@ -196,6 +208,21 @@ CONTRACT_SPECS = {
         "unit": "$1,000 x VIX Index",
         "cftc_code": "1170E1",
     },
+    "rty": {
+        "multiplier": 50.0,
+        "unit": "Russell 2000 Index x $50",
+        "cftc_code": "239742",
+    },
+    "dow": {
+        "multiplier": 5.0,
+        "unit": "DJIA x $5",
+        "cftc_code": "12460+",
+    },
+    "gold": {
+        "multiplier": 100.0,
+        "unit": "100 troy oz",
+        "cftc_code": "088691",
+    },
 }
 
 STRUCTURAL_OFFSET_CATEGORIES = {
@@ -215,6 +242,9 @@ PRICE_SERIES = {
     "sp500": {"fred_id": "SP500", "label": "S&P 500"},
     "nq": {"fred_id": "NASDAQ100", "label": "NASDAQ-100"},
     "vix": {"fred_id": "VIXCLS", "label": "VIX"},
+    "rty": {"fred_id": "RUT", "label": "Russell 2000"},
+    "dow": {"fred_id": "DJIA", "label": "Dow Jones"},
+    "gold": {"fred_id": "GOLD", "label": "Gold (GC Futures)"},
 }
 
 FACTOR_SERIES = {
@@ -361,6 +391,9 @@ FRED_MIN_ROWS = {
     "DGS3MO": 500,
     "DGS30": 500,
     "BAMLC0A0CM": 500,
+    "RUT": 500,
+    "DJIA": 500,
+    "GOLD": 500,
 }
 
 MACRO_SERIES = {
@@ -828,7 +861,15 @@ def load_cot_data() -> dict[str, dict[str, dict[str, Any]]]:
     payload: dict[str, dict[str, dict[str, Any]]] = {key: {} for key in DATASET_CONFIGS}
     for dataset_key in DATASET_CONFIGS:
         for market in MARKET_LABELS:
-            payload[dataset_key][market] = load_market_dataset(market, dataset_key)
+            try:
+                payload[dataset_key][market] = load_market_dataset(market, dataset_key)
+            except FileNotFoundError:
+                # Some markets don't have all datasets (e.g. Gold is not in TFF).
+                print(
+                    f"INFO: No {dataset_key} data found for {market} — skipping. "
+                    f"Run the relevant COT analysis script to generate it."
+                )
+                payload[dataset_key][market] = None  # type: ignore[assignment]
     return payload
 
 
@@ -1245,6 +1286,10 @@ def load_net_position_predictivity_comparison() -> dict[str, Any]:
 WEEKLY_DESK_TARGET_LABELS = {
     "sp500": "S&P 500",
     "nq": "NASDAQ-100",
+    "vix": "VIX Futures",
+    "rty": "Russell 2000",
+    "dow": "Dow Jones",
+    "gold": "Gold",
 }
 
 WEEKLY_DESK_RETAIL_KEYS = {
@@ -1254,7 +1299,7 @@ WEEKLY_DESK_RETAIL_KEYS = {
 
 WEEKLY_DESK_EXCLUDED_CATEGORIES = {
     "tff": set(STRUCTURAL_OFFSET_CATEGORIES["tff"]),
-    "legacy": {"total_reportable"},
+    "legacy": {"total_reportable", "commercial"},
 }
 
 
@@ -1573,7 +1618,11 @@ def weekly_desk_peer_confirmation(
     if current_direction == "Mixed":
         return {"support": 0, "total": 0, "label": "Mixed", "peers": []}
 
-    peer_markets = ["sp500", "nq", "vix"]
+    equity_markets = {"sp500", "nq", "rty", "dow"}
+    if market in equity_markets or market == "vix":
+        peer_markets = ["sp500", "nq", "rty", "dow", "vix"]
+    else:
+        peer_markets = [p for p in MARKET_LABELS if p != market]
     peers = []
     for peer_market in peer_markets:
         if peer_market == market:
@@ -1585,11 +1634,11 @@ def weekly_desk_peer_confirmation(
         peer_direction = direction_from_signed(peer_net)
         if peer_direction == "Mixed":
             continue
-        # VIX is an inverse risk leg for the SP/NQ desk read.
+        # VIX is an inverse risk leg for equity index desk read.
         confirms = peer_direction == current_direction
-        if peer_market == "vix" and market in {"sp500", "nq"}:
+        if peer_market == "vix" and market in equity_markets:
             confirms = peer_direction != current_direction
-        if market == "vix" and peer_market in {"sp500", "nq"}:
+        elif market == "vix" and peer_market in equity_markets:
             confirms = peer_direction != current_direction
         peers.append({
             "market": peer_market,
@@ -1618,6 +1667,8 @@ def build_weekly_desk_payload(data: dict[str, Any], prices: dict[str, Any]) -> d
     for dataset, market_payloads in data.items():
         retail_key = WEEKLY_DESK_RETAIL_KEYS.get(dataset)
         for market, payload in market_payloads.items():
+            if payload is None:
+                continue
             records_ = payload.get("records") or []
             if len(records_) < 2:
                 continue
@@ -1720,6 +1771,16 @@ def build_weekly_desk_payload(data: dict[str, Any], prices: dict[str, Any]) -> d
                     else 0.0
                 )
                 retail_score = 8.0 if retail_divergence else 0.0
+                is_retail = player_key == retail_key
+                if is_retail:
+                    # Non-reportable is contrarian: retail bullish → bearish, retail bearish → bullish
+                    # Use signed inverse rank (lower weight to avoid dominating the score)
+                    inverted_rank = -(robust_rank_score or 0.0)
+                    rank_contrib = inverted_rank * 30.0
+                    z26_contrib = -(z26 or 0.0) * 12.0
+                else:
+                    rank_contrib = rank_distance * 44.0
+                    z26_contrib = stat_extreme * 22.0
                 timing_score = bounded_score(
                     (gas or 0.0) * 0.42
                     + (12.0 if abs(weekly_change) > 0 else 0.0)
@@ -1728,8 +1789,8 @@ def build_weekly_desk_payload(data: dict[str, Any], prices: dict[str, Any]) -> d
                     + edge_score * 0.35
                 )
                 positioning_regime_score = bounded_score(
-                    rank_distance * 44.0
-                    + stat_extreme * 22.0
+                    rank_contrib
+                    + z26_contrib
                     + edge_score
                     + retail_score
                     + (8.0 if price_divergence else 0.0)
@@ -4577,7 +4638,7 @@ def build_metadata(
         "generated_at_utc": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "cot_latest": {
             dataset_key: {
-                market: latest_date(payload["records"])
+                market: latest_date(payload["records"]) if payload else None
                 for market, payload in markets.items()
             }
             for dataset_key, markets in data.items()

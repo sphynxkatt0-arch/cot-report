@@ -56,6 +56,9 @@ FRED_SERIES = {
     "BAMLH0A0HYM2": PROJECT / "data" / "BAMLH0A0HYM2.csv",
     "BAMLC0A0CM": PROJECT / "data" / "BAMLC0A0CM.csv",
     "DTWEXBGS": PROJECT / "data" / "DTWEXBGS.csv",
+    "RUT": PROJECT / "data" / "RUT.csv",
+    "DJIA": PROJECT / "data" / "DJIA.csv",
+    "GOLD": PROJECT / "data" / "GOLD.csv",
 }
 FEAR_GREED_ROOT = PROJECT / "fear-greed-data-main" / "fear-greed-data-main"
 FRED_FETCH_TIMEOUT = 20
@@ -64,6 +67,9 @@ YAHOO_INDEX_PRICE_SERIES = {
     "SP500": "^GSPC",
     "NASDAQ100": "^NDX",
     "VIXCLS": "^VIX",
+    "RUT": "^RUT",
+    "DJIA": "^DJI",
+    "GOLD": "GC=F",
 }
 TREASURY_XML_URL = "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml"
 TREASURY_XML_YEAR_LOOKBACK = 4
@@ -508,9 +514,9 @@ def refresh_data(start: int, end: int, include_legacy: bool = True) -> None:
             raise
 
     refresh_cnn_factors()
-    run_python("cot_overlay_exact.py", "--market", "both", "--start", str(start), "--end", str(end))
+    run_python("cot_overlay_exact.py", "--market", "all", "--start", str(start), "--end", str(end))
     if include_legacy:
-        run_python("cot_legacy_correlations.py", "--market", "both", "--start", str(start), "--end", str(end))
+        run_python("cot_legacy_correlations.py", "--market", "all", "--start", str(start), "--end", str(end))
     run_python("cot_cross_market_predictivity.py")
     run_python("cot_weekly_position_effects.py")
     run_python("cot_regime_score_backtest.py")

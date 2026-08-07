@@ -1,0 +1,97 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# COT Dashboard – Refresh data & deploy to GitHub Pages
+# ─────────────────────────────────────────────────────────────────────────────
+# Triggers:
+#   • Push to main          – rebuild & deploy on every merge
+#   • Manual dispatch       – one-click rebuild from the Actions tab
+#   • Cron (Sat 08:00 UTC)  – COT data is released Friday; Saturday morning
+#                             gives time for all upstream sources to update
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: Refresh and Deploy
+
+on:
+  workflow_dispatch:           # Manual "Run workflow" button only
+
+# ── Permissions required for GitHub Pages deployment ─────────────────────────
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# ── Prevent overlapping deployments ──────────────────────────────────────────
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: false    # Let the running deploy finish; don't cancel it
+
+jobs:
+  refresh-and-deploy:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      # ── 1. Checkout with full history (needed for any git-log analysis) ──
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ── 2. Python setup ──────────────────────────────────────────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: analysis/requirements.txt
+
+      # ── 3. Install dependencies ──────────────────────────────────────────
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r analysis/requirements.txt
+
+      # ── 4. Run the refresh pipeline ──────────────────────────────────────
+      #    --refresh-only : rebuild data + HTML, don't start the HTTP server
+      #    --no-legacy    : skip legacy COT correlations (speeds up CI)
+      #
+      #    If the refresh fails (API downtime, rate limits, etc.), we still
+      #    deploy whatever HTML already exists in the repo so the site stays up.
+      - name: Refresh dashboard data
+        id: refresh
+        continue-on-error: true
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: |
+          python analysis/serve_interactive_cot_dashboard.py \
+            --refresh-only --no-legacy
+
+      - name: Warn if refresh failed
+        if: steps.refresh.outcome == 'failure'
+        run: |
+          echo "::warning::Dashboard refresh failed – deploying existing HTML."
+          echo "Check the logs above for details (API rate limits, network, etc.)."
+
+      # ── 5. Verify the dashboard HTML exists before deploying ─────────────
+      - name: Verify dashboard output
+        run: |
+          if [ ! -f analysis/interactive_cot_dashboard.html ]; then
+            echo "::error::No dashboard HTML found – nothing to deploy."
+            exit 1
+          fi
+          echo "Dashboard size: $(du -h analysis/interactive_cot_dashboard.html | cut -f1)"
+
+      # ── 6. Deploy to GitHub Pages ────────────────────────────────────────
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: analysis/
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

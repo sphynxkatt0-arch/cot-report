@@ -2,17 +2,13 @@
   "nq": [
     {"source": "cot", "key": "noncommercial", "side": "low", "threshold": 10, "weight": 2.5, "reason": "Non-commercial short crowding", "role": "entry_signal"},
     {"source": "cot", "key": "noncommercial", "side": "high", "threshold": 90, "weight": -2.0, "reason": "Non-commercial long crowding", "role": "risk_filter"},
-    {"source": "cot", "key": "commercial", "side": "high", "threshold": 90, "weight": 1.5, "reason": "Commercial contrarian support", "role": "entry_signal"},
-    {"source": "cot", "key": "commercial", "side": "low", "threshold": 10, "weight": -1.5, "reason": "Commercial hedge pressure", "role": "risk_filter"},
-    {"source": "cot", "key": "nonreportable", "side": "low", "threshold": 10, "weight": 1.0, "reason": "Non-reportable reset", "role": "entry_signal"},
-    {"source": "cot", "key": "nonreportable", "side": "high", "threshold": 90, "weight": -2.0, "reason": "Non-reportable crowding", "role": "risk_filter"}
+    {"source": "cot", "key": "nonreportable", "side": "low", "threshold": 10, "weight": 0.75, "reason": "Non-reportable contrarian (retail short)", "role": "entry_signal"},
+    {"source": "cot", "key": "nonreportable", "side": "high", "threshold": 90, "weight": -1.0, "reason": "Non-reportable contrarian (retail long)", "role": "risk_filter"}
   ],
   "sp500": [
     {"source": "cot", "key": "noncommercial", "side": "low", "threshold": 10, "weight": 2.0, "reason": "Non-commercial short crowding", "role": "entry_signal"},
     {"source": "cot", "key": "noncommercial", "side": "high", "threshold": 90, "weight": -2.0, "reason": "Non-commercial long crowding", "role": "risk_filter"},
-    {"source": "cot", "key": "commercial", "side": "high", "threshold": 90, "weight": 1.5, "reason": "Commercial contrarian support", "role": "entry_signal"},
-    {"source": "cot", "key": "commercial", "side": "low", "threshold": 10, "weight": -1.5, "reason": "Commercial hedge pressure", "role": "risk_filter"},
-    {"source": "cot", "key": "nonreportable", "side": "low", "threshold": 10, "weight": 1.5, "reason": "Non-reportable reset", "role": "entry_signal"},
-    {"source": "cot", "key": "nonreportable", "side": "high", "threshold": 90, "weight": -1.5, "reason": "Non-reportable crowding", "role": "risk_filter"}
+    {"source": "cot", "key": "nonreportable", "side": "low", "threshold": 10, "weight": 1.0, "reason": "Non-reportable contrarian (retail short)", "role": "entry_signal"},
+    {"source": "cot", "key": "nonreportable", "side": "high", "threshold": 90, "weight": -1.0, "reason": "Non-reportable contrarian (retail long)", "role": "risk_filter"}
   ]
 }

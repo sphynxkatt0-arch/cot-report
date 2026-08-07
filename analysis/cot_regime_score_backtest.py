@@ -43,6 +43,18 @@ MARKETS = {
         "price_col": "NASDAQ100",
         "cot_glob": "nq_exact_consolidated_data_*.csv",
     },
+    "rty": {
+        "label": "Russell 2000",
+        "price_file": PROJECT / "data" / "RUT.csv",
+        "price_col": "RUT",
+        "cot_glob": "rty_exact_consolidated_data_*.csv",
+    },
+    "dow": {
+        "label": "Dow Jones",
+        "price_file": PROJECT / "data" / "DJIA.csv",
+        "price_col": "DJIA",
+        "cot_glob": "dow_exact_consolidated_data_*.csv",
+    },
 }
 HORIZONS = {
     "1d": 1,

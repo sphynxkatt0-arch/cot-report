@@ -1,19 +1,25 @@
-Scored 874 walk-forward COT observations.
-S&P 500: latest 2026-07-21 signal 2026-07-24 score -3.50 (Caution); observations 426
-NASDAQ-100: latest 2026-07-21 signal 2026-07-24 score +0.50 (Mixed); observations 448
+Scored 1460 walk-forward COT observations.
+S&P 500: latest 2026-08-04 signal 2026-08-07 score -1.50 (Mixed); observations 428
+NASDAQ-100: latest 2026-08-04 signal 2026-08-07 score +1.50 (Mixed); observations 450
+Russell 2000: latest 2026-08-04 signal 2026-08-07 score +0.00 (Mixed); observations 132
+Dow Jones: latest 2026-08-04 signal 2026-08-07 score +0.00 (Mixed); observations 450
 
 Regime bucket summary, 4w horizon:
 market  bucket  observations  avg_return_pct  hit_rate_pct  diff_vs_unconditional_pct  welch_t_stat_vs_rest
- sp500   Mixed           198        1.418485     71.212121                   0.310877              1.188287
- sp500 Caution           174        0.296584     64.942529                  -0.811025             -2.761037
- sp500 Risk-On            49        2.731380     71.428571                   1.623771              2.193119
-    nq   Mixed           333        1.672140     66.066066                   0.059924              0.380443
-    nq Risk-On            78        2.107166     65.384615                   0.494951              0.882534
-    nq Caution            32       -0.217814     56.250000                  -1.830029             -1.771307
+ sp500   Mixed           198        1.418485     71.212121                   0.309361              1.183056
+ sp500 Caution           177        0.313960     65.536723                  -0.795164             -2.753178
+ sp500 Risk-On            49        2.731380     71.428571                   1.622255              2.190673
+    nq   Mixed           336        1.635387     65.476190                   0.050457              0.323160
+    nq Risk-On            78        2.107166     65.384615                   0.522236              0.931240
+    nq Caution            32       -0.217814     56.250000                  -1.802744             -1.744672
+   rty   Mixed           128        1.540916     64.062500                   0.000000                   NaN
+   dow   Mixed           446        0.772753     64.798206                   0.000000                   NaN
 
 Score/return correlation summary, 4w horizon:
 market  observations  score_return_corr  score_return_hac_p_value  risk_on_minus_caution_avg_return_pct  risk_on_minus_caution_hac_p_value  drift_adjusted_accuracy_pct evidence_grade
- sp500           421           0.125231                  0.079246                              2.434796                           0.077622                    50.825083      Tentative
-    nq           443           0.066576                  0.231030                              2.324980                           0.164460                    59.126984        Unclear
+ sp500           424           0.123673                  0.080671                              2.417419                           0.078763                    50.980392      Tentative
+    nq           446           0.064802                  0.242849                              2.324980                           0.164460                    58.431373        Unclear
+   rty           128                NaN                       NaN                                   NaN                                NaN                          NaN   Insufficient
+   dow           446                NaN                       NaN                                   NaN                                NaN                          NaN   Insufficient
 
 Saved outputs to A:\work\trading\cot report\analysis\cot_regime_backtest_output

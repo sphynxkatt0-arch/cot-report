@@ -3374,8 +3374,13 @@
       });
     }
 
+    function activeRegimeMarkets() {
+      const keys = Object.keys(REGIME_BACKTEST.latest || {});
+      return keys.length ? keys : ["sp500", "nq"];
+    }
+
     function renderRegimeStatsTable() {
-      const rows = ["sp500", "nq"].flatMap(regimeStatsForMarket);
+      const rows = activeRegimeMarkets().flatMap(regimeStatsForMarket);
       return `
         <table class="regime-stats-table">
           <thead>
@@ -3392,7 +3397,7 @@
           <tbody>
             ${rows.map(row => `
               <tr>
-                <td>${MARKET_LABELS[row.market]} ${row.label}</td>
+                <td>${MARKET_LABELS[row.market] || row.market} ${row.label}</td>
                 <td>${row.count}</td>
                 <td class="${scoreClass(row.avg13)}">${formatSignedPct(row.avg13)}</td>
                 <td class="${scoreClass(row.avg26)}">${formatSignedPct(row.avg26)}</td>
@@ -3414,19 +3419,19 @@
         return;
       }
       const t = themeTokens();
-      const traces = ["sp500", "nq"].map(market => {
+      const traces = activeRegimeMarkets().map(market => {
         const history = regimeHistory(market);
         return {
           type: "scatter",
           mode: "lines",
           x: history.map(row => row.date),
           y: history.map(row => row.score),
-          name: `${MARKET_LABELS[market]} regime score`,
+          name: `${MARKET_LABELS[market] || market} regime score`,
           line: {
-            color: market === "sp500" ? t.sp500 : t.nq,
+            color: themedLineColor(`${market}_price`) || t.factor,
             width: 2
           },
-          hovertemplate: `<b>${MARKET_LABELS[market]}</b><br>%{x|%Y-%m-%d}<br>Score: %{y:.2f}<extra></extra>`
+          hovertemplate: `<b>${MARKET_LABELS[market] || market}</b><br>%{x|%Y-%m-%d}<br>Score: %{y:.2f}<extra></extra>`
         };
       });
       Plotly.react(el, traces, {
@@ -3456,7 +3461,7 @@
     }
 
     function renderRegimePanel() {
-      const cards = ["sp500", "nq"].map(market => {
+      const cards = activeRegimeMarkets().map(market => {
         const result = evaluateRegime(market);
         const active = market === state.market ? " active" : "";
         const rows = result.hits
