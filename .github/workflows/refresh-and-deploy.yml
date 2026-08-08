@@ -45,6 +45,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r analysis/requirements.txt
 
+      - name: Validate v2 source syntax
+        run: |
+          python -m py_compile analysis/build_worldclass_metals.py
+          node --check analysis/worldclass/app.js
+
       # The existing research pipeline remains the source of truth for TFF,
       # Legacy, price/factor histories and the unified macro-liquidity model.
       - name: Refresh index COT and macro data
@@ -63,7 +68,7 @@ jobs:
           echo "Check the logs above for CFTC/FRED/API availability."
 
       # Gold and Silver are physical commodities and belong in the CFTC
-      # Disaggregated report, not TFF.  This creates the dedicated v2 dataset.
+      # Disaggregated report, not TFF. This creates the dedicated v2 dataset.
       - name: Refresh Gold and Silver disaggregated COT
         id: metals
         continue-on-error: true
@@ -95,7 +100,7 @@ jobs:
             echo "::warning::No metals.json was generated in this run."
           fi
 
-      # Root GitHub Pages now opens the v2 interface.  The old generated
+      # Root GitHub Pages now opens the v2 interface. The old generated
       # interactive_cot_dashboard.html is still published as a data source and
       # a rollback/fallback page.
       - name: Prepare world-class index.html
