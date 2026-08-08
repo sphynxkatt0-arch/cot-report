@@ -22,6 +22,7 @@ import model_spec as model_cfg
 ROOT = Path(__file__).resolve().parent
 WORLDCLASS = ROOT / "worldclass"
 BASE = WORLDCLASS / "base.json"
+RUNTIME_MODEL = WORLDCLASS / "model-spec.json"
 METALS = WORLDCLASS / "metals.json"
 BACKTEST = WORLDCLASS / "backtest.json"
 REGIME = WORLDCLASS / "regime_backtest.json"
@@ -102,8 +103,8 @@ def validate_actor_taxonomy(dataset: str, market: str, payload: dict[str, Any]) 
         f"{dataset}/{market}: actor taxonomy mismatch; "
         f"missing={sorted(expected - actual)} extra={sorted(actual - expected)}"
     )
-    if market in METAL_MARKETS:
-        assert dataset == "disaggregated", f"{market}: metals must use Disaggregated actors, not {dataset}"
+    # Gold/Silver are required to have Disaggregated coverage, but valid Legacy
+    # history may coexist. Only the Disaggregated actor schema is metal-specific.
     if dataset == "disaggregated":
         assert market in METAL_MARKETS, f"{dataset}/{market}: Disaggregated production payload is reserved for metals"
 
@@ -134,7 +135,10 @@ def validate_records(dataset: str, market: str, payload: dict[str, Any]) -> None
             net_pct = finite_number(row.get(f"{key}_net_oi_pct")) if row.get(f"{key}_net_oi_pct") is not None else None
             short_pct = finite_number(row.get(f"{key}_short_oi_pct")) if row.get(f"{key}_short_oi_pct") is not None else None
 
-            for field_name, value in (("long", long), ("short", short), ("net", net), ("net_oi_pct", net_pct), ("short_oi_pct", short_pct)):
+            for field_name, value in (
+                ("long", long), ("short", short), ("net", net),
+                ("net_oi_pct", net_pct), ("short_oi_pct", short_pct),
+            ):
                 raw = row.get(f"{key}_{field_name}")
                 if raw is not None:
                     assert value is not None, f"{dataset}/{market}/{row_date}: non-finite {key}_{field_name}"
@@ -161,7 +165,9 @@ def validate_market_coverage(cot: dict[str, Any], base: dict[str, Any], metals: 
     for market in INDEX_MARKETS:
         assert any((cot.get(dataset) or {}).get(market) for dataset in ("tff", "legacy")), f"{market}: no TFF/Legacy COT payload"
     for market in METAL_MARKETS:
-        assert (cot.get("disaggregated") or {}).get(market), f"{market}: no Disaggregated COT payload"
+        payload = (cot.get("disaggregated") or {}).get(market)
+        assert payload, f"{market}: no Disaggregated COT payload"
+        validate_actor_taxonomy("disaggregated", market, payload)
     prices = dict(base.get("PRICE_DATA") or {})
     prices.update(metals.get("prices") or {})
     for market in MARKETS:
@@ -210,11 +216,15 @@ def validate_backtests(backtest: dict[str, Any], regime: dict[str, Any]) -> None
             assert all(key in families for key in ("cot", "macro", "combined")), f"{market}/{dataset}: model families missing"
 
 
-def validate_runtime_model_contract(base: dict[str, Any]) -> None:
-    runtime = base.get("MODEL_SPEC") or {}
-    assert runtime.get("model_version") == MODEL_VERSION, "runtime MODEL_SPEC model_version mismatch"
-    assert runtime.get("model_spec_hash") == MODEL_SPEC_HASH, "runtime MODEL_SPEC hash mismatch"
-    assert runtime.get("score_models") == MODEL_SPEC.get("score_models"), "runtime MODEL_SPEC score models diverge"
+def validate_runtime_model_contract(base: dict[str, Any], runtime_model: dict[str, Any]) -> None:
+    embedded = base.get("MODEL_SPEC") or {}
+    for name, runtime in (("embedded runtime MODEL_SPEC", embedded), ("standalone runtime model-spec.json", runtime_model)):
+        assert runtime.get("model_version") == MODEL_VERSION, f"{name}: model_version mismatch"
+        assert runtime.get("model_spec_hash") == MODEL_SPEC_HASH, f"{name}: model_spec_hash mismatch"
+        assert runtime.get("score_models") == MODEL_SPEC.get("score_models"), f"{name}: score models diverge"
+        assert runtime.get("actor_taxonomy") == MODEL_SPEC.get("actor_taxonomy"), f"{name}: actor taxonomy diverges"
+        assert runtime.get("horizons") == MODEL_SPEC.get("horizons"), f"{name}: horizons diverge"
+    assert embedded == runtime_model, "embedded and standalone runtime model contracts differ"
     bundle_meta = base.get("bundle_meta") or {}
     assert bundle_meta.get("model_version") == MODEL_VERSION, "bundle model_version mismatch"
     assert bundle_meta.get("model_spec_hash") == MODEL_SPEC_HASH, "bundle model_spec_hash mismatch"
@@ -315,13 +325,14 @@ def latest_report_by_market(cot: dict[str, Any]) -> dict[str, date | None]:
 
 def main() -> None:
     base = load(BASE)
+    runtime_model = load(RUNTIME_MODEL)
     metals = load(METALS, required=False)
     backtest = load(BACKTEST)
     regime = load(REGIME)
     plumbing = load(PLUMBING)
     cot = combined_cot(base, metals)
 
-    validate_runtime_model_contract(base)
+    validate_runtime_model_contract(base, runtime_model)
     validate_market_coverage(cot, base, metals)
     for dataset, markets in cot.items():
         if not isinstance(markets, dict):
