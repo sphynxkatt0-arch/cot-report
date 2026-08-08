@@ -17,6 +17,7 @@ from ledger import (
     FAMILIES,
     HORIZONS,
     LedgerError,
+    atomic_write_json,
     deterministic_signal_id,
     finite,
     forecast_relative_path,
@@ -27,7 +28,6 @@ from ledger import (
     validate_forecast,
     within_forecast_window,
     write_immutable_forecast,
-    atomic_write_json,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -52,16 +52,25 @@ def probability(hit_rate_pct: Any) -> float | None:
     return round(max(0.0, min(100.0, value)) / 100.0, 6)
 
 
-def build_horizon_contract(family_payload: dict[str, Any]) -> dict[str, Any]:
+def build_horizon_contract(
+    family_payload: dict[str, Any],
+    horizon_steps: dict[str, Any],
+) -> dict[str, Any]:
     source = family_payload.get("horizons") or {}
     result: dict[str, Any] = {}
     for horizon in HORIZONS:
         item = source.get(horizon) or {}
+        steps = int(horizon_steps.get(horizon) or 0)
+        if steps <= 0:
+            raise LedgerError(f"canonical model contract has invalid {horizon} trading-close horizon")
         result[horizon] = {
+            "trading_closes": steps,
             "expected_return_pct": finite(item.get("mean_return_pct")),
             "median_return_pct": finite(item.get("median_return_pct")),
             "probability_positive": probability(item.get("hit_rate_pct")),
-            "historical_downside_pct": finite(item.get("max_drawdown_pct")),
+            "historical_average_drawdown_pct": finite(item.get("avg_drawdown_pct")),
+            "historical_worst_drawdown_pct": finite(item.get("max_drawdown_pct")),
+            "historical_unconditional_return_pct": finite(item.get("baseline_return_pct")),
             "observations": int(item.get("observations") or 0),
             "confidence": str(item.get("confidence") or "Low"),
         }
@@ -89,6 +98,7 @@ def build_forecast(
     family_payload: dict[str, Any],
     model_version: str,
     model_spec_hash: str,
+    horizon_steps: dict[str, Any],
     input_manifest_hash: str,
     input_artifacts: dict[str, str],
     research_artifact_hash: str,
@@ -108,7 +118,7 @@ def build_forecast(
         model_version,
         model_spec_hash,
     )
-    horizons = build_horizon_contract(family_payload)
+    horizons = build_horizon_contract(family_payload, horizon_steps)
     h4 = horizons["4w"]
     forecast: dict[str, Any] = {
         "schema_version": 1,
@@ -140,7 +150,8 @@ def build_forecast(
         "probability_positive_4w": horizons["4w"]["probability_positive"],
         "probability_positive_13w": horizons["13w"]["probability_positive"],
         "probability_positive_26w": horizons["26w"]["probability_positive"],
-        "historical_drawdown_expectancy": h4["historical_downside_pct"],
+        "historical_drawdown_expectancy": h4["historical_average_drawdown_pct"],
+        "historical_worst_drawdown": h4["historical_worst_drawdown_pct"],
         "confidence": h4["confidence"],
         "historical_horizons": horizons,
         "input_manifest_hash": input_manifest_hash,
@@ -167,8 +178,11 @@ def generate(
 
     model_version = str(model.get("model_version") or "")
     model_spec_hash = str(model.get("model_spec_hash") or "")
+    horizon_steps = model.get("horizons") or {}
     if not model_version or not model_spec_hash:
         raise LedgerError("runtime model identity missing")
+    if set(horizon_steps) != set(HORIZONS):
+        raise LedgerError("runtime model horizon contract is incomplete")
     for name, artifact in (("backtest", backtest), ("regime", regime)):
         if artifact.get("model_version") != model_version or artifact.get("model_spec_hash") != model_spec_hash:
             raise LedgerError(f"{name} model identity does not match runtime model contract")
@@ -221,6 +235,7 @@ def generate(
                     family_payload=family_payload,
                     model_version=model_version,
                     model_spec_hash=model_spec_hash,
+                    horizon_steps=horizon_steps,
                     input_manifest_hash=input_manifest_hash,
                     input_artifacts=input_artifacts,
                     research_artifact_hash=research_artifact_hash,
