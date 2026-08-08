@@ -1,6 +1,7 @@
 # COT Intelligence – validate, refresh and deploy to GitHub Pages.
-# Scheduled twice in UTC and gated to exactly 21:35 Europe/Stockholm so DST
-# never shifts the intended post-CFTC-release refresh.
+# Scheduled twice in UTC and gated to the UTC cron that maps to exactly 21:35
+# Europe/Stockholm. The gate uses the scheduled time, not runner start time, so
+# normal GitHub Actions queue delays cannot suppress the Friday refresh.
 name: Refresh and Deploy
 
 on:
@@ -48,12 +49,23 @@ jobs:
             exit 0
           fi
 
-          local_time="$(TZ=Europe/Stockholm date +%H:%M)"
-          if [ "$local_time" = "21:35" ]; then
+          case "$schedule_expr" in
+            "35 19 * * 5") scheduled_utc="$utc_day 19:35:00 UTC" ;;
+            "35 20 * * 5") scheduled_utc="$utc_day 20:35:00 UTC" ;;
+            *)
+              echo "run=false" >> "$GITHUB_OUTPUT"
+              echo "Unknown scheduled trigger: $schedule_expr"
+              exit 0
+              ;;
+          esac
+
+          scheduled_local="$(TZ=Europe/Stockholm date -d "$scheduled_utc" +%H:%M)"
+          if [ "$scheduled_local" = "21:35" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "Scheduled trigger maps to 21:35 Stockholm; running even if the runner started late."
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "Skipping duplicate UTC cron; Stockholm time is $local_time."
+            echo "Skipping duplicate UTC cron; scheduled Stockholm time is $scheduled_local."
           fi
 
   refresh-and-deploy:
