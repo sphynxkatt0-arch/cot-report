@@ -3,13 +3,16 @@
 
 The legacy dashboard is intentionally retained as the calculation/rendering
 artifact, but the v2 front-end should not download and parse several megabytes
-of HTML just to get its data.  This script extracts only the JSON payloads v2
-needs and trims wide time-series rows to the fields rendered by the UI.
+of HTML just to get its data. This script extracts only the JSON payloads v2
+needs, trims wide time-series rows to rendered fields, and keeps the initial
+browser history intentionally bounded. Full research/backtest history remains
+in the canonical research artifact and derived backtest files.
 """
 
 from __future__ import annotations
 
 import json
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +20,12 @@ ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "interactive_cot_dashboard.html"
 OUT_DIR = ROOT / "worldclass"
 OUT = OUT_DIR / "base.json"
+
+# Six years comfortably covers the dashboard's 3-year positioning percentile
+# use case while avoiding a multi-megabyte first-load COT payload. Long-history
+# evidence remains available in the separate walk-forward backtest artifacts.
+BROWSER_COT_WEEKS = 312
+RECENT_DAILY_PRICE_DAYS = 183
 
 CONSTANTS = (
     "COT_DATA",
@@ -108,7 +117,7 @@ def compact_cot(data: Any) -> Any:
             if not isinstance(payload, dict):
                 out[dataset][market] = payload
                 continue
-            records = payload.get("records") or []
+            records = (payload.get("records") or [])[-BROWSER_COT_WEEKS:]
             compact_rows = []
             for row in records:
                 if not isinstance(row, dict):
@@ -128,27 +137,57 @@ def compact_cot(data: Any) -> Any:
     return out
 
 
+def parse_day(value: Any) -> date | None:
+    text = str(value or "")[:10]
+    try:
+        return date.fromisoformat(text)
+    except ValueError:
+        return None
+
+
+def compact_price_rows(rows: Any) -> list[dict[str, Any]]:
+    if not isinstance(rows, list):
+        return []
+    valid = [
+        {"date": str(row.get("date"))[:10], "price": row.get("price")}
+        for row in rows
+        if isinstance(row, dict) and row.get("date") and row.get("price") is not None and parse_day(row.get("date"))
+    ]
+    if not valid:
+        return []
+    valid.sort(key=lambda row: row["date"])
+    latest = parse_day(valid[-1]["date"])
+    if latest is None:
+        return valid
+    daily_cutoff = latest - timedelta(days=RECENT_DAILY_PRICE_DAYS)
+    weekly: dict[tuple[int, int], dict[str, Any]] = {}
+    recent: list[dict[str, Any]] = []
+    for row in valid:
+        day = parse_day(row["date"])
+        if day is None:
+            continue
+        if day >= daily_cutoff:
+            recent.append(row)
+            continue
+        iso = day.isocalendar()
+        weekly[(iso.year, iso.week)] = row
+    combined = [*weekly.values(), *recent]
+    combined.sort(key=lambda row: row["date"])
+    return combined
+
+
 def compact_prices(data: Any) -> Any:
     if not isinstance(data, dict):
         return data
     out: dict[str, Any] = {}
     for market, payload in data.items():
         if isinstance(payload, dict):
-            rows = payload.get("records") or []
             out[market] = {
                 "label": payload.get("label"),
-                "records": [
-                    {"date": row.get("date"), "price": row.get("price")}
-                    for row in rows
-                    if isinstance(row, dict) and row.get("date") and row.get("price") is not None
-                ],
+                "records": compact_price_rows(payload.get("records") or []),
             }
         elif isinstance(payload, list):
-            out[market] = [
-                {"date": row.get("date"), "price": row.get("price")}
-                for row in payload
-                if isinstance(row, dict) and row.get("date") and row.get("price") is not None
-            ]
+            out[market] = compact_price_rows(payload)
     return out
 
 
@@ -192,13 +231,18 @@ def build() -> dict[str, Any]:
         "COT_DATA": compact_cot(raw.get("COT_DATA")),
         "PRICE_DATA": compact_prices(raw.get("PRICE_DATA")),
         "FACTOR_DATA": compact_timeseries_tree(raw.get("FACTOR_DATA")),
-        "LIQUIDITY_DATA": compact_timeseries_tree(raw.get("LIQUIDITY_DATA")),
+        # LIQUIDITY_DATA is a legacy duplicate and is not consumed by the v2
+        # runtime. Bootstrap synthesizes an empty constant when it is omitted.
         "MACRO_MONITOR": compact_timeseries_tree(raw.get("MACRO_MONITOR")),
         "MACRO_LENS": compact_timeseries_tree(raw.get("MACRO_LENS")),
         "METADATA": raw.get("METADATA") or {},
     }
     payload["bundle_meta"] = {
         "source_html_bytes": SOURCE.stat().st_size,
+        "cot_history_weeks": BROWSER_COT_WEEKS,
+        "recent_daily_price_days": RECENT_DAILY_PRICE_DAYS,
+        "older_price_sampling": "weekly-last-observation",
+        "full_history_location": "research source + backtest artifacts",
     }
     return payload
 
