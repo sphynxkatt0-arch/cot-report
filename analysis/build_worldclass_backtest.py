@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Build walk-forward COT backtests and current forward expectancy for v2.
 
-The v2 dashboard intentionally has its own transparent 0-100 COT score. This
-builder backtests that exact score rather than reusing an older rule engine.
-Historical scores are expanding-window percentile scores (no future data is
-used) and returns are anchored to the first market close on/after the Friday
-COT release target (Tuesday report date + 3 calendar days).
+The dashboard's transparent 0-100 COT score is defined by the canonical
+`analysis/config/model_spec.json`. Historical scores are expanding-window
+percentile scores (no future data is used) and returns are anchored to the
+first market close on/after the Friday COT release target (Tuesday report date
++ 3 calendar days).
 
 Output:
   analysis/worldclass/backtest.json
@@ -21,45 +21,23 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import model_spec as model_cfg
+
 ROOT = Path(__file__).resolve().parent
 WORLDCLASS = ROOT / "worldclass"
 BASE = WORLDCLASS / "base.json"
 METALS = WORLDCLASS / "metals.json"
 OUT = WORLDCLASS / "backtest.json"
 
-MIN_LOOKBACK_WEEKS = 52
-ANALOG_COUNT = 40
-ANALOG_DISPLAY_COUNT = 8
-HORIZONS = {
-    "1w": 5,
-    "2w": 10,
-    "4w": 20,
-    "13w": 65,
-    "26w": 130,
-}
-
-SCORE_WEIGHTS = {
-    "tff": {
-        "dealer": 0.0,
-        "asset_mgr": 1.25,
-        "lev_money": 0.75,
-        "other_reportable": -1.0,
-        "non_reportable": -1.0,
-    },
-    "legacy": {
-        "noncommercial": 1.0,
-        "commercial": -0.75,
-        "total_reportable": 0.0,
-        "nonreportable": -0.75,
-    },
-    "disaggregated": {
-        "producer_merchant": -0.75,
-        "swap_dealer": -0.35,
-        "managed_money": 1.25,
-        "other_reportable": -0.75,
-        "non_reportable": -0.75,
-    },
-}
+MODEL_SPEC = model_cfg.load_model_spec()
+MODEL_VERSION = str(MODEL_SPEC["model_version"])
+MODEL_SPEC_HASH = model_cfg.model_spec_hash(MODEL_SPEC)
+MIN_LOOKBACK_WEEKS = int(MODEL_SPEC["lookback"]["minimum_weeks"])
+ANALOG_COUNT = int(MODEL_SPEC["analogs"]["count"])
+ANALOG_DISPLAY_COUNT = int(MODEL_SPEC["analogs"]["display_count"])
+ANALOG_MOMENTUM_WEIGHT = float(MODEL_SPEC["analogs"]["momentum_weight"])
+HORIZONS = model_cfg.horizons(MODEL_SPEC)
+SCORE_WEIGHTS = model_cfg.score_weights(MODEL_SPEC)
 
 MARKET_LABELS = {
     "sp500": "S&P 500",
@@ -261,7 +239,7 @@ def build_dataset_backtest(
         unconditional_returns = [row["horizons"][horizon]["return_pct"] for row in realized]
         ranked = []
         for row in realized:
-            distance = abs(row["score"] - current_score) + 0.30 * abs(row["score_delta_4w"] - current_delta)
+            distance = abs(row["score"] - current_score) + ANALOG_MOMENTUM_WEIGHT * abs(row["score_delta_4w"] - current_delta)
             ranked.append((distance, row))
         ranked.sort(key=lambda item: (item[0], item[1]["report_date"]))
         analogs = ranked[: min(ANALOG_COUNT, len(ranked))]
@@ -295,7 +273,7 @@ def build_dataset_backtest(
     for row in score_rows:
         if row["report_date"] == rows[current_index].get("date"):
             continue
-        distance = abs(row["score"] - current_score) + 0.30 * abs(row["score_delta_4w"] - current_delta)
+        distance = abs(row["score"] - current_score) + ANALOG_MOMENTUM_WEIGHT * abs(row["score_delta_4w"] - current_delta)
         complete_analogs.append((distance, row))
     complete_analogs.sort(key=lambda item: (item[0], item[1]["report_date"]))
     analog_display = []
@@ -318,11 +296,13 @@ def build_dataset_backtest(
         "dataset": dataset,
         "dataset_label": payload.get("label") or dataset,
         "score_model": "Worldclass 0-100 expanding-percentile COT score",
+        "model_version": MODEL_VERSION,
+        "model_spec_hash": MODEL_SPEC_HASH,
         "methodology": {
             "minimum_lookback_weeks": MIN_LOOKBACK_WEEKS,
             "release_anchor": "First available close on/after report date + 3 calendar days",
             "analog_count": ANALOG_COUNT,
-            "analog_distance": "abs(score-current) + 0.30*abs(4w score momentum-current)",
+            "analog_distance": f"abs(score-current) + {ANALOG_MOMENTUM_WEIGHT:g}*abs(4w score momentum-current)",
             "lookahead_safe": True,
         },
         "current": {
@@ -350,7 +330,10 @@ def build() -> dict[str, Any]:
         prices.update(metals.get("prices") or {})
 
     result: dict[str, Any] = {
+        "schema_version": 2,
         "generated_at_utc": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "model_version": MODEL_VERSION,
+        "model_spec_hash": MODEL_SPEC_HASH,
         "markets": {},
     }
     for dataset, markets in cot_data.items():
