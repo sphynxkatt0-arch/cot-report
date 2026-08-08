@@ -36,10 +36,10 @@
     addStylesheet("worldclass/kpi-accent.css", "data-worldclass-kpi-accent");
     addStylesheet("worldclass/decision-system.css", "data-worldclass-decision-system");
     addScript("worldclass/enhancements.js");
-    addScript("worldclass/decision-system.js?v=20260808-2332", () => {
-      addScript("worldclass/macro-control-fallback.js?v=20260808-2332", () => {
-        addScript("worldclass/macro-state-renderer.js?v=20260808-2332", () => {
-          addScript("worldclass/macro-live-sources.js?v=20260808-2332");
+    addScript("worldclass/decision-system.js?v=20260808-2340", () => {
+      addScript("worldclass/macro-control-fallback.js?v=20260808-2340", () => {
+        addScript("worldclass/macro-state-renderer.js?v=20260808-2340", () => {
+          addScript("worldclass/macro-live-sources.js?v=20260808-2340");
         });
       });
     });
