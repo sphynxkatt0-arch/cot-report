@@ -49,16 +49,25 @@ def operating_cash_result(rows: list[dict[str, Any]], current: datetime) -> tupl
         "U.S. Treasury Fiscal Data — Daily Treasury Statement",
         "USD bn",
         "unavailable",
-        resolution="official fiscaldata API",
+        resolution="official fiscaldata API; deterministic TGA closing-balance selection",
     )
-    candidates: list[tuple[str, float]] = []
+
+    # FiscalData can return multiple TGA lines for the same date (opening,
+    # closing and other presentation rows). Never let API row order choose the
+    # value: explicitly rank Closing Balance first, then a generic TGA row, and
+    # use Opening Balance only as the last fallback for that date.
+    by_date: dict[str, tuple[int, float]] = {}
     for row in rows:
         stamp = iso_date(row.get("record_date"))
         if not stamp:
             continue
-        account = str(row.get("account_type") or "").lower()
-        if account and "treasury general account" not in account and "closing balance" not in account:
+        descriptor = " ".join(
+            str(row.get(key) or "")
+            for key in ("account_type", "account_nm", "account_name", "line_desc")
+        ).lower()
+        if "treasury general account" not in descriptor:
             continue
+
         value = fiscal_value(
             row,
             (
@@ -69,11 +78,20 @@ def operating_cash_result(rows: list[dict[str, Any]], current: datetime) -> tupl
                 "current_day_bal",
             ),
         )
-        if value is not None:
-            candidates.append((stamp, value / 1000.0))
-    points = sorted(dict(candidates).items())
+        if value is None:
+            continue
+
+        priority = 30 if "closing balance" in descriptor else 10
+        if "opening balance" in descriptor:
+            priority = 5
+        candidate = (priority, value / 1000.0)
+        previous = by_date.get(stamp)
+        if previous is None or candidate[0] > previous[0]:
+            by_date[stamp] = candidate
+
+    points = [(stamp, payload[1]) for stamp, payload in sorted(by_date.items())]
     if not points:
-        result.error = "operating-cash response contained no recognized TGA balance field"
+        result.error = "operating-cash response contained no recognized Treasury General Account balance field"
         return result, {}
     result.latest_date, result.latest_value = points[-1]
     result.change_short = change(points, min(5, max(1, len(points) - 1)))
