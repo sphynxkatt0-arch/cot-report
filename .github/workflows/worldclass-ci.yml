@@ -6,6 +6,7 @@ on:
       - "analysis/worldclass/**"
       - "analysis/worldclass_dashboard.html"
       - "analysis/build_worldclass_metals.py"
+      - "analysis/build_worldclass_bundle.py"
       - "analysis/config/regime_rules.json"
       - ".github/workflows/**"
 
@@ -22,8 +23,22 @@ jobs:
           python-version: "3.11"
       - name: Source syntax
         run: |
-          python -m py_compile analysis/build_worldclass_metals.py
+          python -m py_compile analysis/build_worldclass_metals.py analysis/build_worldclass_bundle.py
           node --check analysis/worldclass/app.js
+          node --check analysis/worldclass/bootstrap.js
+      - name: Build compact browser bundle
+        run: |
+          python analysis/build_worldclass_bundle.py
+          test -s analysis/worldclass/base.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = json.loads(Path('analysis/worldclass/base.json').read_text())
+          assert p.get('COT_DATA'), 'COT_DATA missing'
+          assert p.get('PRICE_DATA'), 'PRICE_DATA missing'
+          assert Path('analysis/worldclass/base.json').stat().st_size < Path('analysis/interactive_cot_dashboard.html').stat().st_size
+          print('Compact browser bundle validation passed')
+          PY
       - name: Build Gold and Silver dataset
         run: |
           python analysis/build_worldclass_metals.py
