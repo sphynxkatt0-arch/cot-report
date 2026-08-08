@@ -64,6 +64,18 @@ jobs:
           python analysis/build_worldclass_bundle.py
           test -s analysis/worldclass/base.json
 
+      - name: Measure compact bundle components
+        run: |
+          python - <<'PY'
+          import gzip
+          import json
+          from pathlib import Path
+          payload = json.loads(Path('analysis/worldclass/base.json').read_text())
+          for key, value in sorted(payload.items()):
+              raw = json.dumps(value, separators=(',', ':')).encode()
+              print(f'BUNDLE_COMPONENT {key}: raw={len(raw):,} gzip={len(gzip.compress(raw, compresslevel=9)):,}')
+          PY
+
       - name: Build Gold and Silver dataset
         run: |
           python analysis/build_worldclass_metals.py
