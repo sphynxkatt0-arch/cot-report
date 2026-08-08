@@ -13,11 +13,14 @@ from typing import Any
 from ledger import (
     HORIZONS,
     LedgerError,
+    atomic_write_bytes,
     atomic_write_json,
     canonical_json_bytes,
+    entry_relative_path,
     finite,
     forecast_files,
     iso_utc,
+    outcome_relative_path,
     parse_iso_day,
     parse_utc,
     sha256_file,
@@ -105,24 +108,13 @@ def first_index_on_or_after(prices: list[dict[str, Any]], target: str) -> int | 
     return index if index < len(prices) else None
 
 
-def entry_relative_path(signal_id: str) -> Path:
-    return Path("live") / "entries" / f"{signal_id}.json"
-
-
-def outcome_relative_path(signal_id: str, horizon: str) -> Path:
-    if horizon not in HORIZONS:
-        raise LedgerError(f"unsupported horizon: {horizon}")
-    return Path("live") / "outcomes" / signal_id / f"{horizon}.json"
-
-
 def write_immutable_json(path: Path, payload: dict[str, Any]) -> str:
     data = canonical_json_bytes(payload)
     if path.exists():
         if path.read_bytes() != data:
             raise LedgerError(f"immutable settlement artifact collision: {path}")
         return "unchanged"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(data)
+    atomic_write_bytes(path, data)
     return "created"
 
 
@@ -169,9 +161,7 @@ def locate_entry_index(prices: list[dict[str, Any]], entry: dict[str, Any]) -> i
     index = bisect_left(dates, str(entry.get("entry_date") or ""))
     if index >= len(prices) or prices[index]["date"] != entry.get("entry_date"):
         raise LedgerError(f"entry date {entry.get('entry_date')} no longer exists in current price source")
-    source_price = finite(prices[index].get("price"))
-    entry_price = finite(entry.get("entry_price"))
-    if source_price is None or entry_price is None:
+    if finite(prices[index].get("price")) is None or finite(entry.get("entry_price")) is None:
         raise LedgerError("entry/current price source contains a non-finite price")
     return index
 
@@ -200,10 +190,14 @@ def build_outcome(
     exit_price = finite(prices[exit_index].get("price"))
     if entry_price is None or entry_price <= 0 or exit_price is None:
         raise LedgerError("cannot settle horizon with invalid entry/exit price")
-    window = [finite(row.get("price")) for row in prices[entry_index : exit_index + 1]]
-    if any(value is None for value in window):
+
+    # The entry artifact is immutable. If a price vendor later revises the entry
+    # day's historical close, future horizon settlement remains anchored to the
+    # price that was actually frozen when the live signal entered.
+    subsequent = [finite(row.get("price")) for row in prices[entry_index + 1 : exit_index + 1]]
+    if any(value is None for value in subsequent):
         raise LedgerError("non-finite price inside settlement window")
-    clean_window = [float(value) for value in window if value is not None]
+    clean_window = [entry_price, *[float(value) for value in subsequent if value is not None]]
     realized = (exit_price / entry_price - 1.0) * 100.0
     mae = (min(clean_window) / entry_price - 1.0) * 100.0
     mfe = (max(clean_window) / entry_price - 1.0) * 100.0
