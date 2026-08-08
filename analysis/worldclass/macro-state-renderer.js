@@ -2,6 +2,7 @@
   "use strict";
 
   const CACHE_KEY = "cot-macro-live-official-v1";
+  const BACKUP_KEY = "cot-macro-live-official-last-good-v1";
   const CACHE_FRESH_MS = 30 * 60 * 1000;
   const CACHE_MAX_MS = 24 * 60 * 60 * 1000;
   const STORE = window.__COT_MACRO_LIVE__ = window.__COT_MACRO_LIVE__ || {
@@ -131,33 +132,65 @@
     STORE.updated_at = Date.now();
   }
 
-  function readOfficialCache() {
+  function parseLocal(key) {
     try {
-      const payload = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
-      if (!payload || typeof payload !== "object") return;
-      const fetchedAt = Number(payload.fetched_at || 0);
-      const cacheAge = Date.now() - fetchedAt;
-      if (!fetchedAt || cacheAge > CACHE_MAX_MS) return;
-      const official = {};
-      for (const [key, metric] of Object.entries({
-        funding: payload.funding,
-        dealers: payload.dealers,
-        fiscal: payload.fiscal,
-        auctions: payload.auctions
-      })) {
+      const value = JSON.parse(localStorage.getItem(key) || "null");
+      return value && typeof value === "object" ? value : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function saveBackup(backup) {
+    try { localStorage.setItem(BACKUP_KEY, JSON.stringify(backup)); } catch {}
+  }
+
+  function readOfficialCache() {
+    const primary = parseLocal(CACHE_KEY);
+    const backup = parseLocal(BACKUP_KEY) || { metrics: {} };
+    if (!backup.metrics || typeof backup.metrics !== "object") backup.metrics = {};
+
+    const primaryFetchedAt = Number(primary?.fetched_at || 0);
+    const primaryAge = primaryFetchedAt ? Date.now() - primaryFetchedAt : Infinity;
+    const primaryUsable = primaryFetchedAt > 0 && primaryAge <= CACHE_MAX_MS;
+    const names = ["funding", "dealers", "fiscal", "auctions"];
+
+    if (primaryUsable) {
+      for (const name of names) {
+        const metric = primary?.[name];
         if (!metric?.ok) continue;
-        official[key] = {
-          ...metric,
-          stale: Boolean(metric.stale) || cacheAge > CACHE_FRESH_MS,
-          detail: `${metric.detail || "official public source"}${cacheAge > CACHE_FRESH_MS ? " · cached browser recovery" : ""}`,
-          source: "official-live"
+        backup.metrics[name] = {
+          metric,
+          cached_at: primaryFetchedAt
         };
       }
-      STORE.official = official;
-      STORE.updated_at = Date.now();
-    } catch {
-      // Keep the last successfully parsed in-memory state.
+      backup.updated_at = Date.now();
+      saveBackup(backup);
     }
+
+    const official = {};
+    for (const name of names) {
+      const primaryMetric = primaryUsable && primary?.[name]?.ok ? primary[name] : null;
+      const backupEntry = backup.metrics?.[name];
+      const backupAt = Number(backupEntry?.cached_at || 0);
+      const backupAge = backupAt ? Date.now() - backupAt : Infinity;
+      const backupMetric = backupEntry?.metric?.ok && backupAge <= CACHE_MAX_MS ? backupEntry.metric : null;
+      const metric = primaryMetric || backupMetric;
+      if (!metric) continue;
+
+      const metricAge = primaryMetric ? primaryAge : backupAge;
+      const cachedAfterFailure = !primaryMetric && Boolean(primaryFetchedAt);
+      official[name] = {
+        ...metric,
+        stale: Boolean(metric.stale) || metricAge > CACHE_FRESH_MS || cachedAfterFailure,
+        detail: `${metric.detail || "official public source"}${cachedAfterFailure ? " · last-good cache after live refresh failure" : metricAge > CACHE_FRESH_MS ? " · cached browser recovery" : ""}`,
+        source: cachedAfterFailure ? "official-last-good" : "official-live",
+        cached_at: primaryMetric ? primaryFetchedAt : backupAt
+      };
+    }
+
+    STORE.official = official;
+    STORE.updated_at = Date.now();
   }
 
   function cardByLabel(root, label) {
@@ -244,14 +277,12 @@
     if (event.target.closest("[data-market],[data-control]")) setTimeout(scheduleRender, 0);
   });
 
-  // The official recovery script writes its cache asynchronously. Poll briefly so
-  // successful network results become persistent even if another renderer races it.
   let polls = 0;
   const poll = setInterval(() => {
     scheduleRender();
     polls += 1;
-    if (polls >= 45) clearInterval(poll);
-  }, 500);
+    if (polls >= 90) clearInterval(poll);
+  }, 250);
 
   scheduleRender();
 })();
