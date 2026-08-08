@@ -5,9 +5,15 @@ on:
     paths:
       - "analysis/worldclass/**"
       - "analysis/worldclass_dashboard.html"
+      - "analysis/interactive_cot_dashboard.html"
       - "analysis/build_worldclass_metals.py"
       - "analysis/build_worldclass_bundle.py"
       - "analysis/build_worldclass_backtest.py"
+      - "analysis/build_worldclass_regime_backtest.py"
+      - "analysis/build_worldclass_research_artifacts.py"
+      - "analysis/model_spec.py"
+      - "analysis/validate_worldclass_release.py"
+      - "analysis/config/model_spec.json"
       - "analysis/config/regime_rules.json"
       - ".github/workflows/**"
 
@@ -19,16 +25,40 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
       - name: Source syntax
         run: |
-          python -m py_compile analysis/build_worldclass_metals.py analysis/build_worldclass_bundle.py analysis/build_worldclass_backtest.py
+          python -m py_compile \
+            analysis/model_spec.py \
+            analysis/build_worldclass_metals.py \
+            analysis/build_worldclass_bundle.py \
+            analysis/build_worldclass_backtest.py \
+            analysis/build_worldclass_regime_backtest.py \
+            analysis/build_worldclass_research_artifacts.py \
+            analysis/validate_worldclass_release.py
           node --check analysis/worldclass/app.js
           node --check analysis/worldclass/bootstrap.js
           node --check analysis/worldclass/enhancements.js
-      - name: Build compact browser bundle
+
+      - name: Validate canonical model specification
+        run: |
+          cd analysis
+          python - <<'PY'
+          import model_spec
+          spec = model_spec.load_model_spec()
+          digest = model_spec.model_spec_hash(spec)
+          assert len(digest) == 64
+          assert spec['model_version']
+          assert set(spec['score_models']) == {'tff', 'legacy', 'disaggregated'}
+          assert set(spec['horizons']) == {'1w', '2w', '4w', '13w', '26w'}
+          print(f"Model {spec['model_version']} · sha256={digest}")
+          PY
+
+      - name: Build and validate compact browser bundle
         run: |
           python analysis/build_worldclass_bundle.py
           test -s analysis/worldclass/base.json
@@ -38,9 +68,19 @@ jobs:
           p = json.loads(Path('analysis/worldclass/base.json').read_text())
           assert p.get('COT_DATA'), 'COT_DATA missing'
           assert p.get('PRICE_DATA'), 'PRICE_DATA missing'
+          assert p.get('MODEL_SPEC'), 'MODEL_SPEC missing from runtime contract'
+          assert p['MODEL_SPEC']['model_spec_hash'] == p['bundle_meta']['model_spec_hash']
+          assert p['MODEL_SPEC']['model_version'] == p['bundle_meta']['model_version']
           assert Path('analysis/worldclass/base.json').stat().st_size < Path('analysis/interactive_cot_dashboard.html').stat().st_size
-          print('Compact browser bundle validation passed')
+          for dataset in p['COT_DATA'].values():
+              if not isinstance(dataset, dict):
+                  continue
+              for payload in dataset.values():
+                  if isinstance(payload, dict):
+                      assert len(payload.get('records') or []) <= 312
+          print('Compact runtime contract validation passed')
           PY
+
       - name: Build Gold and Silver dataset
         run: |
           python analysis/build_worldclass_metals.py
@@ -50,32 +90,67 @@ jobs:
           from pathlib import Path
           p = json.loads(Path('analysis/worldclass/metals.json').read_text())
           assert set(p['markets']) == {'gold', 'silver'}
+          expected = {'producer_merchant', 'swap_dealer', 'managed_money', 'other_reportable', 'non_reportable'}
           for market in ('gold', 'silver'):
-              rows = p['markets'][market]['records']
+              payload = p['markets'][market]
+              rows = payload['records']
               assert len(rows) >= 100, (market, len(rows))
               assert rows[-1]['date'] >= rows[-2]['date']
+              assert expected == set(payload['categories']), (market, payload['categories'])
               assert 'managed_money_net' in rows[-1]
               assert 'other_reportable_net' in rows[-1]
               assert 'non_reportable_net' in rows[-1]
           print('Gold/Silver dataset validation passed')
           PY
-      - name: Build walk-forward expectancy
+
+      - name: Build full-history COT and regime research
         run: |
-          python analysis/build_worldclass_backtest.py
+          python analysis/build_worldclass_research_artifacts.py
           test -s analysis/worldclass/backtest.json
+          test -s analysis/worldclass/regime_backtest.json
+          test ! -e analysis/worldclass/.research-base.tmp.json
+
+      - name: Validate full-history research regressions
+        run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          p = json.loads(Path('analysis/worldclass/backtest.json').read_text())
+
+          base = json.loads(Path('analysis/worldclass/base.json').read_text())
+          backtest = json.loads(Path('analysis/worldclass/backtest.json').read_text())
+          regime = json.loads(Path('analysis/worldclass/regime_backtest.json').read_text())
+          model_hash = base['MODEL_SPEC']['model_spec_hash']
+          model_version = base['MODEL_SPEC']['model_version']
+
+          assert backtest['model_spec_hash'] == model_hash
+          assert regime['model_spec_hash'] == model_hash
+          assert backtest['model_version'] == model_version
+          assert regime['model_version'] == model_version
+
+          floors = {
+              ('nq', 'tff'): 500,
+              ('nq', 'legacy'): 500,
+              ('sp500', 'tff'): 450,
+              ('sp500', 'legacy'): 450,
+              ('gold', 'disaggregated'): 500,
+              ('silver', 'disaggregated'): 500,
+          }
+          for (market, dataset), floor in floors.items():
+              payload = backtest['markets'][market]['datasets'][dataset]
+              count = payload['historical_signal_count']
+              assert count >= floor, (market, dataset, count, floor)
+              assert payload['methodology']['lookahead_safe'] is True
+              assert payload['model_spec_hash'] == model_hash
+              assert payload['horizons'].get('4w'), (market, dataset)
+              assert payload['horizons']['4w']['observations'] >= 20, (market, dataset)
+
+              regime_payload = regime['markets'][market]['datasets'][dataset]
+              assert regime_payload['methodology']['lookahead_safe'] is True
+              assert regime_payload['model_spec_hash'] == model_hash
+              assert set(regime_payload['families']) == {'cot', 'macro', 'combined'}
+
           required = {'sp500', 'nq', 'vix', 'rty', 'dow', 'gold', 'silver'}
-          assert required.issubset(set(p['markets'])), (required - set(p['markets']))
-          for market in required:
-              datasets = p['markets'][market]['datasets']
-              assert datasets, market
-              preferred = datasets.get('disaggregated') or datasets.get('tff') or datasets.get('legacy')
-              assert preferred['methodology']['lookahead_safe'] is True
-              assert preferred['historical_signal_count'] >= 100, (market, preferred['historical_signal_count'])
-              assert preferred['horizons'].get('4w'), market
-              assert preferred['horizons']['4w']['observations'] >= 20, market
-          print('Walk-forward expectancy validation passed')
+          assert required.issubset(backtest['markets']), required - set(backtest['markets'])
+          assert required.issubset(regime['markets']), required - set(regime['markets'])
+          print('Full-history research regression validation passed')
           PY
