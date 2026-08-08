@@ -12,10 +12,25 @@
     "METADATA"
   ];
 
+  function loadEnhancements() {
+    if (!document.querySelector('link[data-worldclass-enhancements]')) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "worldclass/enhancements.css";
+      link.dataset.worldclassEnhancements = "1";
+      document.head.appendChild(link);
+    }
+    const script = document.createElement("script");
+    script.src = "worldclass/enhancements.js";
+    script.defer = true;
+    document.body.appendChild(script);
+  }
+
   function loadApp() {
     const script = document.createElement("script");
     script.src = "worldclass/app.js";
     script.defer = true;
+    script.addEventListener("load", loadEnhancements, { once: true });
     document.body.appendChild(script);
   }
 
@@ -29,9 +44,8 @@
         .join("\n");
 
       // app.js retains a backwards-compatible loader for the original research
-      // dashboard.  Intercept only that one request and satisfy it from the
-      // compact build-time bundle.  All other fetches (including metals.json)
-      // continue to use the native browser fetch implementation.
+      // dashboard. Intercept only that request and satisfy it from the compact
+      // build-time bundle. All other fetches continue to use native fetch.
       window.fetch = (input, init) => {
         const url = typeof input === "string" ? input : input?.url;
         if (url && /(^|\/)interactive_cot_dashboard\.html(?:[?#].*)?$/.test(url)) {
