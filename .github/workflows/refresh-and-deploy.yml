@@ -111,6 +111,7 @@ jobs:
       - name: "[VALIDATING] Source syntax"
         run: |
           python -m py_compile \
+            analysis/model_spec.py \
             analysis/build_worldclass_metals.py \
             analysis/build_worldclass_bundle.py \
             analysis/build_worldclass_backtest.py \
@@ -129,6 +130,17 @@ jobs:
           node --check analysis/worldclass/macro-control-fallback.js
           node --check analysis/worldclass/macro-state-renderer.js
           node --check analysis/worldclass/macro-live-sources.js
+
+      - name: "[VALIDATING] Canonical model specification"
+        run: |
+          cd analysis
+          python - <<'PY'
+          import model_spec
+          spec = model_spec.load_model_spec()
+          digest = model_spec.model_spec_hash(spec)
+          assert len(digest) == 64
+          print(f"Model {spec['model_version']} · sha256={digest}")
+          PY
 
       - name: "[VALIDATING] Macro source parser regression tests"
         run: python analysis/test_macro_liquidity_parsers.py
@@ -195,6 +207,7 @@ jobs:
         run: |
           test -s analysis/interactive_cot_dashboard.html
           test -s analysis/worldclass/base.json
+          test -s analysis/worldclass/model-spec.json
           test -s analysis/worldclass/metals.json
           test -s analysis/worldclass/backtest.json
           test -s analysis/worldclass/regime_backtest.json
@@ -210,6 +223,7 @@ jobs:
           test -s analysis/worldclass/macro-live-sources.js
           echo "Research HTML: $(du -h analysis/interactive_cot_dashboard.html | cut -f1)"
           echo "Browser bundle: $(du -h analysis/worldclass/base.json | cut -f1)"
+          echo "Model contract: $(du -h analysis/worldclass/model-spec.json | cut -f1)"
           echo "COT backtest: $(du -h analysis/worldclass/backtest.json | cut -f1)"
           echo "Regime backtest: $(du -h analysis/worldclass/regime_backtest.json | cut -f1)"
           echo "Macro plumbing: $(du -h analysis/model_output/macro_liquidity_expansion.json | cut -f1)"
@@ -234,6 +248,7 @@ jobs:
           for path in \
             model_output/macro_liquidity_expansion.json \
             worldclass/base.json \
+            worldclass/model-spec.json \
             worldclass/metals.json \
             worldclass/backtest.json \
             worldclass/regime_backtest.json \
