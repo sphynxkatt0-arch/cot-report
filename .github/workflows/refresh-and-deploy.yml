@@ -2,11 +2,16 @@
 # Scheduled twice in UTC and gated to the UTC cron that maps to exactly 21:35
 # Europe/Stockholm. The gate uses the scheduled time, not runner start time, so
 # normal GitHub Actions queue delays cannot suppress the Friday refresh.
+# Merged PRs also trigger deployment so GitHub-App merges do not depend solely
+# on the corresponding push event being delivered.
 name: Refresh and Deploy
 
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+    types: [closed]
   workflow_dispatch:
   schedule:
     - cron: "35 19 * * 5"
@@ -31,6 +36,17 @@ jobs:
       - id: check
         shell: bash
         run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            if [ "${{ github.event.pull_request.merged }}" = "true" ]; then
+              echo "run=true" >> "$GITHUB_OUTPUT"
+              echo "Merged PR detected; running production deployment fallback."
+            else
+              echo "run=false" >> "$GITHUB_OUTPUT"
+              echo "Closed PR was not merged; skipping deployment."
+            fi
+            exit 0
+          fi
+
           if [ "${{ github.event_name }}" != "schedule" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
             exit 0
@@ -116,7 +132,7 @@ jobs:
         run: python analysis/test_macro_liquidity_parsers.py
 
       - name: "[WAITING_FOR_CFTC] Refresh index COT and macro source dashboard"
-        if: github.event_name != 'push'
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         id: refresh
         continue-on-error: true
         env:
@@ -125,7 +141,7 @@ jobs:
           python analysis/serve_interactive_cot_dashboard.py --refresh-only
 
       - name: Warn if core refresh failed
-        if: github.event_name != 'push' && steps.refresh.outcome == 'failure'
+        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.refresh.outcome == 'failure'
         run: |
           echo "::warning::Core COT/macro refresh failed. Deployment will retain the last valid payload and expose stale/delayed state."
 
@@ -146,13 +162,13 @@ jobs:
           fi
 
       - name: "[CFTC_AVAILABLE] Refresh Gold and Silver Disaggregated COT"
-        if: github.event_name != 'push'
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         id: metals
         continue-on-error: true
         run: python analysis/build_worldclass_metals.py
 
       - name: Warn if metals refresh failed
-        if: github.event_name != 'push' && steps.metals.outcome == 'failure'
+        if: (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && steps.metals.outcome == 'failure'
         run: echo "::warning::Gold/Silver refresh failed; retaining last-valid deployed metals cache when available."
 
       - name: "[BUILDING] Refresh macro liquidity control-room payload"
