@@ -9,8 +9,21 @@
   const pct = v => finite(v) === null ? "n/a" : `${finite(v).toFixed(0)}%`;
   const tone = v => finite(v) === null ? "neutral" : finite(v) >= 58 ? "positive" : finite(v) <= 42 ? "negative" : "neutral";
 
+  function ensureRoot() {
+    let root = document.getElementById("marketSentimentPanel");
+    if (root) return root;
+    const anchor = document.getElementById("headlineCards");
+    if (!anchor) return null;
+    root = document.createElement("section");
+    root.id = "marketSentimentPanel";
+    root.className = "panel sentiment-panel";
+    root.setAttribute("aria-label", "Daily market sentiment from Reddit, X, financial news and Polymarket");
+    anchor.insertAdjacentElement("afterend", root);
+    return root;
+  }
+
   function render(payload) {
-    const root = document.getElementById("marketSentimentPanel");
+    const root = ensureRoot();
     if (!root) return;
     const latest = payload?.latest;
     if (!latest) {
@@ -30,7 +43,7 @@
 
     root.innerHTML = `
       <div class="sentiment-topline">
-        <div><span class="panel-kicker">DAILY MARKET SENTIMENT</span><h3>Media, social & prediction-market mood</h3></div>
+        <div><span class="panel-kicker">DAILY MARKET SENTIMENT</span><h3>Media, social & prediction-market mood</h3><p class="panel-meta">Separate observational layer; it does not rewrite the COT model.</p></div>
         <div class="sentiment-date"><strong>${esc(latest.observation_date)}</strong><span>${esc(composite.state || "UNAVAILABLE")} · ${composite.available_sources ?? 0}/${composite.required_sources ?? 4} sources</span></div>
       </div>
       <div class="sentiment-summary-grid">
@@ -57,7 +70,7 @@
   }
 
   async function load() {
-    const root = document.getElementById("marketSentimentPanel");
+    const root = ensureRoot();
     if (!root) return;
     try {
       const response = await fetch(`worldclass/market-sentiment.json?v=${Date.now()}`, { cache: "no-store" });
