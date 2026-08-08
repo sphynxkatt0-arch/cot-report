@@ -2,6 +2,7 @@
   "use strict";
 
   const originalFetch = window.fetch.bind(window);
+  window.__COT_APP_DATA_READY__ = window.__COT_APP_DATA_READY__ || new Promise(resolve => { window.__COT_RESOLVE_APP_DATA_READY__ = resolve; });
   const CONSTANTS = [
     "COT_DATA",
     "PRICE_DATA",
@@ -12,33 +13,65 @@
     "METADATA"
   ];
 
-  function loadEnhancements() {
-    if (!document.querySelector('link[data-worldclass-enhancements]')) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = "worldclass/enhancements.css";
-      link.dataset.worldclassEnhancements = "1";
-      document.head.appendChild(link);
-    }
-    if (!document.querySelector('link[data-worldclass-kpi-accent]')) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = "worldclass/kpi-accent.css";
-      link.dataset.worldclassKpiAccent = "1";
-      document.head.appendChild(link);
-    }
+  function addStylesheet(href, dataKey) {
+    if (document.querySelector(`link[${dataKey}]`)) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = href;
+    link.setAttribute(dataKey, "1");
+    document.head.appendChild(link);
+  }
+
+  function addScript(src, onload) {
     const script = document.createElement("script");
-    script.src = "worldclass/enhancements.js";
+    script.src = src;
     script.defer = true;
+    if (onload) script.addEventListener("load", onload, { once: true });
     document.body.appendChild(script);
+    return script;
+  }
+
+  function loadEnhancements() {
+    addStylesheet("worldclass/enhancements.css", "data-worldclass-enhancements");
+    addStylesheet("worldclass/kpi-accent.css", "data-worldclass-kpi-accent");
+    addStylesheet("worldclass/decision-system.css", "data-worldclass-decision-system");
+    addScript("worldclass/enhancements.js");
+    addScript("worldclass/decision-system.js");
   }
 
   function loadApp() {
-    const script = document.createElement("script");
-    script.src = "worldclass/app.js";
-    script.defer = true;
-    script.addEventListener("load", loadEnhancements, { once: true });
-    document.body.appendChild(script);
+    addScript("worldclass/app.js", () => {
+      // The current app may not yet expose the explicit data-ready hook. The
+      // decision layer can render from the shared compact base payload, so do
+      // not hold it behind a hanging promise while preserving compatibility
+      // with the richer hook when app.js provides it.
+      window.__COT_RESOLVE_APP_DATA_READY__?.({ bootstrap: true });
+      loadEnhancements();
+    });
+  }
+
+  function announcePlotlyReady() {
+    window.dispatchEvent(new CustomEvent("cot:plotly-ready"));
+  }
+
+  function loadPlotlyFallback() {
+    if (window.Plotly) return announcePlotlyReady();
+    const cdn = addScript("https://cdn.plot.ly/plotly-2.35.2.min.js", announcePlotlyReady);
+    cdn.addEventListener("error", () => console.warn("Plotly could not be loaded from local or CDN sources."), { once: true });
+  }
+
+  function loadPlotly() {
+    if (window.Plotly) return announcePlotlyReady();
+    const local = addScript("dashboard_template/plotly-2.35.2.min.js", announcePlotlyReady);
+    local.addEventListener("error", loadPlotlyFallback, { once: true });
+  }
+
+  function schedulePlotly() {
+    if ("requestIdleCallback" in window) {
+      window.requestIdleCallback(loadPlotly, { timeout: 900 });
+    } else {
+      window.setTimeout(loadPlotly, 80);
+    }
   }
 
   async function boot() {
@@ -46,13 +79,13 @@
       const response = await originalFetch(`worldclass/base.json?v=${Date.now()}`, { cache: "no-store" });
       if (!response.ok) throw new Error(`base.json HTTP ${response.status}`);
       const base = await response.json();
+      window.__COT_WORLDCLASS_BASE__ = base;
       const syntheticHtml = CONSTANTS
         .map(name => `const ${name} = ${JSON.stringify(base[name] || {})};`)
         .join("\n");
 
-      // app.js retains a backwards-compatible loader for the original research
-      // dashboard. Intercept only that request and satisfy it from the compact
-      // build-time bundle. All other fetches continue to use native fetch.
+      // app.js retains a backwards-compatible loader. Intercept only its
+      // legacy HTML request and satisfy it from the single compact base bundle.
       window.fetch = (input, init) => {
         const url = typeof input === "string" ? input : input?.url;
         if (url && /(^|\/)interactive_cot_dashboard\.html(?:[?#].*)?$/.test(url)) {
@@ -66,7 +99,10 @@
     } catch (error) {
       console.warn("Compact data bundle unavailable; using legacy dashboard payload fallback.", error);
     }
+
+    // Render the terminal shell/data first; charting is intentionally deferred.
     loadApp();
+    schedulePlotly();
   }
 
   boot();
