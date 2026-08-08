@@ -149,9 +149,6 @@ def validate_macro_plumbing(plumbing: dict[str, Any]) -> dict[str, Any]:
         assert isinstance(pillars.get(key), dict), f"macro plumbing pillar missing: {key}"
         assert pillars[key].get("state"), f"macro plumbing pillar state missing: {key}"
 
-    # These two are backed by the same macro monitor that drives the populated
-    # headline cards. If they are missing here, the builder/extraction path is
-    # broken and deployment must stop rather than publish a wall of n/a values.
     assert finite_number(pillars["net_liquidity"].get("value")) is not None, "macro plumbing net_liquidity value missing"
     assert finite_number(pillars["bank_reserves"].get("value")) is not None, "macro plumbing bank_reserves value missing"
 
@@ -190,6 +187,7 @@ def validate_performance_budget() -> dict[str, int]:
         WORLDCLASS / "decision-system.js",
         WORLDCLASS / "decision-system.css",
         WORLDCLASS / "macro-control-fallback.js",
+        WORLDCLASS / "macro-live-sources.js",
         WORLDCLASS / "regime_backtest.json",
         PLUMBING,
     ]
