@@ -4,7 +4,10 @@
   const TARGET_KEYS = [
     "net_liquidity_4w_change",
     "bank_reserves_4w_change",
-    "sofr_iorb_spread"
+    "bank_reserves",
+    "reserves",
+    "sofr_iorb_spread",
+    "effr_iorb_spread"
   ];
 
   const finite = value => {
@@ -24,7 +27,6 @@
     function visit(node, depth = 0) {
       if (!node || depth > 8 || typeof node !== "object" || seen.has(node)) return;
       seen.add(node);
-
       if (Array.isArray(node)) {
         for (const item of node) visit(item, depth + 1);
         return;
@@ -37,7 +39,6 @@
         bestScore = score;
         bestDate = date;
       }
-
       for (const value of Object.values(node)) visit(value, depth + 1);
     }
 
@@ -50,6 +51,15 @@
     if (number === null) return "n/a";
     const sign = number > 0 ? "+" : number < 0 ? "−" : "";
     return `${sign}${Math.abs(number).toLocaleString(undefined, {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits
+    })}${suffix}`;
+  }
+
+  function plain(value, digits = 0, suffix = "") {
+    const number = finite(value);
+    if (number === null) return "n/a";
+    return `${number.toLocaleString(undefined, {
       minimumFractionDigits: digits,
       maximumFractionDigits: digits
     })}${suffix}`;
@@ -89,30 +99,38 @@
     if (!row) return false;
 
     let used = false;
-
     const liquidity = finite(row.net_liquidity_4w_change);
     if (liquidity !== null) {
       used = setCard(
         cardByLabel(root, "SYSTEM LIQUIDITY"),
         signed(liquidity, 1, " bn"),
         liquidity > 0 ? "Supportive" : liquidity < 0 ? "Defensive" : "Neutral",
-        "Fed − TGA − RRP · macro-monitor fallback",
+        "Fed − TGA − RRP · validated macro-monitor fallback",
         liquidity > 0 ? "positive" : liquidity < 0 ? "negative" : "warning"
       ) || used;
     }
 
-    const reserves = finite(row.bank_reserves_4w_change);
-    if (reserves !== null) {
+    const reserveImpulse = finite(row.bank_reserves_4w_change);
+    const reserveLevel = finite(row.bank_reserves) ?? finite(row.reserves);
+    if (reserveImpulse !== null) {
       used = setCard(
         cardByLabel(root, "RESERVES"),
-        signed(reserves, 1, " bn"),
-        reserves > 0 ? "Supportive" : reserves < 0 ? "Defensive" : "Neutral",
-        "4W reserve impulse · macro-monitor fallback",
-        reserves > 0 ? "positive" : reserves < 0 ? "negative" : "warning"
+        signed(reserveImpulse, 1, " bn"),
+        reserveImpulse > 0 ? "Supportive" : reserveImpulse < 0 ? "Defensive" : "Neutral",
+        "4W reserve impulse · validated macro-monitor fallback",
+        reserveImpulse > 0 ? "positive" : reserveImpulse < 0 ? "negative" : "warning"
+      ) || used;
+    } else if (reserveLevel !== null) {
+      used = setCard(
+        cardByLabel(root, "RESERVES"),
+        plain(reserveLevel, 0),
+        "Context",
+        "Bank reserve level · no directional inference",
+        "warning"
       ) || used;
     }
 
-    const spread = finite(row.sofr_iorb_spread);
+    const spread = finite(row.sofr_iorb_spread) ?? finite(row.effr_iorb_spread);
     if (spread !== null) {
       const abs = Math.abs(spread);
       const state = abs <= 0.02 ? "Normal" : abs <= 0.05 ? "Watch" : "Stress";
@@ -120,7 +138,7 @@
         cardByLabel(root, "FUNDING"),
         signed(spread, 3, " pp"),
         state,
-        "SOFR − IORB fallback; full repo microstructure pending",
+        `${finite(row.sofr_iorb_spread) !== null ? "SOFR" : "EFFR"} − IORB fallback; full repo microstructure pending`,
         state === "Normal" ? "positive" : state === "Stress" ? "negative" : "warning"
       ) || used;
     }
@@ -129,10 +147,9 @@
       const note = root.querySelector(".wc-control-note");
       if (note && !note.dataset.fallbackNote) {
         note.dataset.fallbackNote = "1";
-        note.textContent += " Core liquidity/funding fields are temporarily sourced from the validated macro monitor when the extended plumbing payload is unavailable.";
+        note.textContent += " Core liquidity/funding fields use the validated macro monitor when the extended plumbing payload is temporarily unavailable; reserve levels are never treated as directional impulses.";
       }
     }
-
     return used;
   }
 
