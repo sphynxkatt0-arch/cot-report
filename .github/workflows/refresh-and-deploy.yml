@@ -115,6 +115,7 @@ jobs:
             analysis/build_worldclass_bundle.py \
             analysis/build_worldclass_backtest.py \
             analysis/build_worldclass_regime_backtest.py \
+            analysis/build_worldclass_research_artifacts.py \
             analysis/validate_worldclass_release.py \
             analysis/macro_liquidity_expansion.py \
             analysis/macro_liquidity_expansion_v12.py \
@@ -181,11 +182,10 @@ jobs:
         if: steps.plumbing.outcome == 'failure'
         run: echo "::warning::Macro plumbing builder process failed; validation will use the restored last-valid payload when present. A missing payload remains a hard contract failure."
 
-      - name: Build walk-forward COT backtests
-        run: python analysis/build_worldclass_backtest.py
-
-      - name: Build regime-conditioned COT + macro backtests
-        run: python analysis/build_worldclass_regime_backtest.py
+      - name: Build full-history COT + regime research artifacts
+        run: |
+          python analysis/build_worldclass_research_artifacts.py
+          test ! -e analysis/worldclass/.research-base.tmp.json
 
       - name: "[VALIDATING] Data contracts, lookahead safety and performance budget"
         run: python analysis/validate_worldclass_release.py
@@ -195,6 +195,7 @@ jobs:
         run: |
           test -s analysis/interactive_cot_dashboard.html
           test -s analysis/worldclass/base.json
+          test -s analysis/worldclass/metals.json
           test -s analysis/worldclass/backtest.json
           test -s analysis/worldclass/regime_backtest.json
           test -s analysis/worldclass/release-status.json
@@ -233,6 +234,9 @@ jobs:
           for path in \
             model_output/macro_liquidity_expansion.json \
             worldclass/base.json \
+            worldclass/metals.json \
+            worldclass/backtest.json \
+            worldclass/regime_backtest.json \
             worldclass/release-status.json \
             worldclass/decision-system.js \
             worldclass/decision-system.css \
@@ -246,8 +250,3 @@ jobs:
             test "${size}" -gt 0
             echo "Published ${path}: ${size} bytes"
           done
-
-      - name: "[LIVE] Trigger Pages rebuild"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh api -X POST /repos/${{ github.repository }}/pages/builds
