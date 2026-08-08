@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "interactive_cot_dashboard.html"
 OUT_DIR = ROOT / "worldclass"
 OUT = OUT_DIR / "base.json"
+MODEL_OUT = OUT_DIR / "model-spec.json"
 
 # Six years comfortably covers the dashboard's 3-year positioning percentile
 # use case while avoiding a multi-megabyte first-load COT payload. Long-history
@@ -69,6 +70,12 @@ MACRO_FIELDS = {
     "dollar_4w_change",
     "vix",
 }
+
+
+def atomic_write_json(path: Path, payload: Any) -> None:
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
+    temporary.replace(path)
 
 
 def extract_json_constant(text: str, name: str) -> Any:
@@ -257,14 +264,14 @@ def build() -> dict[str, Any]:
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     payload = build()
-    temporary = OUT.with_suffix(".json.tmp")
-    temporary.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
-    temporary.replace(OUT)
+    atomic_write_json(MODEL_OUT, payload["MODEL_SPEC"])
+    atomic_write_json(OUT, payload)
     payload["bundle_meta"]["bundle_bytes"] = OUT.stat().st_size
     # Re-write once so the size metadata is also present in the file.
-    OUT.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
+    atomic_write_json(OUT, payload)
     ratio = OUT.stat().st_size / max(SOURCE.stat().st_size, 1)
     print(f"Saved {OUT} ({OUT.stat().st_size:,} bytes, {ratio:.1%} of source HTML)")
+    print(f"Saved {MODEL_OUT} (model {payload['MODEL_SPEC']['model_version']} · {payload['MODEL_SPEC']['model_spec_hash']})")
 
 
 if __name__ == "__main__":
