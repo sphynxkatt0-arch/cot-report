@@ -189,6 +189,7 @@ def validate_performance_budget() -> dict[str, int]:
         WORLDCLASS / "enhancements.css",
         WORLDCLASS / "decision-system.js",
         WORLDCLASS / "decision-system.css",
+        WORLDCLASS / "macro-control-fallback.js",
         WORLDCLASS / "regime_backtest.json",
         PLUMBING,
     ]
