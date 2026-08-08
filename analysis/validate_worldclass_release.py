@@ -2,7 +2,7 @@
 """Validate the production COT dashboard payload and publish release health.
 
 Hard data-contract failures stop deployment. A late/missing expected CFTC report
-is not converted to neutral and does not stop deployment: the validator writes
+is *not* converted to neutral and does not stop deployment: the validator writes
 worldclass/release-status.json with state=DELAYED so the last valid observation
 can remain live with an explicit warning.
 """
@@ -200,6 +200,14 @@ def main() -> None:
         "latest_cot_report_date": latest.isoformat() if latest else None,
         "expected_cot_report_date": expected.isoformat(),
         "market_states": market_states,
+        "markets": {
+            market: {
+                "status": value["state"],
+                "latest_report_date": value["latest_cot_report_date"],
+                "expected_report_date": value["expected_cot_report_date"],
+            }
+            for market, value in market_states.items()
+        },
         "delayed_markets": delayed_markets,
         "message": (
             f"Expected CFTC report for {expected.isoformat()} is missing for: {', '.join(delayed_markets)}; serving each market's last valid observation."
