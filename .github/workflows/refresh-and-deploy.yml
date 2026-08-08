@@ -47,9 +47,10 @@ jobs:
 
       - name: Validate v2 source syntax
         run: |
-          python -m py_compile analysis/build_worldclass_metals.py analysis/build_worldclass_bundle.py
+          python -m py_compile analysis/build_worldclass_metals.py analysis/build_worldclass_bundle.py analysis/build_worldclass_backtest.py
           node --check analysis/worldclass/app.js
           node --check analysis/worldclass/bootstrap.js
+          node --check analysis/worldclass/enhancements.js
 
       # A normal code push should deploy quickly instead of re-running every
       # macro/backtest job. Scheduled/manual runs still execute the complete
@@ -93,6 +94,11 @@ jobs:
         run: |
           echo "::warning::Gold/Silver Disaggregated refresh failed. A prior deployed cache will be used when available."
 
+      # Rebuild the forward-expectancy payload from the exact score currently
+      # displayed by v2. This step is local-only once base/metals JSON exist.
+      - name: Build walk-forward COT backtests
+        run: python analysis/build_worldclass_backtest.py
+
       - name: Verify dashboard outputs
         run: |
           if [ ! -f analysis/interactive_cot_dashboard.html ]; then
@@ -103,16 +109,21 @@ jobs:
             echo "::error::Compact worldclass/base.json was not generated."
             exit 1
           fi
+          if [ ! -s analysis/worldclass/backtest.json ]; then
+            echo "::error::worldclass/backtest.json was not generated."
+            exit 1
+          fi
           if [ ! -f analysis/worldclass_dashboard.html ]; then
             echo "::error::No world-class dashboard shell found."
             exit 1
           fi
-          if [ ! -f analysis/worldclass/app.js ] || [ ! -f analysis/worldclass/bootstrap.js ] || [ ! -f analysis/worldclass/styles.css ]; then
+          if [ ! -f analysis/worldclass/app.js ] || [ ! -f analysis/worldclass/bootstrap.js ] || [ ! -f analysis/worldclass/styles.css ] || [ ! -f analysis/worldclass/enhancements.js ] || [ ! -f analysis/worldclass/enhancements.css ]; then
             echo "::error::World-class dashboard assets are incomplete."
             exit 1
           fi
           echo "Research HTML: $(du -h analysis/interactive_cot_dashboard.html | cut -f1)"
           echo "Browser bundle: $(du -h analysis/worldclass/base.json | cut -f1)"
+          echo "Backtest bundle: $(du -h analysis/worldclass/backtest.json | cut -f1)"
           if [ -f analysis/worldclass/metals.json ]; then
             echo "Gold/Silver dataset: $(du -h analysis/worldclass/metals.json | cut -f1)"
           else
