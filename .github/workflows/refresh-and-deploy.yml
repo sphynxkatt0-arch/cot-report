@@ -78,6 +78,7 @@ jobs:
           node --check analysis/worldclass/bootstrap.js
           node --check analysis/worldclass/enhancements.js
           node --check analysis/worldclass/decision-system.js
+          node --check analysis/worldclass/macro-control-fallback.js
 
       - name: "[WAITING_FOR_CFTC] Refresh index COT and macro source dashboard"
         if: github.event_name != 'push'
@@ -105,7 +106,7 @@ jobs:
           git show FETCH_HEAD:worldclass/metals.json > /tmp/metals.json 2>/dev/null || true
           git show FETCH_HEAD:model_output/macro_liquidity_expansion.json > /tmp/macro_liquidity_expansion.json 2>/dev/null || true
           if [ -s /tmp/metals.json ]; then cp /tmp/metals.json analysis/worldclass/metals.json; fi
-          if [ ! -s analysis/model_output/macro_liquidity_expansion.json ] && [ -s /tmp/macro_liquidity_expansion.json ]; then
+          if [ -s /tmp/macro_liquidity_expansion.json ]; then
             cp /tmp/macro_liquidity_expansion.json analysis/model_output/macro_liquidity_expansion.json
           fi
 
@@ -119,15 +120,19 @@ jobs:
         if: github.event_name != 'push' && steps.metals.outcome == 'failure'
         run: echo "::warning::Gold/Silver refresh failed; retaining last-valid deployed metals cache when available."
 
-      - name: "[VALIDATING] Refresh funding, dealer and MMF plumbing"
-        if: github.event_name != 'push'
+      # This must run on every deployment, including push-triggered UI releases.
+      # The builder is source-resilient: individual OFR/Treasury failures are
+      # represented explicitly while the existing macro payload still supplies
+      # system-liquidity/reserve context. If the process itself fails, the
+      # restored last-valid cache remains in place for validation.
+      - name: "[BUILDING] Refresh macro liquidity control-room payload"
         id: plumbing
         continue-on-error: true
         run: python analysis/macro_liquidity_expansion_v12.py
 
       - name: Warn if plumbing refresh failed
-        if: github.event_name != 'push' && steps.plumbing.outcome == 'failure'
-        run: echo "::warning::OFR/dealer/MMF refresh failed; retaining last-valid cache and marking coverage accordingly."
+        if: steps.plumbing.outcome == 'failure'
+        run: echo "::warning::Macro plumbing builder failed; validation will use the restored last-valid payload if one exists, otherwise deployment will stop."
 
       - name: Build walk-forward COT backtests
         run: python analysis/build_worldclass_backtest.py
@@ -146,15 +151,18 @@ jobs:
           test -s analysis/worldclass/backtest.json
           test -s analysis/worldclass/regime_backtest.json
           test -s analysis/worldclass/release-status.json
+          test -s analysis/model_output/macro_liquidity_expansion.json
           test -s analysis/worldclass_dashboard.html
           test -s analysis/worldclass/app.js
           test -s analysis/worldclass/bootstrap.js
           test -s analysis/worldclass/decision-system.js
           test -s analysis/worldclass/decision-system.css
+          test -s analysis/worldclass/macro-control-fallback.js
           echo "Research HTML: $(du -h analysis/interactive_cot_dashboard.html | cut -f1)"
           echo "Browser bundle: $(du -h analysis/worldclass/base.json | cut -f1)"
           echo "COT backtest: $(du -h analysis/worldclass/backtest.json | cut -f1)"
           echo "Regime backtest: $(du -h analysis/worldclass/regime_backtest.json | cut -f1)"
+          echo "Macro plumbing: $(du -h analysis/model_output/macro_liquidity_expansion.json | cut -f1)"
           cat analysis/worldclass/release-status.json
 
       - name: "[BUILDING] Prepare production index"
@@ -166,6 +174,25 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./analysis
           force_orphan: true
+
+      - name: "[LIVE] Verify published gh-pages contract"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in \
+            model_output/macro_liquidity_expansion.json \
+            worldclass/decision-system.js \
+            worldclass/decision-system.css \
+            worldclass/macro-control-fallback.js \
+            worldclass/bootstrap.js \
+            index.html
+          do
+            size="$(gh api "/repos/${{ github.repository }}/contents/${path}?ref=gh-pages" --jq '.size')"
+            test "${size}" -gt 0
+            echo "Published ${path}: ${size} bytes"
+          done
 
       - name: "[LIVE] Trigger Pages rebuild"
         env:
