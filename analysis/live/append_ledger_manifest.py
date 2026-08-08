@@ -38,9 +38,14 @@ def append(ledger_root: Path, metadata_path: Path, forecast_commit_sha: str) -> 
         raise LedgerError("forecast commit must be a full Git commit SHA")
     metadata = load_json(metadata_path)
     new_items = metadata.get("new_forecasts") or []
-    state = validate_manifest_chain(ledger_root)
     if not new_items:
+        state = validate_manifest_chain(ledger_root)
         return {"created": 0, "latest_manifest_hash": state["latest_manifest_hash"]}
+
+    allowed = {str(item.get("relative_path") or "") for item in new_items}
+    state = validate_manifest_chain(ledger_root, allowed_uncovered=allowed)
+    if state["transition_uncovered_count"] != len(allowed):
+        raise LedgerError("live-ledger transition contains an unexpected covered/uncovered forecast set")
 
     previous_hash = state["latest_manifest_hash"]
     manifest_dir = ledger_root / "live" / "manifests"
