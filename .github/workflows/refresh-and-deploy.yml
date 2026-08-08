@@ -80,6 +80,7 @@ jobs:
           node --check analysis/worldclass/enhancements.js
           node --check analysis/worldclass/decision-system.js
           node --check analysis/worldclass/macro-control-fallback.js
+          node --check analysis/worldclass/macro-live-sources.js
 
       - name: "[VALIDATING] Macro source parser regression tests"
         run: python analysis/test_macro_liquidity_parsers.py
@@ -157,6 +158,7 @@ jobs:
           test -s analysis/worldclass/decision-system.js
           test -s analysis/worldclass/decision-system.css
           test -s analysis/worldclass/macro-control-fallback.js
+          test -s analysis/worldclass/macro-live-sources.js
           echo "Research HTML: $(du -h analysis/interactive_cot_dashboard.html | cut -f1)"
           echo "Browser bundle: $(du -h analysis/worldclass/base.json | cut -f1)"
           echo "COT backtest: $(du -h analysis/worldclass/backtest.json | cut -f1)"
@@ -185,6 +187,7 @@ jobs:
             worldclass/decision-system.js \
             worldclass/decision-system.css \
             worldclass/macro-control-fallback.js \
+            worldclass/macro-live-sources.js \
             worldclass/bootstrap.js \
             index.html
           do
