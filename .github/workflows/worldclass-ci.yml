@@ -46,13 +46,15 @@ jobs:
             analysis/live/generate_live_forecasts.py \
             analysis/live/apply_live_forecasts.py \
             analysis/live/append_ledger_manifest.py \
+            analysis/live/settle_live_signals.py \
+            analysis/live/build_live_track_record.py \
             analysis/live/validate_live_ledger.py \
             analysis/test_live_ledger.py
           node --check analysis/worldclass/app.js
           node --check analysis/worldclass/bootstrap.js
           node --check analysis/worldclass/enhancements.js
 
-      - name: Live ledger unit tests
+      - name: Live ledger and settlement unit tests
         run: python analysis/test_live_ledger.py
 
       - name: Validate canonical model specification
@@ -171,11 +173,11 @@ jobs:
           print('Full-history research regression validation passed')
           PY
 
-      - name: Simulate a prospective Friday ledger append
+      - name: Simulate prospective Friday ledger and live analytics
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf /tmp/cot-live-stage /tmp/cot-live-ledger /tmp/cot-live-append.json /tmp/cot-live-append-rerun.json
+          rm -rf /tmp/cot-live-stage /tmp/cot-live-ledger /tmp/cot-live-append.json /tmp/cot-live-append-rerun.json /tmp/live-track-record.json
           simulated_now="$(python - <<'PY'
           import json
           from datetime import UTC, datetime
@@ -216,6 +218,21 @@ jobs:
             --metadata /tmp/cot-live-append.json \
             --forecast-commit-sha ffffffffffffffffffffffffffffffffffffffff
           python analysis/live/validate_live_ledger.py --ledger-root /tmp/cot-live-ledger
+          python analysis/live/build_live_track_record.py \
+            --ledger-root /tmp/cot-live-ledger \
+            --output /tmp/live-track-record.json \
+            --now-utc "${simulated_now}"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          plan = json.loads(Path('/tmp/cot-live-stage/plan.json').read_text())
+          track = json.loads(Path('/tmp/live-track-record.json').read_text())
+          assert track['forecast_count'] == plan['forecast_count']
+          assert track['outcome_count'] == 0
+          assert track['weekly_vintage_count'] >= 1
+          assert track['ledger']['integrity'] == 'PASS'
+          print('Live analytics contract validates immutable forecast-only vintage')
+          PY
           python analysis/live/apply_live_forecasts.py \
             --staging /tmp/cot-live-stage \
             --ledger-root /tmp/cot-live-ledger \
