@@ -1,12 +1,6 @@
-# ─────────────────────────────────────────────────────────────────────────────
-# COT Intelligence – refresh data & deploy to GitHub Pages
-# ─────────────────────────────────────────────────────────────────────────────
-# Triggers:
-#   • Push to main          – fast deploy using the already-validated research bundle
-#   • Manual dispatch       – full data refresh + deploy
-#   • Friday 19:35 UTC      – full refresh at 21:35 Stockholm during CEST
-# ─────────────────────────────────────────────────────────────────────────────
-
+# COT Intelligence – validate, refresh and deploy to GitHub Pages.
+# Scheduled twice in UTC and gated to exactly 21:35 Europe/Stockholm so DST
+# never shifts the intended post-CFTC-release refresh.
 name: Refresh and Deploy
 
 on:
@@ -15,6 +9,7 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "35 19 * * 5"
+    - cron: "35 20 * * 5"
 
 permissions:
   contents: write
@@ -24,7 +19,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  schedule-gate:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          local_time="$(TZ=Europe/Stockholm date +%H:%M)"
+          if [ "$local_time" = "21:35" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping duplicate UTC cron; Stockholm time is $local_time."
+          fi
+
   refresh-and-deploy:
+    needs: schedule-gate
+    if: needs.schedule-gate.outputs.run == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -45,105 +62,112 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r analysis/requirements.txt
 
-      - name: Validate v2 source syntax
+      - name: "[VALIDATING] Source syntax"
         run: |
-          python -m py_compile analysis/build_worldclass_metals.py analysis/build_worldclass_bundle.py analysis/build_worldclass_backtest.py
+          python -m py_compile \
+            analysis/build_worldclass_metals.py \
+            analysis/build_worldclass_bundle.py \
+            analysis/build_worldclass_backtest.py \
+            analysis/build_worldclass_regime_backtest.py \
+            analysis/validate_worldclass_release.py \
+            analysis/macro_liquidity_expansion.py \
+            analysis/macro_liquidity_expansion_v12.py \
+            analysis/treasury_cash_flow_extension.py \
+            analysis/treasury_auction_absorption.py
           node --check analysis/worldclass/app.js
           node --check analysis/worldclass/bootstrap.js
           node --check analysis/worldclass/enhancements.js
+          node --check analysis/worldclass/decision-system.js
 
-      # A normal code push should deploy quickly instead of re-running every
-      # macro/backtest job. Scheduled/manual runs still execute the complete
-      # research refresh and become the source for the next lightweight push.
-      - name: Refresh index COT and macro data
+      - name: "[WAITING_FOR_CFTC] Refresh index COT and macro source dashboard"
         if: github.event_name != 'push'
         id: refresh
         continue-on-error: true
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: |
-          python analysis/serve_interactive_cot_dashboard.py \
-            --refresh-only
+          python analysis/serve_interactive_cot_dashboard.py --refresh-only
 
       - name: Warn if core refresh failed
         if: github.event_name != 'push' && steps.refresh.outcome == 'failure'
         run: |
-          echo "::warning::Core COT/macro refresh failed – deploying the last generated base dashboard."
-          echo "Check the logs above for CFTC/FRED/API availability."
+          echo "::warning::Core COT/macro refresh failed. Deployment will retain the last valid payload and expose stale/delayed state."
 
       - name: Build compact browser data bundle
         run: python analysis/build_worldclass_bundle.py
 
-      # Restore the last deployed metals file before refreshing. If CFTC or
-      # Yahoo is temporarily unavailable, build_worldclass_metals.py keeps the
-      # restored good cache instead of making Silver disappear from the UI.
-      - name: Restore deployed Gold and Silver cache
+      - name: Restore last-valid deployed caches
         continue-on-error: true
+        shell: bash
         run: |
-          mkdir -p analysis/worldclass
+          mkdir -p analysis/worldclass analysis/model_output
           git fetch origin gh-pages --depth=1
-          git show FETCH_HEAD:worldclass/metals.json > analysis/worldclass/metals.json
+          git show FETCH_HEAD:worldclass/metals.json > /tmp/metals.json 2>/dev/null || true
+          git show FETCH_HEAD:model_output/macro_liquidity_expansion.json > /tmp/macro_liquidity_expansion.json 2>/dev/null || true
+          if [ -s /tmp/metals.json ]; then cp /tmp/metals.json analysis/worldclass/metals.json; fi
+          if [ ! -s analysis/model_output/macro_liquidity_expansion.json ] && [ -s /tmp/macro_liquidity_expansion.json ]; then
+            cp /tmp/macro_liquidity_expansion.json analysis/model_output/macro_liquidity_expansion.json
+          fi
 
-      - name: Refresh Gold and Silver disaggregated COT
+      - name: "[CFTC_AVAILABLE] Refresh Gold and Silver Disaggregated COT"
+        if: github.event_name != 'push'
         id: metals
         continue-on-error: true
         run: python analysis/build_worldclass_metals.py
 
       - name: Warn if metals refresh failed
-        if: steps.metals.outcome == 'failure'
-        run: |
-          echo "::warning::Gold/Silver Disaggregated refresh failed. A prior deployed cache will be used when available."
+        if: github.event_name != 'push' && steps.metals.outcome == 'failure'
+        run: echo "::warning::Gold/Silver refresh failed; retaining last-valid deployed metals cache when available."
 
-      # Rebuild the forward-expectancy payload from the exact score currently
-      # displayed by v2. This step is local-only once base/metals JSON exist.
+      - name: "[VALIDATING] Refresh funding, dealer and MMF plumbing"
+        if: github.event_name != 'push'
+        id: plumbing
+        continue-on-error: true
+        run: python analysis/macro_liquidity_expansion_v12.py
+
+      - name: Warn if plumbing refresh failed
+        if: github.event_name != 'push' && steps.plumbing.outcome == 'failure'
+        run: echo "::warning::OFR/dealer/MMF refresh failed; retaining last-valid cache and marking coverage accordingly."
+
       - name: Build walk-forward COT backtests
         run: python analysis/build_worldclass_backtest.py
 
-      - name: Verify dashboard outputs
+      - name: Build regime-conditioned COT + macro backtests
+        run: python analysis/build_worldclass_regime_backtest.py
+
+      - name: "[VALIDATING] Data contracts, lookahead safety and performance budget"
+        run: python analysis/validate_worldclass_release.py
+
+      - name: Verify production outputs
+        shell: bash
         run: |
-          if [ ! -f analysis/interactive_cot_dashboard.html ]; then
-            echo "::error::No base dashboard HTML found – v2 has no research source to build from."
-            exit 1
-          fi
-          if [ ! -s analysis/worldclass/base.json ]; then
-            echo "::error::Compact worldclass/base.json was not generated."
-            exit 1
-          fi
-          if [ ! -s analysis/worldclass/backtest.json ]; then
-            echo "::error::worldclass/backtest.json was not generated."
-            exit 1
-          fi
-          if [ ! -f analysis/worldclass_dashboard.html ]; then
-            echo "::error::No world-class dashboard shell found."
-            exit 1
-          fi
-          if [ ! -f analysis/worldclass/app.js ] || [ ! -f analysis/worldclass/bootstrap.js ] || [ ! -f analysis/worldclass/styles.css ] || [ ! -f analysis/worldclass/enhancements.js ] || [ ! -f analysis/worldclass/enhancements.css ]; then
-            echo "::error::World-class dashboard assets are incomplete."
-            exit 1
-          fi
+          test -s analysis/interactive_cot_dashboard.html
+          test -s analysis/worldclass/base.json
+          test -s analysis/worldclass/backtest.json
+          test -s analysis/worldclass/regime_backtest.json
+          test -s analysis/worldclass/release-status.json
+          test -s analysis/worldclass_dashboard.html
+          test -s analysis/worldclass/app.js
+          test -s analysis/worldclass/bootstrap.js
+          test -s analysis/worldclass/decision-system.js
+          test -s analysis/worldclass/decision-system.css
           echo "Research HTML: $(du -h analysis/interactive_cot_dashboard.html | cut -f1)"
           echo "Browser bundle: $(du -h analysis/worldclass/base.json | cut -f1)"
-          echo "Backtest bundle: $(du -h analysis/worldclass/backtest.json | cut -f1)"
-          if [ -f analysis/worldclass/metals.json ]; then
-            echo "Gold/Silver dataset: $(du -h analysis/worldclass/metals.json | cut -f1)"
-          else
-            echo "::warning::No metals.json is available for this deployment."
-          fi
+          echo "COT backtest: $(du -h analysis/worldclass/backtest.json | cut -f1)"
+          echo "Regime backtest: $(du -h analysis/worldclass/regime_backtest.json | cut -f1)"
+          cat analysis/worldclass/release-status.json
 
-      # Root GitHub Pages opens the v2 interface. The original generated
-      # dashboard remains published as a calculation artifact and fallback.
-      - name: Prepare world-class index.html
+      - name: "[BUILDING] Prepare production index"
         run: cp analysis/worldclass_dashboard.html analysis/index.html
 
-      - name: Deploy to gh-pages branch
+      - name: "[DEPLOYING] Publish to gh-pages"
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./analysis
           force_orphan: true
 
-      - name: Trigger Pages rebuild
+      - name: "[LIVE] Trigger Pages rebuild"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api -X POST /repos/${{ github.repository }}/pages/builds
+        run: gh api -X POST /repos/${{ github.repository }}/pages/builds
