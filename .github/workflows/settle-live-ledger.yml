@@ -10,8 +10,10 @@ on:
 permissions:
   contents: write
 
+# Share the existing deployment mutex because this workflow writes both the
+# authoritative live-ledger branch and a presentation snapshot on gh-pages.
 concurrency:
-  group: cot-production-writes
+  group: pages-deploy
   cancel-in-progress: false
 
 jobs:
