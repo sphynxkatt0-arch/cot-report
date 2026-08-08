@@ -62,13 +62,16 @@ jobs:
         run: |
           python analysis/build_worldclass_bundle.py
           test -s analysis/worldclass/base.json
+          test -s analysis/worldclass/model-spec.json
           python - <<'PY'
           import json
           from pathlib import Path
           p = json.loads(Path('analysis/worldclass/base.json').read_text())
+          runtime_model = json.loads(Path('analysis/worldclass/model-spec.json').read_text())
           assert p.get('COT_DATA'), 'COT_DATA missing'
           assert p.get('PRICE_DATA'), 'PRICE_DATA missing'
           assert p.get('MODEL_SPEC'), 'MODEL_SPEC missing from runtime contract'
+          assert p['MODEL_SPEC'] == runtime_model, 'embedded/standalone model contract mismatch'
           assert p['MODEL_SPEC']['model_spec_hash'] == p['bundle_meta']['model_spec_hash']
           assert p['MODEL_SPEC']['model_version'] == p['bundle_meta']['model_version']
           assert Path('analysis/worldclass/base.json').stat().st_size < Path('analysis/interactive_cot_dashboard.html').stat().st_size
@@ -117,11 +120,13 @@ jobs:
           from pathlib import Path
 
           base = json.loads(Path('analysis/worldclass/base.json').read_text())
+          runtime_model = json.loads(Path('analysis/worldclass/model-spec.json').read_text())
           backtest = json.loads(Path('analysis/worldclass/backtest.json').read_text())
           regime = json.loads(Path('analysis/worldclass/regime_backtest.json').read_text())
-          model_hash = base['MODEL_SPEC']['model_spec_hash']
-          model_version = base['MODEL_SPEC']['model_version']
+          model_hash = runtime_model['model_spec_hash']
+          model_version = runtime_model['model_version']
 
+          assert base['MODEL_SPEC'] == runtime_model
           assert backtest['model_spec_hash'] == model_hash
           assert regime['model_spec_hash'] == model_hash
           assert backtest['model_version'] == model_version
