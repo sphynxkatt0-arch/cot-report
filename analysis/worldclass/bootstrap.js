@@ -20,6 +20,13 @@
       link.dataset.worldclassEnhancements = "1";
       document.head.appendChild(link);
     }
+    if (!document.querySelector('link[data-worldclass-kpi-accent]')) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "worldclass/kpi-accent.css";
+      link.dataset.worldclassKpiAccent = "1";
+      document.head.appendChild(link);
+    }
     const script = document.createElement("script");
     script.src = "worldclass/enhancements.js";
     script.defer = true;
