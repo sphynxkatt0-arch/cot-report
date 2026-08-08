@@ -1,41 +1,38 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# COT Dashboard – Refresh data & deploy to GitHub Pages
+# COT Intelligence – refresh data & deploy to GitHub Pages
 # ─────────────────────────────────────────────────────────────────────────────
 # Triggers:
-#   • Push to main          – rebuild & deploy on every merge
+#   • Push to main          – deploy immediately after a merged improvement
 #   • Manual dispatch       – one-click rebuild from the Actions tab
-#   • Cron (Sat 08:00 UTC)  – COT data is released Friday; Saturday morning
-#                             gives time for all upstream sources to update
+#   • Friday 19:35 UTC      – 21:35 Stockholm during CEST, just after COT release
 # ─────────────────────────────────────────────────────────────────────────────
 
 name: Refresh and Deploy
 
 on:
-  workflow_dispatch:           # Manual "Run workflow" button
+  push:
+    branches: [main]
+  workflow_dispatch:
   schedule:
-    - cron: "35 19 * * 5"      # Every Friday at 19:35 UTC (21:35 Stockholm CEST)
+    - cron: "35 19 * * 5"
 
-# ── Permissions required for deployment ────────────────────────────────────
 permissions:
   contents: write
 
-# ── Prevent overlapping deployments ──────────────────────────────────────────
 concurrency:
   group: pages-deploy
-  cancel-in-progress: false    # Let the running deploy finish; don't cancel it
+  cancel-in-progress: false
 
 jobs:
   refresh-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # ── 1. Checkout with full history (needed for any git-log analysis) ──
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # ── 2. Python setup ──────────────────────────────────────────────────
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
@@ -43,19 +40,19 @@ jobs:
           cache: pip
           cache-dependency-path: analysis/requirements.txt
 
-      # ── 3. Install dependencies ──────────────────────────────────────────
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r analysis/requirements.txt
 
-      # ── 4. Run the refresh pipeline ──────────────────────────────────────
-      #    --refresh-only : rebuild data + HTML, don't start the HTTP server
-      #    --no-legacy    : skip legacy COT correlations (speeds up CI)
-      #
-      #    If the refresh fails (API downtime, rate limits, etc.), we still
-      #    deploy whatever HTML already exists in the repo so the site stays up.
-      - name: Refresh dashboard data
+      - name: Validate v2 source syntax
+        run: |
+          python -m py_compile analysis/build_worldclass_metals.py
+          node --check analysis/worldclass/app.js
+
+      # The existing research pipeline remains the source of truth for TFF,
+      # Legacy, price/factor histories and the unified macro-liquidity model.
+      - name: Refresh index COT and macro data
         id: refresh
         continue-on-error: true
         env:
@@ -64,36 +61,58 @@ jobs:
           python analysis/serve_interactive_cot_dashboard.py \
             --refresh-only
 
-      - name: Warn if refresh failed
+      - name: Warn if core refresh failed
         if: steps.refresh.outcome == 'failure'
         run: |
-          echo "::warning::Dashboard refresh failed – deploying existing HTML."
-          echo "Check the logs above for details (API rate limits, network, etc.)."
+          echo "::warning::Core COT/macro refresh failed – attempting deployment with the last generated base dashboard."
+          echo "Check the logs above for CFTC/FRED/API availability."
 
-      # ── 5. Verify the dashboard HTML exists before deploying ─────────────
-      - name: Verify dashboard output
+      # Gold and Silver are physical commodities and belong in the CFTC
+      # Disaggregated report, not TFF. This creates the dedicated v2 dataset.
+      - name: Refresh Gold and Silver disaggregated COT
+        id: metals
+        continue-on-error: true
+        run: python analysis/build_worldclass_metals.py
+
+      - name: Warn if metals refresh failed
+        if: steps.metals.outcome == 'failure'
+        run: |
+          echo "::warning::Gold/Silver Disaggregated refresh failed. The dashboard will expose any available cached/legacy data and mark unavailable instruments accordingly."
+
+      - name: Verify dashboard outputs
         run: |
           if [ ! -f analysis/interactive_cot_dashboard.html ]; then
-            echo "::error::No dashboard HTML found – nothing to deploy."
+            echo "::error::No base dashboard HTML found – v2 has no embedded research data to load."
             exit 1
           fi
-          echo "Dashboard size: $(du -h analysis/interactive_cot_dashboard.html | cut -f1)"
+          if [ ! -f analysis/worldclass_dashboard.html ]; then
+            echo "::error::No world-class dashboard shell found."
+            exit 1
+          fi
+          if [ ! -f analysis/worldclass/app.js ] || [ ! -f analysis/worldclass/styles.css ]; then
+            echo "::error::World-class dashboard assets are incomplete."
+            exit 1
+          fi
+          echo "Base dashboard: $(du -h analysis/interactive_cot_dashboard.html | cut -f1)"
+          if [ -f analysis/worldclass/metals.json ]; then
+            echo "Gold/Silver dataset: $(du -h analysis/worldclass/metals.json | cut -f1)"
+          else
+            echo "::warning::No metals.json was generated in this run."
+          fi
 
-      # ── 6. Prepare index.html for GitHub Pages ───────────────────────────
-      - name: Prepare index.html
-        run: cp analysis/interactive_cot_dashboard.html analysis/index.html
+      # Root GitHub Pages now opens the v2 interface. The old generated
+      # interactive_cot_dashboard.html is still published as a data source and
+      # a rollback/fallback page.
+      - name: Prepare world-class index.html
+        run: cp analysis/worldclass_dashboard.html analysis/index.html
 
-      # ── 7. Deploy to gh-pages branch (Bypasses artifact storage limits) ──
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./analysis
-          force_orphan: true    # Overwrites history with a single commit to prevent repo bloat
+          force_orphan: true
 
-      # ── 8. Trigger GitHub Pages Rebuild ──────────────────────────────────
-      # Pushes made with the default GITHUB_TOKEN do not trigger the internal
-      # Pages build workflow for security reasons. We trigger it manually here.
       - name: Trigger Pages rebuild
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
