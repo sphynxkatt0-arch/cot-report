@@ -86,9 +86,29 @@ def load_config(path: Path = CONFIG) -> dict[str, Any]:
 
 
 def series_points(payload: Any, mnemonic: str | None = None) -> list[tuple[str, float]]:
+    """Normalize OFR timeseries/full responses into sorted date/value pairs.
+
+    The dedicated /series/timeseries endpoint returns a bare list, while the
+    /series/full endpoint returns a mnemonic-keyed object. Mnemonic matching is
+    deliberately case-insensitive because OFR canonicalizes requested mnemonics
+    in its response (for example a lowercase request may return an uppercase key).
+    """
     raw: Any = payload
-    if isinstance(payload, dict) and mnemonic and mnemonic in payload:
-        raw = payload[mnemonic]
+    if isinstance(raw, dict) and mnemonic:
+        exact = raw.get(mnemonic)
+        if exact is not None:
+            raw = exact
+        else:
+            folded = str(mnemonic).casefold()
+            match = next((value for key, value in raw.items() if str(key).casefold() == folded), None)
+            if match is not None:
+                raw = match
+
+    if isinstance(raw, dict) and "timeseries" not in raw and len(raw) == 1:
+        only = next(iter(raw.values()))
+        if isinstance(only, dict):
+            raw = only
+
     if isinstance(raw, dict) and "timeseries" in raw:
         raw = raw["timeseries"]
     if isinstance(raw, dict):
@@ -99,12 +119,17 @@ def series_points(payload: Any, mnemonic: str | None = None) -> list[tuple[str, 
             raw = next((value for value in raw.values() if isinstance(value, list)), [])
     if not isinstance(raw, list):
         return []
+
     output: list[tuple[str, float]] = []
     for item in raw:
-        if not isinstance(item, (list, tuple)) or len(item) < 2:
-            continue
-        stamp = iso_date(item[0])
-        value = finite(item[1])
+        stamp: str | None = None
+        value: float | None = None
+        if isinstance(item, (list, tuple)) and len(item) >= 2:
+            stamp = iso_date(item[0])
+            value = finite(item[1])
+        elif isinstance(item, dict):
+            stamp = iso_date(item.get("date") or item.get("record_date") or item.get("observation_date"))
+            value = finite(item.get("value") if "value" in item else item.get("observation_value"))
         if stamp and value is not None:
             output.append((stamp, value))
     return sorted(dict(output).items())
@@ -202,11 +227,19 @@ def fetch_indicator(spec: dict[str, Any], *, now: datetime | None = None) -> Ind
             result.error = resolution
             return result
         start = (now or datetime.now(UTC)).date() - timedelta(days=int(spec.get("history_days", 1400)))
-        url = f"{OFR_BASE}/series/full?{urllib.parse.urlencode({'mnemonic': mnemonic, 'start_date': start.isoformat()})}"
+        url = f"{OFR_BASE}/series/timeseries?{urllib.parse.urlencode({'mnemonic': mnemonic, 'start_date': start.isoformat(), 'remove_nulls': 'true'})}"
         points = series_points(request_json(url), mnemonic)
         if not points:
             result.error = "series has no usable observations"
             return result
+
+        divisor = finite(spec.get("scale_divisor")) or 1.0
+        if divisor <= 0:
+            raise ValueError(f"invalid scale_divisor for {spec['key']}: {divisor}")
+        if divisor != 1.0:
+            points = [(stamp, value / divisor) for stamp, value in points]
+            result.resolution = f"{resolution}; scaled raw OFR dollars by {divisor:g}"
+
         result.latest_date, result.latest_value = points[-1]
         result.change_short = change(points, int(spec.get("short_observations", 5)))
         result.change_medium = change(points, int(spec.get("medium_observations", 20)))
@@ -360,8 +393,8 @@ def build_payload(config: dict[str, Any] | None = None, *, now: datetime | None 
         "sources": source_rows(results),
         "source_notes": [
             "OFR Short-term Funding Monitor is used for repo, primary-dealer, and money-market-fund series.",
-            "Missing or stale series reduce coverage and are never filled with a neutral score.",
-            "Primary-dealer and MMF indicators are context until their exact series selection is reviewed in generated source status."
+            "Dollar series are normalized at ingestion to the units declared in the reviewed source config.",
+            "Missing or stale series reduce coverage and are never filled with a neutral score."
         ]
     }
 
