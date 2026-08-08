@@ -122,6 +122,8 @@ jobs:
             analysis/live/generate_live_forecasts.py \
             analysis/live/apply_live_forecasts.py \
             analysis/live/append_ledger_manifest.py \
+            analysis/live/settle_live_signals.py \
+            analysis/live/build_live_track_record.py \
             analysis/live/validate_live_ledger.py \
             analysis/test_live_ledger.py \
             analysis/macro_liquidity_expansion.py \
@@ -278,6 +280,19 @@ jobs:
           test "$local_head" = "$remote_head"
           echo "live-ledger verified at ${remote_head}"
 
+      - name: "[FORWARD_TEST] Build presentation track record from authoritative ledger"
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/cot-live-ledger-track
+          git fetch origin live-ledger:refs/remotes/origin/live-ledger
+          git worktree add --detach /tmp/cot-live-ledger-track origin/live-ledger
+          python analysis/live/validate_live_ledger.py --ledger-root /tmp/cot-live-ledger-track --verify-git-history
+          python analysis/live/build_live_track_record.py \
+            --ledger-root /tmp/cot-live-ledger-track \
+            --output analysis/worldclass/live-track-record.json
+          test -s analysis/worldclass/live-track-record.json
+
       - name: Verify production outputs
         shell: bash
         run: |
@@ -287,6 +302,7 @@ jobs:
           test -s analysis/worldclass/metals.json
           test -s analysis/worldclass/backtest.json
           test -s analysis/worldclass/regime_backtest.json
+          test -s analysis/worldclass/live-track-record.json
           test -s analysis/worldclass/release-status.json
           test -s analysis/model_output/macro_liquidity_expansion.json
           test -s analysis/worldclass_dashboard.html
@@ -302,6 +318,7 @@ jobs:
           echo "Model contract: $(du -h analysis/worldclass/model-spec.json | cut -f1)"
           echo "COT backtest: $(du -h analysis/worldclass/backtest.json | cut -f1)"
           echo "Regime backtest: $(du -h analysis/worldclass/regime_backtest.json | cut -f1)"
+          echo "Live track record: $(du -h analysis/worldclass/live-track-record.json | cut -f1)"
           echo "Macro plumbing: $(du -h analysis/model_output/macro_liquidity_expansion.json | cut -f1)"
           cat analysis/worldclass/release-status.json
 
@@ -328,6 +345,7 @@ jobs:
             worldclass/metals.json \
             worldclass/backtest.json \
             worldclass/regime_backtest.json \
+            worldclass/live-track-record.json \
             worldclass/release-status.json \
             worldclass/decision-system.js \
             worldclass/decision-system.css \
