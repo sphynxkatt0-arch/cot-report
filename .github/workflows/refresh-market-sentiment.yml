@@ -2,6 +2,9 @@ name: Refresh Daily Market Sentiment
 
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Refresh and Deploy"]
+    types: [completed]
   schedule:
     # Exactly one maps to 23:45 Europe/Stockholm across DST.
     - cron: "45 21 * * *"
@@ -19,13 +22,25 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       run: ${{ steps.check.outputs.run }}
+      collect: ${{ steps.check.outputs.collect }}
     steps:
       - id: check
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" != "schedule" ]; then
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            if [ "${{ github.event.workflow_run.conclusion }}" = "success" ]; then
+              echo "run=true" >> "$GITHUB_OUTPUT"
+              echo "collect=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "run=false" >> "$GITHUB_OUTPUT"
+              echo "collect=false" >> "$GITHUB_OUTPUT"
+            fi
+            exit 0
+          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "collect=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           schedule_expr='${{ github.event.schedule }}'
@@ -33,16 +48,18 @@ jobs:
           case "$schedule_expr" in
             "45 21 * * *") scheduled_utc="$utc_day 21:45:00 UTC" ;;
             "45 22 * * *") scheduled_utc="$utc_day 22:45:00 UTC" ;;
-            *) echo "run=false" >> "$GITHUB_OUTPUT"; exit 0 ;;
+            *) echo "run=false" >> "$GITHUB_OUTPUT"; echo "collect=false" >> "$GITHUB_OUTPUT"; exit 0 ;;
           esac
           scheduled_local="$(TZ=Europe/Stockholm date -d "$scheduled_utc" +%H:%M)"
           if [ "$scheduled_local" = "23:45" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "collect=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "collect=false" >> "$GITHUB_OUTPUT"
           fi
 
-  collect:
+  refresh:
     needs: schedule-gate
     if: needs.schedule-gate.outputs.run == 'true'
     runs-on: ubuntu-latest
@@ -50,6 +67,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
 
       - uses: actions/setup-python@v5
@@ -61,24 +79,31 @@ jobs:
           python -m py_compile analysis/sentiment/adanos_daily.py analysis/sentiment/build_market_sentiment_history.py analysis/test_market_sentiment.py
           python analysis/test_market_sentiment.py
 
-      - name: Require Adanos API secret
-        env:
-          ADANOS_API_KEY: ${{ secrets.ADANOS_API_KEY }}
-        run: |
-          if [ -z "${ADANOS_API_KEY}" ]; then
-            echo "::error::Repository secret ADANOS_API_KEY is required."
-            exit 1
-          fi
-
-      - name: Append immutable daily source snapshot
-        env:
-          ADANOS_API_KEY: ${{ secrets.ADANOS_API_KEY }}
+      - name: Checkout sentiment ledger
         shell: bash
         run: |
           set -euo pipefail
           rm -rf /tmp/cot-sentiment-ledger
           git fetch origin sentiment-ledger:refs/remotes/origin/sentiment-ledger
           git worktree add --detach /tmp/cot-sentiment-ledger origin/sentiment-ledger
+
+      - name: Require Adanos API secret for collection runs
+        if: needs.schedule-gate.outputs.collect == 'true'
+        env:
+          ADANOS_API_KEY: ${{ secrets.ADANOS_API_KEY }}
+        run: |
+          if [ -z "${ADANOS_API_KEY}" ]; then
+            echo "::error::Repository secret ADANOS_API_KEY is required for daily collection."
+            exit 1
+          fi
+
+      - name: Append immutable daily source snapshot
+        if: needs.schedule-gate.outputs.collect == 'true'
+        env:
+          ADANOS_API_KEY: ${{ secrets.ADANOS_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
           python analysis/sentiment/adanos_daily.py --ledger-root /tmp/cot-sentiment-ledger
           git -C /tmp/cot-sentiment-ledger config user.name "github-actions[bot]"
           git -C /tmp/cot-sentiment-ledger config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -95,7 +120,7 @@ jobs:
             --output /tmp/market-sentiment.json
           test -s /tmp/market-sentiment.json
 
-      - name: Publish sentiment snapshot to Pages
+      - name: Publish or restore sentiment snapshot on Pages
         shell: bash
         run: |
           set -euo pipefail
