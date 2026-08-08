@@ -36,7 +36,9 @@
     addStylesheet("worldclass/enhancements.css", "data-worldclass-enhancements");
     addStylesheet("worldclass/kpi-accent.css", "data-worldclass-kpi-accent");
     addStylesheet("worldclass/decision-system.css", "data-worldclass-decision-system");
+    addStylesheet("worldclass/sentiment-panel.css", "data-worldclass-sentiment");
     addScript("worldclass/enhancements.js");
+    addScript("worldclass/sentiment-panel.js?v=20260809-001");
     addScript("worldclass/decision-system.js?v=20260808-2340", () => {
       addScript("worldclass/macro-control-fallback.js?v=20260808-2340", () => {
         addScript("worldclass/macro-state-renderer.js?v=20260808-2340", () => {
