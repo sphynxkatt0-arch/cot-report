@@ -1,45 +1,48 @@
 (() => {
   "use strict";
 
-  const TARGET_KEYS = [
-    "net_liquidity_4w_change",
-    "bank_reserves_4w_change",
-    "bank_reserves",
-    "reserves",
-    "sofr_iorb_spread",
-    "effr_iorb_spread"
-  ];
-
   const finite = value => {
     const number = Number(value);
     return Number.isFinite(number) ? number : null;
   };
 
-  function latestMacroRow() {
+  function latestMetric(keys) {
     const root = window.__COT_WORLDCLASS_BASE__?.MACRO_MONITOR;
     if (!root || typeof root !== "object") return null;
-
-    let best = null;
-    let bestScore = -1;
-    let bestDate = "";
+    const wanted = new Set(keys);
     const seen = new Set();
+    let best = null;
+    let sequence = 0;
 
-    function visit(node, depth = 0) {
-      if (!node || depth > 8 || typeof node !== "object" || seen.has(node)) return;
+    function visit(node, inheritedDate = "", depth = 0) {
+      if (!node || depth > 9 || typeof node !== "object" || seen.has(node)) return;
       seen.add(node);
       if (Array.isArray(node)) {
-        for (const item of node) visit(item, depth + 1);
+        for (const item of node) visit(item, inheritedDate, depth + 1);
         return;
       }
 
-      const score = TARGET_KEYS.reduce((sum, key) => sum + (finite(node[key]) !== null ? 1 : 0), 0);
-      const date = String(node.date || node.observation_date || node.report_date || "").slice(0, 10);
-      if (score > 0 && (score > bestScore || (score === bestScore && date > bestDate))) {
-        best = node;
-        bestScore = score;
-        bestDate = date;
+      const ownDate = String(
+        node.date || node.observation_date || node.report_date || node.as_of_date || inheritedDate || ""
+      ).slice(0, 10);
+
+      for (const [key, raw] of Object.entries(node)) {
+        if (!wanted.has(key)) continue;
+        const value = finite(raw);
+        if (value === null) continue;
+        sequence += 1;
+        const candidate = { key, value, date: ownDate, sequence };
+        if (
+          !best ||
+          (candidate.date && !best.date) ||
+          (candidate.date && best.date && candidate.date > best.date) ||
+          (candidate.date === best.date && candidate.sequence > best.sequence)
+        ) {
+          best = candidate;
+        }
       }
-      for (const value of Object.values(node)) visit(value, depth + 1);
+
+      for (const value of Object.values(node)) visit(value, ownDate, depth + 1);
     }
 
     visit(root);
@@ -95,50 +98,48 @@
   function applyFallback() {
     const root = document.querySelector("#wcMacroControl");
     if (!root) return false;
-    const row = latestMacroRow();
-    if (!row) return false;
-
     let used = false;
-    const liquidity = finite(row.net_liquidity_4w_change);
-    if (liquidity !== null) {
+
+    const liquidity = latestMetric(["net_liquidity_4w_change"]);
+    if (liquidity) {
       used = setCard(
         cardByLabel(root, "SYSTEM LIQUIDITY"),
-        signed(liquidity, 1, " bn"),
-        liquidity > 0 ? "Supportive" : liquidity < 0 ? "Defensive" : "Neutral",
-        "Fed − TGA − RRP · validated macro-monitor fallback",
-        liquidity > 0 ? "positive" : liquidity < 0 ? "negative" : "warning"
+        signed(liquidity.value, 1, " bn"),
+        liquidity.value > 0 ? "Supportive" : liquidity.value < 0 ? "Defensive" : "Neutral",
+        `Fed − TGA − RRP · validated macro monitor${liquidity.date ? ` · ${liquidity.date}` : ""}`,
+        liquidity.value > 0 ? "positive" : liquidity.value < 0 ? "negative" : "warning"
       ) || used;
     }
 
-    const reserveImpulse = finite(row.bank_reserves_4w_change);
-    const reserveLevel = finite(row.bank_reserves) ?? finite(row.reserves);
-    if (reserveImpulse !== null) {
+    const reserveImpulse = latestMetric(["bank_reserves_4w_change"]);
+    const reserveLevel = latestMetric(["bank_reserves", "reserves"]);
+    if (reserveImpulse) {
       used = setCard(
         cardByLabel(root, "RESERVES"),
-        signed(reserveImpulse, 1, " bn"),
-        reserveImpulse > 0 ? "Supportive" : reserveImpulse < 0 ? "Defensive" : "Neutral",
-        "4W reserve impulse · validated macro-monitor fallback",
-        reserveImpulse > 0 ? "positive" : reserveImpulse < 0 ? "negative" : "warning"
+        signed(reserveImpulse.value, 1, " bn"),
+        reserveImpulse.value > 0 ? "Supportive" : reserveImpulse.value < 0 ? "Defensive" : "Neutral",
+        `4W reserve impulse · validated macro monitor${reserveImpulse.date ? ` · ${reserveImpulse.date}` : ""}`,
+        reserveImpulse.value > 0 ? "positive" : reserveImpulse.value < 0 ? "negative" : "warning"
       ) || used;
-    } else if (reserveLevel !== null) {
+    } else if (reserveLevel) {
       used = setCard(
         cardByLabel(root, "RESERVES"),
-        plain(reserveLevel, 0),
+        plain(reserveLevel.value, 0),
         "Context",
-        "Bank reserve level · no directional inference",
+        `Bank reserve level · no directional inference${reserveLevel.date ? ` · ${reserveLevel.date}` : ""}`,
         "warning"
       ) || used;
     }
 
-    const spread = finite(row.sofr_iorb_spread) ?? finite(row.effr_iorb_spread);
-    if (spread !== null) {
-      const abs = Math.abs(spread);
+    const spread = latestMetric(["sofr_iorb_spread", "effr_iorb_spread"]);
+    if (spread) {
+      const abs = Math.abs(spread.value);
       const state = abs <= 0.02 ? "Normal" : abs <= 0.05 ? "Watch" : "Stress";
       used = setCard(
         cardByLabel(root, "FUNDING"),
-        signed(spread, 3, " pp"),
+        signed(spread.value, 3, " pp"),
         state,
-        `${finite(row.sofr_iorb_spread) !== null ? "SOFR" : "EFFR"} − IORB fallback; full repo microstructure pending`,
+        `${spread.key === "sofr_iorb_spread" ? "SOFR" : "EFFR"} − IORB · validated macro monitor${spread.date ? ` · ${spread.date}` : ""}`,
         state === "Normal" ? "positive" : state === "Stress" ? "negative" : "warning"
       ) || used;
     }
@@ -147,7 +148,7 @@
       const note = root.querySelector(".wc-control-note");
       if (note && !note.dataset.fallbackNote) {
         note.dataset.fallbackNote = "1";
-        note.textContent += " Core liquidity/funding fields use the validated macro monitor when the extended plumbing payload is temporarily unavailable; reserve levels are never treated as directional impulses.";
+        note.textContent += " Core liquidity/funding fields are resolved independently from the validated macro monitor when the extended plumbing payload is unavailable; reserve levels are never treated as directional impulses.";
       }
     }
     return used;
@@ -157,7 +158,7 @@
   const timer = window.setInterval(() => {
     applyFallback();
     attempts += 1;
-    if (attempts >= 40 || document.querySelectorAll("[data-macro-fallback='1']").length >= 3) {
+    if (attempts >= 48 || document.querySelectorAll("[data-macro-fallback='1']").length >= 3) {
       window.clearInterval(timer);
     }
   }, 250);
