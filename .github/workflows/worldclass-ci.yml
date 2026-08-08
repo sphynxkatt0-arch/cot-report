@@ -7,6 +7,7 @@ on:
       - "analysis/worldclass_dashboard.html"
       - "analysis/build_worldclass_metals.py"
       - "analysis/build_worldclass_bundle.py"
+      - "analysis/build_worldclass_backtest.py"
       - "analysis/config/regime_rules.json"
       - ".github/workflows/**"
 
@@ -23,9 +24,10 @@ jobs:
           python-version: "3.11"
       - name: Source syntax
         run: |
-          python -m py_compile analysis/build_worldclass_metals.py analysis/build_worldclass_bundle.py
+          python -m py_compile analysis/build_worldclass_metals.py analysis/build_worldclass_bundle.py analysis/build_worldclass_backtest.py
           node --check analysis/worldclass/app.js
           node --check analysis/worldclass/bootstrap.js
+          node --check analysis/worldclass/enhancements.js
       - name: Build compact browser bundle
         run: |
           python analysis/build_worldclass_bundle.py
@@ -56,4 +58,24 @@ jobs:
               assert 'other_reportable_net' in rows[-1]
               assert 'non_reportable_net' in rows[-1]
           print('Gold/Silver dataset validation passed')
+          PY
+      - name: Build walk-forward expectancy
+        run: |
+          python analysis/build_worldclass_backtest.py
+          test -s analysis/worldclass/backtest.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = json.loads(Path('analysis/worldclass/backtest.json').read_text())
+          required = {'sp500', 'nq', 'vix', 'rty', 'dow', 'gold', 'silver'}
+          assert required.issubset(set(p['markets'])), (required - set(p['markets']))
+          for market in required:
+              datasets = p['markets'][market]['datasets']
+              assert datasets, market
+              preferred = datasets.get('disaggregated') or datasets.get('tff') or datasets.get('legacy')
+              assert preferred['methodology']['lookahead_safe'] is True
+              assert preferred['historical_signal_count'] >= 100, (market, preferred['historical_signal_count'])
+              assert preferred['horizons'].get('4w'), market
+              assert preferred['horizons']['4w']['observations'] >= 20, market
+          print('Walk-forward expectancy validation passed')
           PY
