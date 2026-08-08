@@ -80,6 +80,7 @@ jobs:
           node --check analysis/worldclass/enhancements.js
           node --check analysis/worldclass/decision-system.js
           node --check analysis/worldclass/macro-control-fallback.js
+          node --check analysis/worldclass/macro-state-renderer.js
           node --check analysis/worldclass/macro-live-sources.js
 
       - name: "[VALIDATING] Macro source parser regression tests"
@@ -132,7 +133,7 @@ jobs:
 
       - name: Warn if plumbing refresh failed
         if: steps.plumbing.outcome == 'failure'
-        run: echo "::warning::Macro plumbing builder failed; validation will use the restored last-valid payload if one exists, otherwise deployment will stop."
+        run: echo "::warning::Macro plumbing builder process failed; validation will use the restored last-valid payload when present. A missing payload remains a hard contract failure."
 
       - name: Build walk-forward COT backtests
         run: python analysis/build_worldclass_backtest.py
@@ -158,6 +159,7 @@ jobs:
           test -s analysis/worldclass/decision-system.js
           test -s analysis/worldclass/decision-system.css
           test -s analysis/worldclass/macro-control-fallback.js
+          test -s analysis/worldclass/macro-state-renderer.js
           test -s analysis/worldclass/macro-live-sources.js
           echo "Research HTML: $(du -h analysis/interactive_cot_dashboard.html | cut -f1)"
           echo "Browser bundle: $(du -h analysis/worldclass/base.json | cut -f1)"
@@ -187,6 +189,7 @@ jobs:
             worldclass/decision-system.js \
             worldclass/decision-system.css \
             worldclass/macro-control-fallback.js \
+            worldclass/macro-state-renderer.js \
             worldclass/macro-live-sources.js \
             worldclass/bootstrap.js \
             index.html
