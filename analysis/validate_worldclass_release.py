@@ -2,9 +2,9 @@
 """Validate the production COT dashboard payload and publish release health.
 
 Hard data-contract failures stop deployment. A late/missing expected CFTC report
-is *not* converted to neutral and does not stop deployment: the validator writes
-worldclass/release-status.json with state=DELAYED so the last valid observation
-can remain live with an explicit warning.
+or a temporary external macro-source outage is not converted to neutral: the
+validator publishes explicit delayed/degraded health while preserving valid core
+data and the browser's official-source recovery path.
 """
 from __future__ import annotations
 
@@ -130,7 +130,7 @@ def validate_backtests(backtest: dict[str, Any], regime: dict[str, Any]) -> None
 
 
 def validate_macro_plumbing(plumbing: dict[str, Any]) -> dict[str, Any]:
-    """Reject deployments that would render the control room as an empty shell."""
+    """Require the macro contract, while treating third-party outages as degraded health."""
     assert isinstance(plumbing, dict) and plumbing, "macro plumbing payload is empty"
     assert plumbing.get("schema_version") == 1, "macro plumbing schema_version must be 1"
     assert plumbing.get("model_version"), "macro plumbing model_version missing"
@@ -149,12 +149,15 @@ def validate_macro_plumbing(plumbing: dict[str, Any]) -> dict[str, Any]:
         assert isinstance(pillars.get(key), dict), f"macro plumbing pillar missing: {key}"
         assert pillars[key].get("state"), f"macro plumbing pillar state missing: {key}"
 
+    # These two values come from the same validated macro monitor already shown
+    # by the top cards, so their absence indicates a real internal data-contract
+    # break and remains a hard deployment failure.
     assert finite_number(pillars["net_liquidity"].get("value")) is not None, "macro plumbing net_liquidity value missing"
     assert finite_number(pillars["bank_reserves"].get("value")) is not None, "macro plumbing bank_reserves value missing"
 
     external = ("funding_microstructure", "dealer_absorption", "fiscal_cash_flow", "auction_absorption")
     available_external = [key for key in external if str(pillars[key].get("state")) != "Unavailable"]
-    assert available_external, "all external macro-plumbing pillars are unavailable; refusing empty control-room deploy"
+    unavailable_external = [key for key in external if key not in available_external]
 
     sources = plumbing.get("sources")
     assert isinstance(sources, list) and sources, "macro plumbing source matrix missing"
@@ -162,11 +165,14 @@ def validate_macro_plumbing(plumbing: dict[str, Any]) -> dict[str, Any]:
     assert coverage is not None and 0 <= coverage <= 1, "macro plumbing coverage ratio invalid"
 
     return {
+        "state": "LIVE" if available_external else "DEGRADED",
         "model_version": plumbing.get("model_version"),
         "generated_at_utc": plumbing.get("generated_at_utc"),
         "source_coverage_ratio": coverage,
         "source_coverage_label": plumbing.get("source_coverage_label"),
         "available_external_pillars": available_external,
+        "unavailable_external_pillars": unavailable_external,
+        "browser_official_recovery": True,
         "required_pillars": list(required),
     }
 
@@ -187,6 +193,7 @@ def validate_performance_budget() -> dict[str, int]:
         WORLDCLASS / "decision-system.js",
         WORLDCLASS / "decision-system.css",
         WORLDCLASS / "macro-control-fallback.js",
+        WORLDCLASS / "macro-state-renderer.js",
         WORLDCLASS / "macro-live-sources.js",
         WORLDCLASS / "regime_backtest.json",
         PLUMBING,
@@ -277,7 +284,12 @@ def main() -> None:
     }
     STATUS.write_text(json.dumps(status, indent=2) + "\n", encoding="utf-8")
     print(f"Worldclass release validation PASS · state={status['state']}")
-    print(f"Macro plumbing coverage: {plumbing_health['source_coverage_ratio']:.0%} · external pillars: {', '.join(plumbing_health['available_external_pillars'])}")
+    external_text = ", ".join(plumbing_health["available_external_pillars"]) or "none"
+    print(f"Macro plumbing coverage: {plumbing_health['source_coverage_ratio']:.0%} · external pillars: {external_text}")
+    if plumbing_health["state"] == "DEGRADED":
+        print("::warning::All server-side external macro feeds are unavailable; deploying validated core macro data with browser official-source recovery enabled.")
+    elif plumbing_health["unavailable_external_pillars"]:
+        print(f"::warning::Macro plumbing partial coverage; unavailable: {', '.join(plumbing_health['unavailable_external_pillars'])}.")
     print(f"Initial non-Plotly gzip payload: {performance['initial_total']:,} bytes")
     if delayed:
         print(f"::warning::{status['message']}")
