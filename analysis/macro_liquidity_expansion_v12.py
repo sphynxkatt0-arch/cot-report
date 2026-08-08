@@ -3,20 +3,49 @@
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from typing import Any
 
 import macro_liquidity_expansion as base
+import treasury_auction_absorption as auction_module
+import treasury_cash_flow_extension as fiscal_module
 from treasury_auction_absorption import fetch_auction_context
 from treasury_cash_flow_extension import fetch_treasury_cash_context, fiscal_pillar
 
 FISCAL_CSV = base.OUT_DIR / "treasury_cash_source_status.csv"
+SOURCE_TIMEOUT_SECONDS = 10
+SOURCE_RETRIES = 1
+
+
+def transport_failure(error: str | None) -> bool:
+    """Identify failures where a metadata retry against the same host is wasteful."""
+    text = str(error or "").lower()
+    return any(
+        marker in text
+        for marker in (
+            "timed out",
+            "temporary failure",
+            "name or service not known",
+            "connection reset",
+            "connection refused",
+            "remote end closed",
+            "urlopen error",
+            "http error 500",
+            "http error 502",
+            "http error 503",
+            "http error 504",
+        )
+    )
 
 
 def resilient_ofr_indicator(spec: dict[str, Any], current: datetime) -> base.IndicatorResult:
-    """Verify configured series, then fall back to metadata search when needed."""
+    """Verify configured series, then fall back to metadata search when useful."""
     result = base.fetch_indicator(spec, now=current)
     if result.status != "unavailable" or not spec.get("preferred_mnemonics"):
+        return result
+    if transport_failure(result.error):
+        result.resolution = f"{result.resolution or 'configured'}; metadata fallback skipped after transport failure"
         return result
     fallback = dict(spec)
     fallback["preferred_mnemonics"] = []
@@ -65,10 +94,53 @@ def apply_core_macro_fallbacks(pillars: dict[str, Any], macro_latest: dict[str, 
             }
 
 
+def fetch_external_sources(config: dict[str, Any], current: datetime):
+    """Fetch independent public sources concurrently with bounded network waits.
+
+    Production must degrade quickly when OFR or Treasury APIs are unavailable;
+    a broad source outage must not turn into a 20+ minute serial retry chain.
+    """
+    original_base_request = base.request_json
+    original_fiscal_request = fiscal_module.request_json
+    original_auction_request = auction_module.request_json
+
+    def bounded_request_json(url: str, *, timeout: int = SOURCE_TIMEOUT_SECONDS, retries: int = SOURCE_RETRIES):
+        return original_base_request(
+            url,
+            timeout=min(int(timeout), SOURCE_TIMEOUT_SECONDS),
+            retries=min(int(retries), SOURCE_RETRIES),
+        )
+
+    base.request_json = bounded_request_json
+    fiscal_module.request_json = bounded_request_json
+    auction_module.request_json = bounded_request_json
+    try:
+        with ThreadPoolExecutor(max_workers=6, thread_name_prefix="ofr") as ofr_pool, ThreadPoolExecutor(
+            max_workers=2, thread_name_prefix="treasury"
+        ) as treasury_pool:
+            fiscal_future = treasury_pool.submit(fetch_treasury_cash_context, now=current)
+            auction_future = treasury_pool.submit(fetch_auction_context, now=current)
+            ofr_results = list(
+                ofr_pool.map(
+                    lambda spec: resilient_ofr_indicator(spec, current),
+                    config["indicators"],
+                )
+            )
+            fiscal_results, fiscal_context = fiscal_future.result()
+            auction_result, auction_context = auction_future.result()
+        return ofr_results, fiscal_results, fiscal_context, auction_result, auction_context
+    finally:
+        base.request_json = original_base_request
+        fiscal_module.request_json = original_fiscal_request
+        auction_module.request_json = original_auction_request
+
+
 def build_payload(*, now: datetime | None = None) -> dict:
     current = now or datetime.now(UTC)
     config = base.load_config()
-    ofr_results = [resilient_ofr_indicator(spec, current) for spec in config["indicators"]]
+    ofr_results, fiscal_results, fiscal_context, auction_result, auction_context = fetch_external_sources(
+        config, current
+    )
     by_key = {result.key: result for result in ofr_results}
     macro_latest = base.last_macro(base.extract_macro_monitor())
     pillars = base.existing_pillars(macro_latest)
@@ -81,11 +153,9 @@ def build_payload(*, now: datetime | None = None) -> dict:
         }
     )
 
-    fiscal_results, fiscal_context = fetch_treasury_cash_context(now=current)
     fiscal_by_key = {result.key: result for result in fiscal_results}
     pillars["fiscal_cash_flow"] = fiscal_pillar(fiscal_context, fiscal_by_key)
 
-    auction_result, auction_context = fetch_auction_context(now=current)
     pillars["auction_absorption"] = {
         "label": "Treasury auction absorption",
         "score": auction_context.get("score"),
@@ -118,7 +188,8 @@ def build_payload(*, now: datetime | None = None) -> dict:
             "Positive fiscal cash flow means Treasury withdrawals injected cash into the private sector; deposits and tax receipts are drains.",
             "Treasury auction absorption compares bid-to-cover, dealer share, and indirect share against prior auctions of the same tenor.",
             "OFR Short-term Funding Monitor provides repo, primary-dealer, and money-market-fund series.",
-            "Configured OFR mnemonics are verified by their data response; metadata search is the automatic fallback.",
+            "Configured OFR mnemonics are verified by their data response; metadata search is the automatic fallback when the host is reachable.",
+            "Official-source requests are bounded and independent feeds are fetched concurrently so source outages degrade quickly instead of blocking deployment.",
             "If the 4-week reserve impulse is absent, the observed reserve level is shown as Context and never converted into a directional score.",
             "Missing or stale series reduce coverage and are never filled with a neutral score.",
             "All extension pillars are descriptive and cannot create or reverse the governed COT direction.",
