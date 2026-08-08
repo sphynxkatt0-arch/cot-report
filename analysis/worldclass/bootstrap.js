@@ -10,7 +10,8 @@
     "LIQUIDITY_DATA",
     "MACRO_MONITOR",
     "MACRO_LENS",
-    "METADATA"
+    "METADATA",
+    "MODEL_SPEC"
   ];
 
   function addStylesheet(href, dataKey) {
@@ -78,10 +79,24 @@
     return value && typeof value === "object" && Object.keys(value).length > 0;
   }
 
+  function validateModelSpec(spec) {
+    if (!spec || typeof spec !== "object") throw new Error("runtime MODEL_SPEC is not an object");
+    if (!spec.model_version) throw new Error("runtime MODEL_SPEC has no model_version");
+    if (!/^[a-f0-9]{64}$/i.test(String(spec.model_spec_hash || ""))) throw new Error("runtime MODEL_SPEC has no valid SHA-256 hash");
+    if (!hasKeys(spec.score_models)) throw new Error("runtime MODEL_SPEC has no score_models");
+    for (const dataset of ["tff", "legacy", "disaggregated"]) {
+      if (!hasKeys(spec.score_models?.[dataset]?.category_weights)) {
+        throw new Error(`runtime MODEL_SPEC has no ${dataset} category weights`);
+      }
+    }
+    return spec;
+  }
+
   function validateBase(base) {
     if (!base || typeof base !== "object") throw new Error("runtime bundle is not an object");
     if (!hasKeys(base.COT_DATA)) throw new Error("runtime bundle has no COT_DATA");
     if (!hasKeys(base.PRICE_DATA)) throw new Error("runtime bundle has no PRICE_DATA");
+    validateModelSpec(base.MODEL_SPEC);
     return base;
   }
 
@@ -130,15 +145,31 @@
     return validateBase(JSON.parse(text));
   }
 
-  async function loadLegacyBase() {
-    const response = await originalFetch(`interactive_cot_dashboard.html?v=${Date.now()}`, { cache: "no-store" });
-    if (!response.ok) throw new Error(`interactive dashboard HTTP ${response.status}`);
+  async function loadRuntimeModelSpec() {
+    const response = await originalFetch(`worldclass/model-spec.json?v=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) throw new Error(`model-spec.json HTTP ${response.status}`);
     const text = await response.text();
-    const base = Object.fromEntries(CONSTANTS.map(name => [name, extractEmbeddedConstant(text, name)]));
+    if (!text.trim()) throw new Error("model-spec.json is empty");
+    return validateModelSpec(JSON.parse(text));
+  }
+
+  async function loadLegacyBase() {
+    const [legacyResponse, modelSpec] = await Promise.all([
+      originalFetch(`interactive_cot_dashboard.html?v=${Date.now()}`, { cache: "no-store" }),
+      loadRuntimeModelSpec()
+    ]);
+    if (!legacyResponse.ok) throw new Error(`interactive dashboard HTTP ${legacyResponse.status}`);
+    const text = await legacyResponse.text();
+    const base = Object.fromEntries(
+      CONSTANTS.filter(name => name !== "MODEL_SPEC").map(name => [name, extractEmbeddedConstant(text, name)])
+    );
+    base.MODEL_SPEC = modelSpec;
     base.bundle_meta = {
       source: "legacy-html-runtime-recovery",
       source_html_bytes: text.length,
-      recovered_at_utc: new Date().toISOString()
+      recovered_at_utc: new Date().toISOString(),
+      model_version: modelSpec.model_version,
+      model_spec_hash: modelSpec.model_spec_hash
     };
     return validateBase(base);
   }
@@ -162,7 +193,7 @@
   function exposeRecoveryState(error) {
     window.__COT_BOOTSTRAP_SOURCE__ = "legacy-app-direct";
     window.__COT_BOOTSTRAP_ERROR__ = String(error?.message || error || "runtime data unavailable");
-    console.error("Both compact and legacy shared-data bootstrap failed; app.js will attempt its own legacy loader.", error);
+    console.error("Both compact and legacy shared-data bootstrap failed; app.js will surface a hard data/model contract error rather than inventing a neutral score.", error);
   }
 
   async function boot() {
@@ -175,7 +206,7 @@
       try {
         base = await loadLegacyBase();
         installSharedBase(base, "legacy-html-runtime-recovery");
-        console.info("Recovered shared dashboard data from interactive_cot_dashboard.html.");
+        console.info("Recovered shared dashboard data from interactive_cot_dashboard.html with canonical model metadata.");
       } catch (legacyError) {
         exposeRecoveryState(legacyError);
       }

@@ -5,6 +5,8 @@ This extends the existing lookahead-safe COT backtest without replacing it.
 Every weekly signal is anchored to the first market close on/after the Friday
 COT release target. Macro observations are selected strictly on or before that
 release target so future macro data cannot leak into a historical signal.
+Model thresholds, weights, horizons and analog-distance coefficients come from
+the same canonical specification used by the standard COT backtest.
 
 Output:
   analysis/worldclass/regime_backtest.json
@@ -27,8 +29,21 @@ BASE = WORLDCLASS / "base.json"
 METALS = WORLDCLASS / "metals.json"
 OUT = WORLDCLASS / "regime_backtest.json"
 
-MIN_SAMPLE = 8
-DISPLAY_ANALOGS = 8
+MODEL_SPEC = cot_bt.MODEL_SPEC
+MODEL_VERSION = cot_bt.MODEL_VERSION
+MODEL_SPEC_HASH = cot_bt.MODEL_SPEC_HASH
+THRESHOLDS = MODEL_SPEC["thresholds"]
+ANALOG_SPEC = MODEL_SPEC["analogs"]
+BULLISH_THRESHOLD = float(THRESHOLDS["bullish"])
+BEARISH_THRESHOLD = float(THRESHOLDS["bearish"])
+EXTREME_UPPER = float(THRESHOLDS["extreme_upper_percentile"])
+EXTREME_LOWER = float(THRESHOLDS["extreme_lower_percentile"])
+MIN_SAMPLE = int(ANALOG_SPEC["minimum_regime_sample"])
+DISPLAY_ANALOGS = int(ANALOG_SPEC["display_count"])
+MOMENTUM_WEIGHT = float(ANALOG_SPEC["momentum_weight"])
+EXTREME_COUNT_WEIGHT = float(ANALOG_SPEC["extreme_count_weight"])
+MACRO_SCORE_WEIGHT = float(ANALOG_SPEC["macro_score_weight"])
+TRANSMISSION_MISMATCH_PENALTY = float(ANALOG_SPEC["transmission_mismatch_penalty"])
 MACRO_SCORE_KEYS = ("liquidity_score", "macro_score", "unified_score", "score")
 TRANSMISSION_KEYS = ("real_yield_4w_change", "hy_oas_4w_change", "dollar_4w_change")
 
@@ -44,9 +59,9 @@ def finite(value: Any) -> float | None:
 def state(value: float | None) -> str:
     if value is None:
         return "unavailable"
-    if value >= 60:
+    if value >= BULLISH_THRESHOLD:
         return "bullish"
-    if value <= 40:
+    if value <= BEARISH_THRESHOLD:
         return "bearish"
     return "neutral"
 
@@ -191,7 +206,7 @@ def extreme_count_at(rows: list[dict[str, Any]], index: int, categories: list[st
         history = [finite(row.get(field)) for row in rows[: index + 1]]
         clean = [value for value in history if value is not None]
         rank = cot_bt.percentile_rank(clean, current) if clean else None
-        if rank is not None and (rank >= 90 or rank <= 10):
+        if rank is not None and (rank >= EXTREME_UPPER or rank <= EXTREME_LOWER):
             count += 1
     return count
 
@@ -214,13 +229,19 @@ def family_payload(name: str, current: dict[str, Any], history: list[dict[str, A
         momentum_distance = abs((row.get("cot_score_delta_4w") or 0) - (current.get("cot_score_delta_4w") or 0))
         extreme_distance = abs(int(row.get("extreme_count") or 0) - int(current.get("extreme_count") or 0))
         macro_distance = abs((row.get("macro_score") or 50) - (current.get("macro_score") or 50))
-        transmission_penalty = 0 if row.get("transmission_state") == current.get("transmission_state") else 8
+        transmission_penalty = 0 if row.get("transmission_state") == current.get("transmission_state") else TRANSMISSION_MISMATCH_PENALTY
         if name == "cot":
-            distance = cot_distance + 0.30 * momentum_distance + 2.0 * extreme_distance
+            distance = cot_distance + MOMENTUM_WEIGHT * momentum_distance + EXTREME_COUNT_WEIGHT * extreme_distance
         elif name == "macro":
             distance = macro_distance + transmission_penalty
         else:
-            distance = cot_distance + 0.30 * momentum_distance + 2.0 * extreme_distance + 0.65 * macro_distance + transmission_penalty
+            distance = (
+                cot_distance
+                + MOMENTUM_WEIGHT * momentum_distance
+                + EXTREME_COUNT_WEIGHT * extreme_distance
+                + MACRO_SCORE_WEIGHT * macro_distance
+                + transmission_penalty
+            )
         ranked.append((distance, row))
     ranked.sort(key=lambda item: (item[0], item[1]["report_date"]))
     analogs = []
@@ -311,15 +332,17 @@ def build_market_dataset(
     return {
         "market": market,
         "dataset": dataset,
+        "model_version": MODEL_VERSION,
+        "model_spec_hash": MODEL_SPEC_HASH,
         "methodology": {
             "lookahead_safe": True,
             "cot_release_anchor": "first close on/after Tuesday report date + 3 calendar days",
             "macro_alignment": "last macro observation on or before the release target",
-            "cot_state_thresholds": "bullish >=60, bearish <=40, otherwise neutral",
-            "macro_state_thresholds": "bullish >=60, bearish <=40, otherwise neutral",
-            "cot_analog_distance": "score distance + 0.30*4w score-momentum distance + 2*extreme-count distance",
-            "macro_analog_distance": "macro-score distance + transmission-state mismatch penalty",
-            "combined_regime": "exact COT-state + macro-state match; distance ranks score momentum, extremes, macro score and transmission only within that regime",
+            "cot_state_thresholds": f"bullish >={BULLISH_THRESHOLD:g}, bearish <={BEARISH_THRESHOLD:g}, otherwise neutral",
+            "macro_state_thresholds": f"bullish >={BULLISH_THRESHOLD:g}, bearish <={BEARISH_THRESHOLD:g}, otherwise neutral",
+            "cot_analog_distance": f"score distance + {MOMENTUM_WEIGHT:g}*4w score-momentum distance + {EXTREME_COUNT_WEIGHT:g}*extreme-count distance",
+            "macro_analog_distance": f"macro-score distance + {TRANSMISSION_MISMATCH_PENALTY:g} transmission-state mismatch penalty",
+            "combined_regime": f"exact COT-state + macro-state match; distance ranks score momentum, extremes, {MACRO_SCORE_WEIGHT:g}*macro score and transmission only within that regime",
         },
         "current": current,
         "families": families,
@@ -351,8 +374,10 @@ def build() -> dict[str, Any]:
 
     macro_rows = normalize_macro_rows(base)
     result: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_at_utc": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "model_version": MODEL_VERSION,
+        "model_spec_hash": MODEL_SPEC_HASH,
         "macro_history_points": len(macro_rows),
         "markets": {},
     }

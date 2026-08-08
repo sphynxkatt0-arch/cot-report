@@ -17,9 +17,12 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+import model_spec as model_cfg
+
 ROOT = Path(__file__).resolve().parent
 WORLDCLASS = ROOT / "worldclass"
 BASE = WORLDCLASS / "base.json"
+RUNTIME_MODEL = WORLDCLASS / "model-spec.json"
 METALS = WORLDCLASS / "metals.json"
 BACKTEST = WORLDCLASS / "backtest.json"
 REGIME = WORLDCLASS / "regime_backtest.json"
@@ -30,6 +33,18 @@ MARKETS = ("sp500", "nq", "vix", "rty", "dow", "gold", "silver")
 INDEX_MARKETS = ("sp500", "nq", "vix", "rty", "dow")
 METAL_MARKETS = ("gold", "silver")
 MAX_INITIAL_GZIP = int(os.getenv("WORLDCLASS_INITIAL_GZIP_BUDGET", "1000000"))
+MODEL_SPEC = model_cfg.load_model_spec()
+MODEL_VERSION = str(MODEL_SPEC["model_version"])
+MODEL_SPEC_HASH = model_cfg.model_spec_hash(MODEL_SPEC)
+ACTOR_TAXONOMY = MODEL_SPEC["actor_taxonomy"]
+HISTORICAL_SIGNAL_FLOORS = {
+    ("nq", "tff"): 500,
+    ("nq", "legacy"): 500,
+    ("sp500", "tff"): 450,
+    ("sp500", "legacy"): 450,
+    ("gold", "disaggregated"): 500,
+    ("silver", "disaggregated"): 500,
+}
 
 
 def load(path: Path, required: bool = True) -> Any:
@@ -73,6 +88,27 @@ def combined_cot(base: dict[str, Any], metals: dict[str, Any]) -> dict[str, Any]
     return cot
 
 
+def approx_equal(left: float, right: float, absolute: float = 0.05) -> bool:
+    return abs(left - right) <= max(absolute, 1e-9 * max(abs(left), abs(right), 1.0))
+
+
+def validate_actor_taxonomy(dataset: str, market: str, payload: dict[str, Any]) -> None:
+    taxonomy = ACTOR_TAXONOMY.get(dataset)
+    assert isinstance(taxonomy, dict), f"{dataset}/{market}: unsupported COT dataset taxonomy"
+    expected = set(taxonomy.get("required_categories") or [])
+    categories = payload.get("categories") or {}
+    actual = set(categories)
+    assert expected, f"{dataset}/{market}: canonical actor taxonomy empty"
+    assert actual == expected, (
+        f"{dataset}/{market}: actor taxonomy mismatch; "
+        f"missing={sorted(expected - actual)} extra={sorted(actual - expected)}"
+    )
+    # Gold/Silver are required to have Disaggregated coverage, but valid Legacy
+    # history may coexist. Only the Disaggregated actor schema is metal-specific.
+    if dataset == "disaggregated":
+        assert market in METAL_MARKETS, f"{dataset}/{market}: Disaggregated production payload is reserved for metals"
+
+
 def validate_records(dataset: str, market: str, payload: dict[str, Any]) -> None:
     rows = payload.get("records") or []
     assert len(rows) >= 2, f"{dataset}/{market}: fewer than two observations"
@@ -80,24 +116,58 @@ def validate_records(dataset: str, market: str, payload: dict[str, Any]) -> None
     assert all(parse_day(value) for value in dates), f"{dataset}/{market}: invalid date"
     assert len(dates) == len(set(dates)), f"{dataset}/{market}: duplicate report dates"
     assert dates == sorted(dates), f"{dataset}/{market}: dates not sorted"
+    validate_actor_taxonomy(dataset, market, payload)
     categories = payload.get("categories") or {}
-    assert categories, f"{dataset}/{market}: category map missing"
+
     for row in rows:
-        oi = row.get("open_interest")
-        if oi is not None:
-            assert float(oi) >= 0, f"{dataset}/{market}: negative open interest"
+        row_date = str(row.get("date") or "")[:10]
+        oi_raw = row.get("open_interest")
+        oi = None
+        if oi_raw is not None:
+            oi = finite_number(oi_raw)
+            assert oi is not None, f"{dataset}/{market}/{row_date}: invalid open interest"
+            assert oi >= 0, f"{dataset}/{market}/{row_date}: negative open interest"
+
         for key in categories:
-            for suffix in ("long", "short"):
-                value = row.get(f"{key}_{suffix}")
-                if value is not None:
-                    assert float(value) >= 0, f"{dataset}/{market}: negative {key}_{suffix}"
+            long = finite_number(row.get(f"{key}_long")) if row.get(f"{key}_long") is not None else None
+            short = finite_number(row.get(f"{key}_short")) if row.get(f"{key}_short") is not None else None
+            net = finite_number(row.get(f"{key}_net")) if row.get(f"{key}_net") is not None else None
+            net_pct = finite_number(row.get(f"{key}_net_oi_pct")) if row.get(f"{key}_net_oi_pct") is not None else None
+            short_pct = finite_number(row.get(f"{key}_short_oi_pct")) if row.get(f"{key}_short_oi_pct") is not None else None
+
+            for field_name, value in (
+                ("long", long), ("short", short), ("net", net),
+                ("net_oi_pct", net_pct), ("short_oi_pct", short_pct),
+            ):
+                raw = row.get(f"{key}_{field_name}")
+                if raw is not None:
+                    assert value is not None, f"{dataset}/{market}/{row_date}: non-finite {key}_{field_name}"
+
+            if long is not None:
+                assert long >= 0, f"{dataset}/{market}/{row_date}: negative {key}_long"
+            if short is not None:
+                assert short >= 0, f"{dataset}/{market}/{row_date}: negative {key}_short"
+            if long is not None and short is not None and net is not None:
+                assert approx_equal(long - short, net, absolute=1.0), (
+                    f"{dataset}/{market}/{row_date}: {key} net arithmetic mismatch"
+                )
+            if oi is not None and oi > 0 and net is not None and net_pct is not None:
+                assert approx_equal(net / oi * 100.0, net_pct), (
+                    f"{dataset}/{market}/{row_date}: {key} net/OI percentage mismatch"
+                )
+            if oi is not None and oi > 0 and short is not None and short_pct is not None:
+                assert approx_equal(short / oi * 100.0, short_pct), (
+                    f"{dataset}/{market}/{row_date}: {key} short/OI percentage mismatch"
+                )
 
 
 def validate_market_coverage(cot: dict[str, Any], base: dict[str, Any], metals: dict[str, Any]) -> None:
     for market in INDEX_MARKETS:
         assert any((cot.get(dataset) or {}).get(market) for dataset in ("tff", "legacy")), f"{market}: no TFF/Legacy COT payload"
     for market in METAL_MARKETS:
-        assert (cot.get("disaggregated") or {}).get(market), f"{market}: no Disaggregated COT payload"
+        payload = (cot.get("disaggregated") or {}).get(market)
+        assert payload, f"{market}: no Disaggregated COT payload"
+        validate_actor_taxonomy("disaggregated", market, payload)
     prices = dict(base.get("PRICE_DATA") or {})
     prices.update(metals.get("prices") or {})
     for market in MARKETS:
@@ -106,17 +176,34 @@ def validate_market_coverage(cot: dict[str, Any], base: dict[str, Any], metals: 
         assert rows, f"{market}: price history missing"
 
 
+def validate_model_identity(payload: dict[str, Any], name: str) -> None:
+    assert payload.get("model_version") == MODEL_VERSION, f"{name}: model_version mismatch"
+    assert payload.get("model_spec_hash") == MODEL_SPEC_HASH, f"{name}: model_spec_hash mismatch"
+
+
 def validate_backtests(backtest: dict[str, Any], regime: dict[str, Any]) -> None:
     assert backtest.get("markets"), "standard backtest has no markets"
     assert regime.get("markets"), "regime backtest has no markets"
+    validate_model_identity(backtest, "standard backtest")
+    validate_model_identity(regime, "regime backtest")
+
     for market, market_payload in backtest["markets"].items():
         for dataset, payload in (market_payload.get("datasets") or {}).items():
             assert payload.get("methodology", {}).get("lookahead_safe") is True, f"{market}/{dataset}: COT backtest not lookahead-safe"
+            validate_model_identity(payload, f"{market}/{dataset} COT backtest")
             score = payload.get("current", {}).get("score")
             assert score is None or 0 <= float(score) <= 100, f"{market}/{dataset}: COT score out of bounds"
+
+    for (market, dataset), floor in HISTORICAL_SIGNAL_FLOORS.items():
+        payload = ((backtest.get("markets") or {}).get(market) or {}).get("datasets", {}).get(dataset)
+        assert isinstance(payload, dict), f"{market}/{dataset}: required historical research missing"
+        count = int(payload.get("historical_signal_count") or 0)
+        assert count >= floor, f"{market}/{dataset}: historical signal count {count} below regression floor {floor}"
+
     for market, market_payload in regime["markets"].items():
         for dataset, payload in (market_payload.get("datasets") or {}).items():
             assert payload.get("methodology", {}).get("lookahead_safe") is True, f"{market}/{dataset}: regime backtest not lookahead-safe"
+            validate_model_identity(payload, f"{market}/{dataset} regime backtest")
             current = payload.get("current") or {}
             for key in ("cot_score", "macro_score"):
                 value = current.get(key)
@@ -127,6 +214,20 @@ def validate_backtests(backtest: dict[str, Any], regime: dict[str, Any]) -> None
                 assert release == report + timedelta(days=3), f"{market}/{dataset}: release anchor mismatch"
             families = payload.get("families") or {}
             assert all(key in families for key in ("cot", "macro", "combined")), f"{market}/{dataset}: model families missing"
+
+
+def validate_runtime_model_contract(base: dict[str, Any], runtime_model: dict[str, Any]) -> None:
+    embedded = base.get("MODEL_SPEC") or {}
+    for name, runtime in (("embedded runtime MODEL_SPEC", embedded), ("standalone runtime model-spec.json", runtime_model)):
+        assert runtime.get("model_version") == MODEL_VERSION, f"{name}: model_version mismatch"
+        assert runtime.get("model_spec_hash") == MODEL_SPEC_HASH, f"{name}: model_spec_hash mismatch"
+        assert runtime.get("score_models") == MODEL_SPEC.get("score_models"), f"{name}: score models diverge"
+        assert runtime.get("actor_taxonomy") == MODEL_SPEC.get("actor_taxonomy"), f"{name}: actor taxonomy diverges"
+        assert runtime.get("horizons") == MODEL_SPEC.get("horizons"), f"{name}: horizons diverge"
+    assert embedded == runtime_model, "embedded and standalone runtime model contracts differ"
+    bundle_meta = base.get("bundle_meta") or {}
+    assert bundle_meta.get("model_version") == MODEL_VERSION, "bundle model_version mismatch"
+    assert bundle_meta.get("model_spec_hash") == MODEL_SPEC_HASH, "bundle model_spec_hash mismatch"
 
 
 def validate_macro_plumbing(plumbing: dict[str, Any]) -> dict[str, Any]:
@@ -224,12 +325,14 @@ def latest_report_by_market(cot: dict[str, Any]) -> dict[str, date | None]:
 
 def main() -> None:
     base = load(BASE)
+    runtime_model = load(RUNTIME_MODEL)
     metals = load(METALS, required=False)
     backtest = load(BACKTEST)
     regime = load(REGIME)
     plumbing = load(PLUMBING)
     cot = combined_cot(base, metals)
 
+    validate_runtime_model_contract(base, runtime_model)
     validate_market_coverage(cot, base, metals)
     for dataset, markets in cot.items():
         if not isinstance(markets, dict):
@@ -257,11 +360,15 @@ def main() -> None:
     latest_values = [value for value in latest_by_market.values() if value is not None]
     latest = max(latest_values) if latest_values else None
     status = {
-        "schema_version": 1,
+        "schema_version": 2,
         "state": "DELAYED" if delayed else "LIVE",
         "generated_at_utc": now.isoformat(timespec="seconds").replace("+00:00", "Z"),
         "latest_cot_report_date": latest.isoformat() if latest else None,
         "expected_cot_report_date": expected.isoformat(),
+        "model": {
+            "model_version": MODEL_VERSION,
+            "model_spec_hash": MODEL_SPEC_HASH,
+        },
         "market_states": market_states,
         "markets": {
             market: {
@@ -278,12 +385,17 @@ def main() -> None:
         ),
         "markets_validated": list(MARKETS),
         "data_contracts": "PASS",
+        "actor_taxonomy": "PASS",
         "lookahead_safety": "PASS",
+        "historical_regression_floors": {
+            f"{market}/{dataset}": floor for (market, dataset), floor in HISTORICAL_SIGNAL_FLOORS.items()
+        },
         "macro_plumbing": plumbing_health,
         "performance_gzip_bytes": performance,
     }
     STATUS.write_text(json.dumps(status, indent=2) + "\n", encoding="utf-8")
     print(f"Worldclass release validation PASS · state={status['state']}")
+    print(f"Model {MODEL_VERSION} · sha256={MODEL_SPEC_HASH}")
     external_text = ", ".join(plumbing_health["available_external_pillars"]) or "none"
     print(f"Macro plumbing coverage: {plumbing_health['source_coverage_ratio']:.0%} · external pillars: {external_text}")
     if plumbing_health["state"] == "DEGRADED":

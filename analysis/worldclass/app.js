@@ -42,31 +42,9 @@
     silver: "#b9c7d8"
   };
 
-  // The score is intentionally separate from the older regime-rule engine.
-  // It is normalized, visible and auditable. Positive weights mean a high
-  // historical percentile is supportive; negative weights are contrarian.
-  const SCORE_WEIGHTS = {
-    tff: {
-      dealer: 0,
-      asset_mgr: 1.25,
-      lev_money: 0.75,
-      other_reportable: -1.0,
-      non_reportable: -1.0
-    },
-    legacy: {
-      noncommercial: 1.0,
-      commercial: -0.75,
-      total_reportable: 0,
-      nonreportable: -0.75
-    },
-    disaggregated: {
-      producer_merchant: -0.75,
-      swap_dealer: -0.35,
-      managed_money: 1.25,
-      other_reportable: -0.75,
-      non_reportable: -0.75
-    }
-  };
+  // Authoritative score weights are populated from MODEL_SPEC after runtime
+  // data loads. The frontend intentionally owns no independent research model.
+  const SCORE_WEIGHTS = {};
 
   const METRIC_LABELS = {
     net_oi_pct: "Net / open interest (%)",
@@ -95,6 +73,7 @@
     MACRO_MONITOR: {},
     MACRO_LENS: {},
     METADATA: {},
+    MODEL_SPEC: {},
     metals: null
   };
 
@@ -158,16 +137,30 @@
     return null;
   }
 
+  function configureModelSpec() {
+    const models = db.MODEL_SPEC?.score_models;
+    if (!models || typeof models !== "object" || !db.MODEL_SPEC?.model_version || !db.MODEL_SPEC?.model_spec_hash) {
+      throw new Error("Canonical MODEL_SPEC is unavailable or invalid");
+    }
+    for (const key of Object.keys(SCORE_WEIGHTS)) delete SCORE_WEIGHTS[key];
+    for (const [dataset, model] of Object.entries(models)) {
+      const weights = model?.category_weights;
+      if (!weights || typeof weights !== "object") throw new Error(`MODEL_SPEC missing ${dataset} category weights`);
+      SCORE_WEIGHTS[dataset] = { ...weights };
+    }
+  }
+
   async function loadData() {
     const response = await fetch("interactive_cot_dashboard.html", { cache: "no-store" });
     if (!response.ok) throw new Error(`Base dashboard data returned HTTP ${response.status}`);
     const html = await response.text();
     for (const name of [
       "COT_DATA", "PRICE_DATA", "FACTOR_DATA", "LIQUIDITY_DATA",
-      "MACRO_MONITOR", "MACRO_LENS", "METADATA"
+      "MACRO_MONITOR", "MACRO_LENS", "METADATA", "MODEL_SPEC"
     ]) {
       db[name] = extractEmbeddedJson(html, name) || {};
     }
+    configureModelSpec();
 
     try {
       const metalResponse = await fetch(`worldclass/metals.json?v=${Date.now()}`, { cache: "no-store" });
@@ -540,7 +533,7 @@
     }
     pill.querySelector("span:last-child").textContent = label;
     $("#heroAsOf").innerHTML = `<strong>${escapeHtml(MARKET_META[state.market].label)}</strong>${escapeHtml(DATASET_LABELS[state.dataset] || state.dataset)}<br>Report date ${escapeHtml(latest.date || "n/a")}`;
-    $("#footerFreshness").textContent = `Selected COT: ${latest.date || "n/a"} · Dashboard build: ${String(db.METADATA?.generated_at_utc || db.METADATA?.generated_at || "n/a").replace("T", " ").replace("Z", " UTC")}`;
+    $("#footerFreshness").textContent = `Selected COT: ${latest.date || "n/a"} · Dashboard build: ${String(db.METADATA?.generated_at_utc || db.METADATA?.generated_at || "n/a").replace("T", " ").replace("Z", " UTC")} · Model ${db.MODEL_SPEC?.model_version || "n/a"}`;
 
     const alert = $("#alertStrip");
     if (age !== null && age > 14) {
