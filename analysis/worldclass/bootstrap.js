@@ -36,7 +36,7 @@
     addStylesheet("worldclass/kpi-accent.css", "data-worldclass-kpi-accent");
     addStylesheet("worldclass/decision-system.css", "data-worldclass-decision-system");
     addScript("worldclass/enhancements.js");
-    addScript("worldclass/decision-system.js");
+    addScript("worldclass/decision-system.js", () => addScript("worldclass/macro-control-fallback.js"));
   }
 
   function loadApp() {
