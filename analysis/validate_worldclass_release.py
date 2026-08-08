@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import gzip
 import json
+import math
 import os
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -23,6 +24,7 @@ METALS = WORLDCLASS / "metals.json"
 BACKTEST = WORLDCLASS / "backtest.json"
 REGIME = WORLDCLASS / "regime_backtest.json"
 STATUS = WORLDCLASS / "release-status.json"
+PLUMBING = ROOT / "model_output" / "macro_liquidity_expansion.json"
 
 MARKETS = ("sp500", "nq", "vix", "rty", "dow", "gold", "silver")
 INDEX_MARKETS = ("sp500", "nq", "vix", "rty", "dow")
@@ -36,6 +38,14 @@ def load(path: Path, required: bool = True) -> Any:
             raise AssertionError(f"missing required file: {path}")
         return {}
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def finite_number(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
 
 
 def parse_day(value: Any) -> date | None:
@@ -119,6 +129,51 @@ def validate_backtests(backtest: dict[str, Any], regime: dict[str, Any]) -> None
             assert all(key in families for key in ("cot", "macro", "combined")), f"{market}/{dataset}: model families missing"
 
 
+def validate_macro_plumbing(plumbing: dict[str, Any]) -> dict[str, Any]:
+    """Reject deployments that would render the control room as an empty shell."""
+    assert isinstance(plumbing, dict) and plumbing, "macro plumbing payload is empty"
+    assert plumbing.get("schema_version") == 1, "macro plumbing schema_version must be 1"
+    assert plumbing.get("model_version"), "macro plumbing model_version missing"
+
+    pillars = plumbing.get("pillars")
+    assert isinstance(pillars, dict), "macro plumbing pillars missing"
+    required = (
+        "net_liquidity",
+        "bank_reserves",
+        "funding_microstructure",
+        "dealer_absorption",
+        "fiscal_cash_flow",
+        "auction_absorption",
+    )
+    for key in required:
+        assert isinstance(pillars.get(key), dict), f"macro plumbing pillar missing: {key}"
+        assert pillars[key].get("state"), f"macro plumbing pillar state missing: {key}"
+
+    # These two are backed by the same macro monitor that drives the populated
+    # headline cards. If they are missing here, the builder/extraction path is
+    # broken and deployment must stop rather than publish a wall of n/a values.
+    assert finite_number(pillars["net_liquidity"].get("value")) is not None, "macro plumbing net_liquidity value missing"
+    assert finite_number(pillars["bank_reserves"].get("value")) is not None, "macro plumbing bank_reserves value missing"
+
+    external = ("funding_microstructure", "dealer_absorption", "fiscal_cash_flow", "auction_absorption")
+    available_external = [key for key in external if str(pillars[key].get("state")) != "Unavailable"]
+    assert available_external, "all external macro-plumbing pillars are unavailable; refusing empty control-room deploy"
+
+    sources = plumbing.get("sources")
+    assert isinstance(sources, list) and sources, "macro plumbing source matrix missing"
+    coverage = finite_number(plumbing.get("source_coverage_ratio"))
+    assert coverage is not None and 0 <= coverage <= 1, "macro plumbing coverage ratio invalid"
+
+    return {
+        "model_version": plumbing.get("model_version"),
+        "generated_at_utc": plumbing.get("generated_at_utc"),
+        "source_coverage_ratio": coverage,
+        "source_coverage_label": plumbing.get("source_coverage_label"),
+        "available_external_pillars": available_external,
+        "required_pillars": list(required),
+    }
+
+
 def gzip_size(path: Path) -> int:
     return len(gzip.compress(path.read_bytes(), compresslevel=9)) if path.exists() else 0
 
@@ -135,7 +190,7 @@ def validate_performance_budget() -> dict[str, int]:
         WORLDCLASS / "decision-system.js",
         WORLDCLASS / "decision-system.css",
         WORLDCLASS / "regime_backtest.json",
-        ROOT / "model_output" / "macro_liquidity_expansion.json",
+        PLUMBING,
     ]
     sizes = {str(path.relative_to(ROOT)): gzip_size(path) for path in immediate if path.exists()}
     total = sum(sizes.values())
@@ -166,6 +221,7 @@ def main() -> None:
     metals = load(METALS, required=False)
     backtest = load(BACKTEST)
     regime = load(REGIME)
+    plumbing = load(PLUMBING)
     cot = combined_cot(base, metals)
 
     validate_market_coverage(cot, base, metals)
@@ -176,6 +232,7 @@ def main() -> None:
             if isinstance(payload, dict) and market in MARKETS:
                 validate_records(dataset, market, payload)
     validate_backtests(backtest, regime)
+    plumbing_health = validate_macro_plumbing(plumbing)
     performance = validate_performance_budget()
 
     now = datetime.now(UTC)
@@ -216,10 +273,12 @@ def main() -> None:
         "markets_validated": list(MARKETS),
         "data_contracts": "PASS",
         "lookahead_safety": "PASS",
+        "macro_plumbing": plumbing_health,
         "performance_gzip_bytes": performance,
     }
     STATUS.write_text(json.dumps(status, indent=2) + "\n", encoding="utf-8")
     print(f"Worldclass release validation PASS · state={status['state']}")
+    print(f"Macro plumbing coverage: {plumbing_health['source_coverage_ratio']:.0%} · external pillars: {', '.join(plumbing_health['available_external_pillars'])}")
     print(f"Initial non-Plotly gzip payload: {performance['initial_total']:,} bytes")
     if delayed:
         print(f"::warning::{status['message']}")
