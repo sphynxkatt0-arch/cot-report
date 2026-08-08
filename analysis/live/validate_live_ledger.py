@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Validate live-ledger forecast immutability and manifest-chain integrity."""
+"""Validate forecast immutability, settlement contracts and ledger integrity."""
 from __future__ import annotations
 
 import argparse
 from pathlib import Path
 
-from ledger import validate_manifest_chain
+from ledger import validate_ledger
 
 
 def parse_args() -> argparse.Namespace:
@@ -17,9 +17,10 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    result = validate_manifest_chain(args.ledger_root, verify_git_history=args.verify_git_history)
+    result = validate_ledger(args.ledger_root, verify_git_history=args.verify_git_history)
     print(
         f"Live ledger integrity PASS · forecasts={result['forecast_count']} · "
+        f"entries={result['entry_count']} · outcomes={result['outcome_count']} · "
         f"manifests={result['manifest_count']} · head={result['latest_manifest_hash']}"
     )
 
