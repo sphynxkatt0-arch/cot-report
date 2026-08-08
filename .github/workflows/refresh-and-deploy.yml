@@ -78,6 +78,7 @@ jobs:
           node --check analysis/worldclass/bootstrap.js
           node --check analysis/worldclass/enhancements.js
           node --check analysis/worldclass/decision-system.js
+          node --check analysis/worldclass/macro-control-fallback.js
 
       - name: "[WAITING_FOR_CFTC] Refresh index COT and macro source dashboard"
         if: github.event_name != 'push'
@@ -156,6 +157,7 @@ jobs:
           test -s analysis/worldclass/bootstrap.js
           test -s analysis/worldclass/decision-system.js
           test -s analysis/worldclass/decision-system.css
+          test -s analysis/worldclass/macro-control-fallback.js
           echo "Research HTML: $(du -h analysis/interactive_cot_dashboard.html | cut -f1)"
           echo "Browser bundle: $(du -h analysis/worldclass/base.json | cut -f1)"
           echo "COT backtest: $(du -h analysis/worldclass/backtest.json | cut -f1)"
@@ -183,6 +185,7 @@ jobs:
             model_output/macro_liquidity_expansion.json \
             worldclass/decision-system.js \
             worldclass/decision-system.css \
+            worldclass/macro-control-fallback.js \
             worldclass/bootstrap.js \
             index.html
           do
