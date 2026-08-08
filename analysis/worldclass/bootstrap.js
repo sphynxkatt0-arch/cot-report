@@ -36,12 +36,11 @@
     addStylesheet("worldclass/kpi-accent.css", "data-worldclass-kpi-accent");
     addStylesheet("worldclass/decision-system.css", "data-worldclass-decision-system");
     addScript("worldclass/enhancements.js");
-    addScript("worldclass/decision-system.js", () => addScript("worldclass/macro-control-fallback.js"));
+    addScript("worldclass/decision-system.js", () => addScript("worldclass/macro-control-fallback.js?v=20260808-2130"));
   }
 
   function loadApp() {
     addScript("worldclass/app.js", () => {
-      // The decision layer can render directly from the shared compact bundle.
       window.__COT_RESOLVE_APP_DATA_READY__?.({ bootstrap: true });
       loadEnhancements();
     });
@@ -49,8 +48,6 @@
 
   function announcePlotlyReady() {
     window.dispatchEvent(new CustomEvent("cot:plotly-ready"));
-    // app.js was originally written for synchronous Plotly. Re-run its active
-    // market selection once so the main and macro charts render after lazy load.
     window.setTimeout(() => document.querySelector("#instrumentTabs [data-market].active")?.click(), 0);
   }
 
@@ -67,11 +64,8 @@
   }
 
   function schedulePlotly() {
-    if ("requestIdleCallback" in window) {
-      window.requestIdleCallback(loadPlotly, { timeout: 900 });
-    } else {
-      window.setTimeout(loadPlotly, 80);
-    }
+    if ("requestIdleCallback" in window) window.requestIdleCallback(loadPlotly, { timeout: 900 });
+    else window.setTimeout(loadPlotly, 80);
   }
 
   async function boot() {
@@ -80,19 +74,11 @@
       if (!response.ok) throw new Error(`base.json HTTP ${response.status}`);
       const base = await response.json();
       window.__COT_WORLDCLASS_BASE__ = base;
-      const syntheticHtml = CONSTANTS
-        .map(name => `const ${name} = ${JSON.stringify(base[name] || {})};`)
-        .join("\n");
-
-      // app.js retains a backwards-compatible loader. Intercept only its
-      // legacy HTML request and satisfy it from the single compact base bundle.
+      const syntheticHtml = CONSTANTS.map(name => `const ${name} = ${JSON.stringify(base[name] || {})};`).join("\n");
       window.fetch = (input, init) => {
         const url = typeof input === "string" ? input : input?.url;
         if (url && /(^|\/)interactive_cot_dashboard\.html(?:[?#].*)?$/.test(url)) {
-          return Promise.resolve(new Response(syntheticHtml, {
-            status: 200,
-            headers: { "Content-Type": "text/html; charset=utf-8" }
-          }));
+          return Promise.resolve(new Response(syntheticHtml, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } }));
         }
         return originalFetch(input, init);
       };
@@ -100,7 +86,6 @@
       console.warn("Compact data bundle unavailable; using legacy dashboard payload fallback.", error);
     }
 
-    // Render the terminal shell/data first; charting is intentionally deferred.
     loadApp();
     schedulePlotly();
   }
