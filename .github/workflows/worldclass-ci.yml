@@ -1,0 +1,44 @@
+name: World-class dashboard CI
+
+on:
+  pull_request:
+    paths:
+      - "analysis/worldclass/**"
+      - "analysis/worldclass_dashboard.html"
+      - "analysis/build_worldclass_metals.py"
+      - "analysis/config/regime_rules.json"
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Source syntax
+        run: |
+          python -m py_compile analysis/build_worldclass_metals.py
+          node --check analysis/worldclass/app.js
+      - name: Build Gold and Silver dataset
+        run: |
+          python analysis/build_worldclass_metals.py
+          test -s analysis/worldclass/metals.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = json.loads(Path('analysis/worldclass/metals.json').read_text())
+          assert set(p['markets']) == {'gold', 'silver'}
+          for market in ('gold', 'silver'):
+              rows = p['markets'][market]['records']
+              assert len(rows) >= 100, (market, len(rows))
+              assert rows[-1]['date'] >= rows[-2]['date']
+              assert 'managed_money_net' in rows[-1]
+              assert 'other_reportable_net' in rows[-1]
+              assert 'non_reportable_net' in rows[-1]
+          print('Gold/Silver dataset validation passed')
+          PY
