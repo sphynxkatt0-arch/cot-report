@@ -16,6 +16,8 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
+import model_spec as model_cfg
+
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "interactive_cot_dashboard.html"
 OUT_DIR = ROOT / "worldclass"
@@ -227,6 +229,8 @@ def build() -> dict[str, Any]:
         raise FileNotFoundError(f"Missing {SOURCE}; build the interactive dashboard first")
     source_text = SOURCE.read_text(encoding="utf-8")
     raw = {name: extract_json_constant(source_text, name) for name in CONSTANTS}
+    spec = model_cfg.load_model_spec()
+    model_meta = model_cfg.runtime_metadata(spec)
     payload = {
         "COT_DATA": compact_cot(raw.get("COT_DATA")),
         "PRICE_DATA": compact_prices(raw.get("PRICE_DATA")),
@@ -236,6 +240,7 @@ def build() -> dict[str, Any]:
         "MACRO_MONITOR": compact_timeseries_tree(raw.get("MACRO_MONITOR")),
         "MACRO_LENS": compact_timeseries_tree(raw.get("MACRO_LENS")),
         "METADATA": raw.get("METADATA") or {},
+        "MODEL_SPEC": model_meta,
     }
     payload["bundle_meta"] = {
         "source_html_bytes": SOURCE.stat().st_size,
@@ -243,6 +248,8 @@ def build() -> dict[str, Any]:
         "recent_daily_price_days": RECENT_DAILY_PRICE_DAYS,
         "older_price_sampling": "weekly-last-observation",
         "full_history_location": "research source + backtest artifacts",
+        "model_version": model_meta["model_version"],
+        "model_spec_hash": model_meta["model_spec_hash"],
     }
     return payload
 
