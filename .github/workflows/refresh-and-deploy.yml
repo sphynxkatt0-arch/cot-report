@@ -231,6 +231,8 @@ jobs:
           set -euo pipefail
           for path in \
             model_output/macro_liquidity_expansion.json \
+            worldclass/base.json \
+            worldclass/release-status.json \
             worldclass/decision-system.js \
             worldclass/decision-system.css \
             worldclass/macro-control-fallback.js \
