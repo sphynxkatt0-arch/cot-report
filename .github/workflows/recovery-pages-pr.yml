@@ -6,6 +6,8 @@ on:
     types: [synchronize, reopened, ready_for_review]
     paths:
       - ".github/workflows/recovery-pages-pr.yml"
+      - "analysis/build_worldclass_bundle.py"
+      - "analysis/build_worldclass_research_artifacts.py"
 
 permissions:
   contents: write
@@ -45,6 +47,7 @@ jobs:
             analysis/build_worldclass_bundle.py \
             analysis/build_worldclass_backtest.py \
             analysis/build_worldclass_regime_backtest.py \
+            analysis/build_worldclass_research_artifacts.py \
             analysis/validate_worldclass_release.py \
             analysis/macro_liquidity_expansion.py \
             analysis/macro_liquidity_expansion_v12.py \
@@ -86,12 +89,13 @@ jobs:
           python analysis/macro_liquidity_expansion_v12.py
           test -s analysis/model_output/macro_liquidity_expansion.json
 
-      - name: Build walk-forward backtests
+      - name: Build full-history research artifacts
         run: |
-          python analysis/build_worldclass_backtest.py
-          python analysis/build_worldclass_regime_backtest.py
+          python analysis/build_worldclass_research_artifacts.py
           test -s analysis/worldclass/backtest.json
           test -s analysis/worldclass/regime_backtest.json
+          test -s analysis/worldclass/base.json
+          test ! -e analysis/worldclass/.research-base.tmp.json
 
       - name: Validate release contracts
         run: |
@@ -118,6 +122,8 @@ jobs:
           for path in \
             worldclass/base.json \
             worldclass/metals.json \
+            worldclass/backtest.json \
+            worldclass/regime_backtest.json \
             worldclass/release-status.json \
             model_output/macro_liquidity_expansion.json \
             worldclass/bootstrap.js \
@@ -128,8 +134,3 @@ jobs:
             test "$size" -gt 0
             echo "Published ${path}: ${size} bytes"
           done
-
-      - name: Trigger Pages rebuild
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh api -X POST /repos/${{ github.repository }}/pages/builds
