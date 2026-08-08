@@ -16,9 +16,9 @@ on:
   schedule:
     - cron: "35 19 * * 5"
     - cron: "35 20 * * 5"
-    # One-time backend recovery trigger. The gate below allows this expression
-    # only on 2026-08-08 UTC, so it self-expires after tonight.
+    # Date-gated recovery triggers. They become inert after 2026-08-08 UTC.
     - cron: "20 22 8 8 *"
+    - cron: "40 22 8 8 *"
 
 permissions:
   contents: write
@@ -54,13 +54,13 @@ jobs:
 
           schedule_expr='${{ github.event.schedule }}'
           utc_day="$(date -u +%F)"
-          if [ "$schedule_expr" = "20 22 8 8 *" ]; then
+          if [ "$schedule_expr" = "20 22 8 8 *" ] || [ "$schedule_expr" = "40 22 8 8 *" ]; then
             if [ "$utc_day" = "2026-08-08" ]; then
               echo "run=true" >> "$GITHUB_OUTPUT"
-              echo "Running one-time backend recovery deployment."
+              echo "Running date-gated backend recovery deployment: $schedule_expr"
             else
               echo "run=false" >> "$GITHUB_OUTPUT"
-              echo "One-time backend recovery schedule is expired."
+              echo "Date-gated backend recovery schedule is expired."
             fi
             exit 0
           fi
