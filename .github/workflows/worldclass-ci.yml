@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "analysis/worldclass/**"
+      - "analysis/live/**"
+      - "analysis/test_live_ledger.py"
       - "analysis/worldclass_dashboard.html"
       - "analysis/interactive_cot_dashboard.html"
       - "analysis/build_worldclass_metals.py"
@@ -39,10 +41,19 @@ jobs:
             analysis/build_worldclass_backtest.py \
             analysis/build_worldclass_regime_backtest.py \
             analysis/build_worldclass_research_artifacts.py \
-            analysis/validate_worldclass_release.py
+            analysis/validate_worldclass_release.py \
+            analysis/live/ledger.py \
+            analysis/live/generate_live_forecasts.py \
+            analysis/live/apply_live_forecasts.py \
+            analysis/live/append_ledger_manifest.py \
+            analysis/live/validate_live_ledger.py \
+            analysis/test_live_ledger.py
           node --check analysis/worldclass/app.js
           node --check analysis/worldclass/bootstrap.js
           node --check analysis/worldclass/enhancements.js
+
+      - name: Live ledger unit tests
+        run: python analysis/test_live_ledger.py
 
       - name: Validate canonical model specification
         run: |
@@ -158,4 +169,62 @@ jobs:
           assert required.issubset(backtest['markets']), required - set(backtest['markets'])
           assert required.issubset(regime['markets']), required - set(regime['markets'])
           print('Full-history research regression validation passed')
+          PY
+
+      - name: Simulate a prospective Friday ledger append
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/cot-live-stage /tmp/cot-live-ledger /tmp/cot-live-append.json /tmp/cot-live-append-rerun.json
+          simulated_now="$(python - <<'PY'
+          import json
+          from datetime import UTC, datetime
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+          payload = json.loads(Path('analysis/worldclass/regime_backtest.json').read_text())
+          dates = []
+          for market in payload['markets'].values():
+              for dataset in market.get('datasets', {}).values():
+                  value = (dataset.get('current') or {}).get('release_target_date')
+                  if value:
+                      dates.append(value)
+          latest = max(dates)
+          day = datetime.fromisoformat(latest).date()
+          stamp = datetime(day.year, day.month, day.day, 21, 35, tzinfo=ZoneInfo('Europe/Stockholm')).astimezone(UTC)
+          print(stamp.isoformat(timespec='seconds').replace('+00:00', 'Z'))
+          PY
+          )"
+          echo "Simulated prospective vintage: ${simulated_now}"
+          python analysis/live/generate_live_forecasts.py \
+            --output-root /tmp/cot-live-stage \
+            --now-utc "${simulated_now}"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          plan = json.loads(Path('/tmp/cot-live-stage/plan.json').read_text())
+          assert plan['prospective_window_enforced'] is True
+          assert plan['forecast_count'] > 0, plan
+          print(f"Generated {plan['forecast_count']} deterministic live forecasts")
+          PY
+          mkdir -p /tmp/cot-live-ledger
+          python analysis/live/apply_live_forecasts.py \
+            --staging /tmp/cot-live-stage \
+            --ledger-root /tmp/cot-live-ledger \
+            --metadata-out /tmp/cot-live-append.json
+          python analysis/live/append_ledger_manifest.py \
+            --ledger-root /tmp/cot-live-ledger \
+            --metadata /tmp/cot-live-append.json \
+            --forecast-commit-sha ffffffffffffffffffffffffffffffffffffffff
+          python analysis/live/validate_live_ledger.py --ledger-root /tmp/cot-live-ledger
+          python analysis/live/apply_live_forecasts.py \
+            --staging /tmp/cot-live-stage \
+            --ledger-root /tmp/cot-live-ledger \
+            --metadata-out /tmp/cot-live-append-rerun.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path('/tmp/cot-live-append-rerun.json').read_text())
+          assert result['new_count'] == 0, result
+          assert result['unchanged_count'] > 0, result
+          print('Prospective ledger rerun is idempotent')
           PY

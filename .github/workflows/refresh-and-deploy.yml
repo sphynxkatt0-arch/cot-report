@@ -118,6 +118,12 @@ jobs:
             analysis/build_worldclass_regime_backtest.py \
             analysis/build_worldclass_research_artifacts.py \
             analysis/validate_worldclass_release.py \
+            analysis/live/ledger.py \
+            analysis/live/generate_live_forecasts.py \
+            analysis/live/apply_live_forecasts.py \
+            analysis/live/append_ledger_manifest.py \
+            analysis/live/validate_live_ledger.py \
+            analysis/test_live_ledger.py \
             analysis/macro_liquidity_expansion.py \
             analysis/macro_liquidity_expansion_v12.py \
             analysis/treasury_cash_flow_extension.py \
@@ -141,6 +147,9 @@ jobs:
           assert len(digest) == 64
           print(f"Model {spec['model_version']} · sha256={digest}")
           PY
+
+      - name: "[VALIDATING] Live ledger regression tests"
+        run: python analysis/test_live_ledger.py
 
       - name: "[VALIDATING] Macro source parser regression tests"
         run: python analysis/test_macro_liquidity_parsers.py
@@ -201,6 +210,73 @@ jobs:
 
       - name: "[VALIDATING] Data contracts, lookahead safety and performance budget"
         run: python analysis/validate_worldclass_release.py
+
+      - name: "[FORWARD_TEST] Stage prospective live forecasts"
+        id: live_forecasts
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf analysis/.live-ledger-staging
+          python analysis/live/generate_live_forecasts.py --output-root analysis/.live-ledger-staging
+          count="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          plan = json.loads(Path('analysis/.live-ledger-staging/plan.json').read_text())
+          print(int(plan.get('forecast_count') or 0))
+          PY
+          )"
+          echo "count=${count}" >> "$GITHUB_OUTPUT"
+          if [ "$count" -eq 0 ]; then
+            echo "No prospective forecast is eligible in this run; no live history will be manufactured."
+          else
+            echo "Staged ${count} prospective forecasts for immutable append."
+          fi
+
+      - name: "[FORWARD_TEST] Append forecasts to live-ledger"
+        if: steps.live_forecasts.outputs.count != '0'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/cot-live-ledger /tmp/cot-live-append.json
+          git fetch origin live-ledger:refs/remotes/origin/live-ledger
+          git worktree add --detach /tmp/cot-live-ledger origin/live-ledger
+          python analysis/live/validate_live_ledger.py --ledger-root /tmp/cot-live-ledger --verify-git-history
+          python analysis/live/apply_live_forecasts.py \
+            --staging analysis/.live-ledger-staging \
+            --ledger-root /tmp/cot-live-ledger \
+            --metadata-out /tmp/cot-live-append.json
+          new_count="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path('/tmp/cot-live-append.json').read_text())
+          print(int(result.get('new_count') or 0))
+          PY
+          )"
+          if [ "$new_count" -eq 0 ]; then
+            echo "Forecast vintage already exists byte-for-byte; immutable ledger is unchanged."
+            python analysis/live/validate_live_ledger.py --ledger-root /tmp/cot-live-ledger --verify-git-history
+            exit 0
+          fi
+
+          git -C /tmp/cot-live-ledger config user.name "github-actions[bot]"
+          git -C /tmp/cot-live-ledger config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C /tmp/cot-live-ledger add live/forecasts
+          git -C /tmp/cot-live-ledger commit -m "Append prospective COT forecasts"
+          forecast_commit="$(git -C /tmp/cot-live-ledger rev-parse HEAD)"
+
+          python analysis/live/append_ledger_manifest.py \
+            --ledger-root /tmp/cot-live-ledger \
+            --metadata /tmp/cot-live-append.json \
+            --forecast-commit-sha "$forecast_commit"
+          git -C /tmp/cot-live-ledger add live/manifests
+          git -C /tmp/cot-live-ledger commit -m "Append forecast integrity manifests"
+          python analysis/live/validate_live_ledger.py --ledger-root /tmp/cot-live-ledger --verify-git-history
+
+          git -C /tmp/cot-live-ledger push origin HEAD:live-ledger
+          local_head="$(git -C /tmp/cot-live-ledger rev-parse HEAD)"
+          remote_head="$(git -C /tmp/cot-live-ledger ls-remote origin refs/heads/live-ledger | cut -f1)"
+          test "$local_head" = "$remote_head"
+          echo "live-ledger verified at ${remote_head}"
 
       - name: Verify production outputs
         shell: bash
