@@ -41,10 +41,7 @@
 
   function loadApp() {
     addScript("worldclass/app.js", () => {
-      // The current app may not yet expose the explicit data-ready hook. The
-      // decision layer can render from the shared compact base payload, so do
-      // not hold it behind a hanging promise while preserving compatibility
-      // with the richer hook when app.js provides it.
+      // The decision layer can render directly from the shared compact bundle.
       window.__COT_RESOLVE_APP_DATA_READY__?.({ bootstrap: true });
       loadEnhancements();
     });
@@ -52,6 +49,9 @@
 
   function announcePlotlyReady() {
     window.dispatchEvent(new CustomEvent("cot:plotly-ready"));
+    // app.js was originally written for synchronous Plotly. Re-run its active
+    // market selection once so the main and macro charts render after lazy load.
+    window.setTimeout(() => document.querySelector("#instrumentTabs [data-market].active")?.click(), 0);
   }
 
   function loadPlotlyFallback() {
