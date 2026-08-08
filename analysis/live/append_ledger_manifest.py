@@ -47,7 +47,9 @@ def append(ledger_root: Path, metadata_path: Path, forecast_commit_sha: str) -> 
     manifest_dir.mkdir(parents=True, exist_ok=True)
     created = 0
 
-    for item in sorted(new_items, key=lambda value: value["relative_path"]):
+    # The validator reads manifest files in lexicographic filename order, so the
+    # chain must be constructed in that exact same deterministic order.
+    for item in sorted(new_items, key=manifest_filename):
         forecast_path_text = str(item.get("relative_path") or "")
         forecast_path = ledger_root / forecast_path_text
         if not forecast_path.exists():
