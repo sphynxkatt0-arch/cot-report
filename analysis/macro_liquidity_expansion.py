@@ -104,8 +104,6 @@ def series_points(payload: Any, mnemonic: str | None = None) -> list[tuple[str, 
             if match is not None:
                 raw = match
 
-    # Be tolerant of a single mnemonic wrapper even when the caller did not
-    # supply the exact key spelling returned by OFR.
     if isinstance(raw, dict) and "timeseries" not in raw and len(raw) == 1:
         only = next(iter(raw.values()))
         if isinstance(only, dict):
@@ -229,14 +227,19 @@ def fetch_indicator(spec: dict[str, Any], *, now: datetime | None = None) -> Ind
             result.error = resolution
             return result
         start = (now or datetime.now(UTC)).date() - timedelta(days=int(spec.get("history_days", 1400)))
-        # OFR documents /series/timeseries as the compact single-series endpoint:
-        # it returns exactly the aggregation date/value pairs we need and avoids
-        # repeatedly downloading the much larger metadata/full payload.
         url = f"{OFR_BASE}/series/timeseries?{urllib.parse.urlencode({'mnemonic': mnemonic, 'start_date': start.isoformat(), 'remove_nulls': 'true'})}"
         points = series_points(request_json(url), mnemonic)
         if not points:
             result.error = "series has no usable observations"
             return result
+
+        divisor = finite(spec.get("scale_divisor")) or 1.0
+        if divisor <= 0:
+            raise ValueError(f"invalid scale_divisor for {spec['key']}: {divisor}")
+        if divisor != 1.0:
+            points = [(stamp, value / divisor) for stamp, value in points]
+            result.resolution = f"{resolution}; scaled raw OFR dollars by {divisor:g}"
+
         result.latest_date, result.latest_value = points[-1]
         result.change_short = change(points, int(spec.get("short_observations", 5)))
         result.change_medium = change(points, int(spec.get("medium_observations", 20)))
@@ -390,8 +393,8 @@ def build_payload(config: dict[str, Any] | None = None, *, now: datetime | None 
         "sources": source_rows(results),
         "source_notes": [
             "OFR Short-term Funding Monitor is used for repo, primary-dealer, and money-market-fund series.",
-            "Missing or stale series reduce coverage and are never filled with a neutral score.",
-            "Primary-dealer and MMF indicators are context until their exact series selection is reviewed in generated source status."
+            "Dollar series are normalized at ingestion to the units declared in the reviewed source config.",
+            "Missing or stale series reduce coverage and are never filled with a neutral score."
         ]
     }
 
