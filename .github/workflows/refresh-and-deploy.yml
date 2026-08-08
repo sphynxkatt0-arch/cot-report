@@ -73,12 +73,16 @@ jobs:
             analysis/macro_liquidity_expansion.py \
             analysis/macro_liquidity_expansion_v12.py \
             analysis/treasury_cash_flow_extension.py \
-            analysis/treasury_auction_absorption.py
+            analysis/treasury_auction_absorption.py \
+            analysis/test_macro_liquidity_parsers.py
           node --check analysis/worldclass/app.js
           node --check analysis/worldclass/bootstrap.js
           node --check analysis/worldclass/enhancements.js
           node --check analysis/worldclass/decision-system.js
           node --check analysis/worldclass/macro-control-fallback.js
+
+      - name: "[VALIDATING] Macro source parser regression tests"
+        run: python analysis/test_macro_liquidity_parsers.py
 
       - name: "[WAITING_FOR_CFTC] Refresh index COT and macro source dashboard"
         if: github.event_name != 'push'
@@ -120,11 +124,6 @@ jobs:
         if: github.event_name != 'push' && steps.metals.outcome == 'failure'
         run: echo "::warning::Gold/Silver refresh failed; retaining last-valid deployed metals cache when available."
 
-      # This must run on every deployment, including push-triggered UI releases.
-      # The builder is source-resilient: individual OFR/Treasury failures are
-      # represented explicitly while the existing macro payload still supplies
-      # system-liquidity/reserve context. If the process itself fails, the
-      # restored last-valid cache remains in place for validation.
       - name: "[BUILDING] Refresh macro liquidity control-room payload"
         id: plumbing
         continue-on-error: true
