@@ -247,7 +247,12 @@ def _git_blob(repo_root: Path, commit_sha: str, relative_path: str) -> bytes:
     return completed.stdout
 
 
-def validate_manifest_chain(ledger_root: Path, *, verify_git_history: bool = False) -> dict[str, Any]:
+def validate_manifest_chain(
+    ledger_root: Path,
+    *,
+    verify_git_history: bool = False,
+    allowed_uncovered: set[str] | None = None,
+) -> dict[str, Any]:
     manifests = manifest_files(ledger_root)
     previous_hash = "GENESIS"
     covered: dict[str, str] = {}
@@ -293,9 +298,14 @@ def validate_manifest_chain(ledger_root: Path, *, verify_git_history: bool = Fal
 
     forecasts = forecast_files(ledger_root)
     forecast_paths = {str(path.relative_to(ledger_root)).replace("\\", "/") for path in forecasts}
-    uncovered = sorted(forecast_paths - set(covered))
-    if uncovered:
-        raise LedgerError(f"uncovered forecast files: {', '.join(uncovered[:5])}")
+    allowed = set(allowed_uncovered or set())
+    missing_allowed = sorted(allowed - forecast_paths)
+    if missing_allowed:
+        raise LedgerError(f"allowed transition forecast does not exist: {', '.join(missing_allowed[:5])}")
+    uncovered = forecast_paths - set(covered)
+    unexpected_uncovered = sorted(uncovered - allowed)
+    if unexpected_uncovered:
+        raise LedgerError(f"uncovered forecast files: {', '.join(unexpected_uncovered[:5])}")
     unknown = sorted(set(covered) - forecast_paths)
     if unknown:
         raise LedgerError(f"manifest references unknown forecasts: {', '.join(unknown[:5])}")
@@ -304,5 +314,6 @@ def validate_manifest_chain(ledger_root: Path, *, verify_git_history: bool = Fal
         "forecast_count": len(forecasts),
         "manifest_count": len(manifests),
         "latest_manifest_hash": previous_hash,
-        "integrity": "PASS",
+        "transition_uncovered_count": len(uncovered),
+        "integrity": "TRANSITION" if uncovered else "PASS",
     }
