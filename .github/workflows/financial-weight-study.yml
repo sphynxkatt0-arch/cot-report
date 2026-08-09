@@ -1,0 +1,41 @@
+name: Financial actor weight study
+
+on:
+  pull_request:
+    paths:
+      - "analysis/evaluate_financial_actor_weights.py"
+      - "analysis/interactive_cot_dashboard.html"
+      - "analysis/build_worldclass_bundle.py"
+      - "analysis/model_spec.py"
+      - "analysis/config/model_spec.json"
+      - ".github/workflows/financial-weight-study.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate source
+        run: python -m py_compile analysis/evaluate_financial_actor_weights.py
+      - name: Run lookahead-safe 2022+ holdout study
+        run: |
+          python analysis/evaluate_financial_actor_weights.py
+          test -s analysis/worldclass/financial-weight-study.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = json.loads(Path('analysis/worldclass/financial-weight-study.json').read_text())
+          assert p['methodology']['lookahead_safe'] is True
+          assert p['markets'] == ['sp500', 'nq']
+          assert p['decision_horizons'] == ['4w', '13w']
+          for dataset in ('tff', 'legacy'):
+              for verdict in p[dataset]['secondary_actor_verdicts'].values():
+                  assert verdict['total_checks'] == 8
+          print('Financial actor holdout study contract passed')
+          PY
