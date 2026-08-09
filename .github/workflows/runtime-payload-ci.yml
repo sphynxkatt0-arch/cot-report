@@ -1,0 +1,102 @@
+name: Dashboard runtime payload CI
+
+on:
+  pull_request:
+    paths:
+      - "analysis/worldclass/**"
+      - "analysis/build_worldclass_metals.py"
+      - "analysis/worldclass_dashboard.html"
+      - "analysis/validate_worldclass_release.py"
+      - ".github/workflows/runtime-payload-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  first-render-budget:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Restore current production data payloads
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin gh-pages:refs/remotes/origin/gh-pages --depth=1
+          mkdir -p analysis/worldclass analysis/model_output
+          for path in \
+            worldclass/base.json \
+            worldclass/metals.json \
+            worldclass/regime_backtest.json \
+            worldclass/release-status.json \
+            worldclass/market-sentiment.json \
+            worldclass/live-track-record.json \
+            model_output/macro_liquidity_expansion.json
+          do
+            target="analysis/${path}"
+            mkdir -p "$(dirname "${target}")"
+            git show "origin/gh-pages:${path}" > "${target}" 2>/dev/null || rm -f "${target}"
+          done
+          test -s analysis/worldclass/base.json
+          test -s analysis/worldclass/metals.json
+          test -s analysis/worldclass/regime_backtest.json
+          test -s analysis/model_output/macro_liquidity_expansion.json
+
+      - name: Apply branch metals runtime compaction deterministically
+        run: |
+          PYTHONPATH=analysis python - <<'PY'
+          import json
+          from pathlib import Path
+          import build_worldclass_metals as metals_builder
+
+          path = Path('analysis/worldclass/metals.json')
+          payload = json.loads(path.read_text())
+          for market in ('gold', 'silver'):
+              rows = (payload.get('markets', {}).get(market, {}).get('records') or [])[-metals_builder.BROWSER_COT_WEEKS:]
+              assert len(rows) >= 100, (market, len(rows))
+              payload['markets'][market]['records'] = rows
+              payload['prices'][market]['records'] = metals_builder.aligned_runtime_prices(rows)
+          payload['runtime_contract'] = {
+              'history_window_weeks': metals_builder.BROWSER_COT_WEEKS,
+              'price_frequency': 'COT-aligned weekly close',
+              'full_history_research_separate': True,
+          }
+          path.write_text(json.dumps(payload, separators=(',', ':')))
+          print(f"Compacted production-shaped metals fixture: {path.stat().st_size:,} bytes")
+          PY
+
+      - name: Enforce measured first-render gzip budget
+        env:
+          WORLDCLASS_INITIAL_GZIP_BUDGET: "1000000"
+        run: |
+          PYTHONPATH=analysis python - <<'PY'
+          import json
+          import validate_worldclass_release as release
+
+          budget = release.MAX_INITIAL_GZIP
+          release.MAX_INITIAL_GZIP = 10**12
+          sizes = release.validate_performance_budget()
+          release.MAX_INITIAL_GZIP = budget
+          sizes['budget'] = budget
+
+          print(json.dumps(sizes, indent=2, sort_keys=True))
+          ranked = sorted(
+              ((name, value) for name, value in sizes.items() if name not in {'initial_total', 'deferred_after_load_total', 'budget'}),
+              key=lambda item: item[1],
+              reverse=True,
+          )
+          print('Largest first-render assets:')
+          for name, value in ranked[:12]:
+              print(f'  {value:>9,}  {name}')
+          print(f"Measured first-render payload: {sizes['initial_total']:,} / {budget:,} gzip bytes")
+          print(f"Deferred deep-intelligence payload: {sizes['deferred_after_load_total']:,} gzip bytes")
+          assert sizes['initial_total'] <= budget, (
+              f"measured first-render payload {sizes['initial_total']:,} exceeds {budget:,} gzip bytes"
+          )
+          PY
