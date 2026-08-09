@@ -6,6 +6,8 @@
 .hero p{max-width:940px!important;line-height:1.55!important}
 .app-frame{--max:1760px}
 .panel{box-shadow:0 16px 44px rgba(0,0,0,.14)!important}
+/* The legacy decision enhancer used pre-governance hard-coded weights. The canonical command center replaces it. */
+#wcDecisionLayer,#wcWeeklyIntel{display:none!important}
 
 .wc-v2-command{margin:4px 0 16px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,var(--surface),color-mix(in srgb,var(--surface-2) 94%,var(--bg)));overflow:hidden}
 .wc-v2-head{display:flex;justify-content:space-between;align-items:flex-end;gap:22px;padding:18px 20px 15px;border-bottom:1px solid var(--line-soft)}
