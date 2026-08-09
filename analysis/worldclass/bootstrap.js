@@ -44,15 +44,10 @@
     return script;
   }
 
-  function loadEnhancements() {
-    addStylesheet("worldclass/enhancements.css", "data-worldclass-enhancements");
-    addStylesheet("worldclass/kpi-accent.css", "data-worldclass-kpi-accent");
+  function loadDeepIntelligence() {
+    if (document.documentElement.dataset.cotDeepIntelligence === "loaded") return;
+    document.documentElement.dataset.cotDeepIntelligence = "loaded";
     addStylesheet("worldclass/decision-system.css", "data-worldclass-decision-system");
-    addStylesheet("worldclass/terminal-v2.css", "data-worldclass-terminal-v2");
-    addStylesheet("worldclass/sentiment-panel.css", "data-worldclass-sentiment");
-    addScript("worldclass/enhancements.js");
-    addScript("worldclass/sentiment-panel.js");
-    addScript("worldclass/terminal-v2.js");
     addScript("worldclass/decision-system.js", () => {
       addScript("worldclass/macro-control-fallback.js", () => {
         addScript("worldclass/macro-state-renderer.js", () => {
@@ -60,6 +55,26 @@
         });
       });
     });
+  }
+
+  function scheduleDeepIntelligence() {
+    const schedule = () => {
+      if ("requestIdleCallback" in window) window.requestIdleCallback(loadDeepIntelligence, { timeout: 1800 });
+      else window.setTimeout(loadDeepIntelligence, 900);
+    };
+    if (document.readyState === "complete") schedule();
+    else window.addEventListener("load", schedule, { once: true });
+  }
+
+  function loadEnhancements() {
+    addStylesheet("worldclass/enhancements.css", "data-worldclass-enhancements");
+    addStylesheet("worldclass/kpi-accent.css", "data-worldclass-kpi-accent");
+    addStylesheet("worldclass/terminal-v2.css", "data-worldclass-terminal-v2");
+    addStylesheet("worldclass/sentiment-panel.css", "data-worldclass-sentiment");
+    addScript("worldclass/enhancements.js");
+    addScript("worldclass/sentiment-panel.js");
+    addScript("worldclass/terminal-v2.js");
+    scheduleDeepIntelligence();
   }
 
   function loadApp() {
