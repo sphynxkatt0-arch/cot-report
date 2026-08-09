@@ -1,0 +1,81 @@
+name: Public Pages Diagnostic
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/public-pages-diagnostic.yml"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/public-pages-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Verify current public GitHub Pages state
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo="${GITHUB_REPOSITORY#*/}"
+          base="https://${GITHUB_REPOSITORY_OWNER}.github.io/${repo}"
+          nonce="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p /tmp/public-pages
+          curl -fsS --max-time 20 "${base}/?v=${nonce}" -o /tmp/public-pages/index.html
+          curl -fsS --max-time 20 "${base}/worldclass/model-spec.json?v=${nonce}" -o /tmp/public-pages/model-spec.json
+          curl -fsS --max-time 20 "${base}/worldclass/release-status.json?v=${nonce}" -o /tmp/public-pages/release-status.json
+          curl -fsS --max-time 20 "${base}/worldclass/base.json?v=${nonce}" -o /tmp/public-pages/base.json
+          curl -fsS --max-time 20 "${base}/model_output/macro_liquidity_expansion.json?v=${nonce}" -o /tmp/public-pages/macro.json
+          PYTHONPATH=analysis python - <<'PY'
+          import json, math
+          from pathlib import Path
+          import model_spec
+
+          root = Path('/tmp/public-pages')
+          html = (root / 'index.html').read_text()
+          spec = json.loads((root / 'model-spec.json').read_text())
+          release = json.loads((root / 'release-status.json').read_text())
+          base = json.loads((root / 'base.json').read_text())
+          macro = json.loads((root / 'macro.json').read_text())
+          expected = model_spec.load_model_spec()
+          expected_hash = model_spec.model_spec_hash(expected)
+
+          print(f"PUBLIC_INDEX_BYTES={len(html.encode())}")
+          print(f"PUBLIC_MODEL={spec.get('model_version')}")
+          print(f"PUBLIC_MODEL_HASH={spec.get('model_spec_hash')}")
+          print(f"PUBLIC_RELEASE_STATE={release.get('state')}")
+          print(f"PUBLIC_RELEASE_DATE={release.get('latest_cot_report_date')}")
+          print(f"PUBLIC_BASE_COT_DATASETS={sorted((base.get('COT_DATA') or {}).keys())}")
+          print(f"PUBLIC_MACRO_COVERAGE={(macro.get('source_coverage') or {}).get('coverage_ratio')}")
+
+          assert len(html.encode()) < 200_000
+          assert 'worldclass/bootstrap.js' in html
+          assert 'const COT_DATA = ' not in html
+          assert spec.get('model_version') == expected.get('model_version')
+          assert spec.get('model_spec_hash') == expected_hash
+          assert release.get('state') in ('LIVE', 'DELAYED', 'DEGRADED')
+          assert release.get('data_contracts') == 'PASS'
+          assert release.get('latest_cot_report_date') == '2026-08-04'
+
+          cot = base.get('COT_DATA') or {}
+          for market in ('sp500', 'nq'):
+              for dataset in ('tff', 'legacy'):
+                  rows = (((cot.get(dataset) or {}).get(market) or {}).get('records') or [])
+                  assert len(rows) >= 2, (dataset, market, len(rows))
+          pillars = macro.get('pillars') or {}
+          for key in ('net_liquidity','bank_reserves','funding_microstructure','dealer_absorption','fiscal_cash_flow','auction_absorption'):
+              assert isinstance(pillars.get(key), dict), key
+              assert pillars[key].get('state'), key
+          assert math.isfinite(float(pillars['net_liquidity']['value']))
+          assert math.isfinite(float(pillars['bank_reserves']['value']))
+          print('PUBLIC_CONTRACT=PASS')
+          PY
