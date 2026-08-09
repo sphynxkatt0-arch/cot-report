@@ -188,9 +188,16 @@
 
         const runtimeVersion = releaseVersion || String(Date.now());
         window.__COT_RUNTIME_VERSION__ = runtimeVersion;
-        addScript(versioned("worldclass/bootstrap.js", runtimeVersion));
+        const bootstrap = addScript(versioned("worldclass/bootstrap.js", runtimeVersion));
         addScript(versioned("worldclass/live-track-record-panel.js", runtimeVersion));
-        addScript(versioned("worldclass/taxonomy-governance.js", runtimeVersion));
+        bootstrap.addEventListener("load", async () => {
+          try {
+            if (window.__COT_APP_DATA_READY__) await window.__COT_APP_DATA_READY__;
+          } catch (error) {
+            console.warn("Shared runtime data did not become ready before taxonomy startup.", error);
+          }
+          addScript(versioned("worldclass/taxonomy-governance.js", runtimeVersion));
+        }, { once: true });
       }
 
       startCurrentRelease();
