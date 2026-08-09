@@ -2,6 +2,16 @@
   "use strict";
 
   const originalFetch = window.fetch.bind(window);
+  const bootstrapScript = document.currentScript;
+  const scriptVersion = (() => {
+    try {
+      return new URL(bootstrapScript?.src || window.location.href, window.location.href).searchParams.get("v");
+    } catch (_) {
+      return null;
+    }
+  })();
+  const RUNTIME_VERSION = String(window.__COT_RUNTIME_VERSION__ || scriptVersion || Date.now());
+  window.__COT_RUNTIME_VERSION__ = RUNTIME_VERSION;
   window.__COT_APP_DATA_READY__ = window.__COT_APP_DATA_READY__ || new Promise(resolve => { window.__COT_RESOLVE_APP_DATA_READY__ = resolve; });
   const CONSTANTS = ["COT_DATA","PRICE_DATA","FACTOR_DATA","LIQUIDITY_DATA","MACRO_MONITOR","MACRO_LENS","METADATA","MODEL_SPEC"];
   const MACRO_CORE_GROUPS = [
@@ -10,18 +20,24 @@
     ["sofr_iorb_spread", "effr_iorb_spread"]
   ];
 
+  function versionedAsset(src) {
+    if (/^(?:https?:)?\/\//i.test(src)) return src;
+    const clean = String(src).split("?")[0].split("#")[0];
+    return `${clean}?v=${encodeURIComponent(RUNTIME_VERSION)}`;
+  }
+
   function addStylesheet(href, dataKey) {
     if (document.querySelector(`link[${dataKey}]`)) return;
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = href;
+    link.href = versionedAsset(href);
     link.setAttribute(dataKey, "1");
     document.head.appendChild(link);
   }
 
   function addScript(src, onload) {
     const script = document.createElement("script");
-    script.src = src;
+    script.src = versionedAsset(src);
     script.defer = true;
     if (onload) script.addEventListener("load", onload, { once: true });
     document.body.appendChild(script);
@@ -32,13 +48,13 @@
     addStylesheet("worldclass/enhancements.css", "data-worldclass-enhancements");
     addStylesheet("worldclass/kpi-accent.css", "data-worldclass-kpi-accent");
     addStylesheet("worldclass/decision-system.css", "data-worldclass-decision-system");
-    addStylesheet("worldclass/sentiment-panel.css?v=20260809-0245", "data-worldclass-sentiment");
+    addStylesheet("worldclass/sentiment-panel.css", "data-worldclass-sentiment");
     addScript("worldclass/enhancements.js");
-    addScript("worldclass/sentiment-panel.js?v=20260809-0245");
-    addScript("worldclass/decision-system.js?v=20260809-0415", () => {
-      addScript("worldclass/macro-control-fallback.js?v=20260809-0415", () => {
-        addScript("worldclass/macro-state-renderer.js?v=20260809-0415", () => {
-          addScript("worldclass/macro-live-sources.js?v=20260809-0415");
+    addScript("worldclass/sentiment-panel.js");
+    addScript("worldclass/decision-system.js", () => {
+      addScript("worldclass/macro-control-fallback.js", () => {
+        addScript("worldclass/macro-state-renderer.js", () => {
+          addScript("worldclass/macro-live-sources.js");
         });
       });
     });
@@ -46,7 +62,7 @@
 
   function loadApp() {
     addScript("worldclass/app.js", () => {
-      window.__COT_RESOLVE_APP_DATA_READY__?.({ bootstrap: true, source: window.__COT_BOOTSTRAP_SOURCE__ || "unknown" });
+      window.__COT_RESOLVE_APP_DATA_READY__?.({ bootstrap: true, source: window.__COT_BOOTSTRAP_SOURCE__ || "unknown", runtimeVersion: RUNTIME_VERSION });
       loadEnhancements();
     });
   }
