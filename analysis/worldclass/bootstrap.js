@@ -3,15 +3,11 @@
 
   const originalFetch = window.fetch.bind(window);
   window.__COT_APP_DATA_READY__ = window.__COT_APP_DATA_READY__ || new Promise(resolve => { window.__COT_RESOLVE_APP_DATA_READY__ = resolve; });
-  const CONSTANTS = [
-    "COT_DATA",
-    "PRICE_DATA",
-    "FACTOR_DATA",
-    "LIQUIDITY_DATA",
-    "MACRO_MONITOR",
-    "MACRO_LENS",
-    "METADATA",
-    "MODEL_SPEC"
+  const CONSTANTS = ["COT_DATA","PRICE_DATA","FACTOR_DATA","LIQUIDITY_DATA","MACRO_MONITOR","MACRO_LENS","METADATA","MODEL_SPEC"];
+  const MACRO_CORE_GROUPS = [
+    ["net_liquidity_4w_change"],
+    ["bank_reserves_4w_change", "bank_reserves"],
+    ["sofr_iorb_spread", "effr_iorb_spread"]
   ];
 
   function addStylesheet(href, dataKey) {
@@ -39,10 +35,10 @@
     addStylesheet("worldclass/sentiment-panel.css?v=20260809-0245", "data-worldclass-sentiment");
     addScript("worldclass/enhancements.js");
     addScript("worldclass/sentiment-panel.js?v=20260809-0245");
-    addScript("worldclass/decision-system.js?v=20260808-2340", () => {
-      addScript("worldclass/macro-control-fallback.js?v=20260808-2340", () => {
-        addScript("worldclass/macro-state-renderer.js?v=20260808-2340", () => {
-          addScript("worldclass/macro-live-sources.js?v=20260808-2340");
+    addScript("worldclass/decision-system.js?v=20260809-0415", () => {
+      addScript("worldclass/macro-control-fallback.js?v=20260809-0415", () => {
+        addScript("worldclass/macro-state-renderer.js?v=20260809-0415", () => {
+          addScript("worldclass/macro-live-sources.js?v=20260809-0415");
         });
       });
     });
@@ -77,8 +73,40 @@
     else window.setTimeout(loadPlotly, 80);
   }
 
-  function hasKeys(value) {
-    return value && typeof value === "object" && Object.keys(value).length > 0;
+  const hasKeys = value => value && typeof value === "object" && Object.keys(value).length > 0;
+  const finiteNumber = value => Number.isFinite(Number(value)) ? Number(value) : null;
+
+  function findMetric(node, keys, depth = 0) {
+    if (!node || depth > 10 || typeof node !== "object") return null;
+    if (Array.isArray(node)) {
+      for (let i = node.length - 1; i >= 0; i -= 1) {
+        const found = findMetric(node[i], keys, depth + 1);
+        if (found !== null) return found;
+      }
+      return null;
+    }
+    for (const key of keys) {
+      if (key in node) {
+        const value = finiteNumber(node[key]);
+        if (value !== null) return value;
+      }
+    }
+    for (const key of ["latest", "current", "state"]) {
+      const found = findMetric(node[key], keys, depth + 1);
+      if (found !== null) return found;
+    }
+    for (const [key, value] of Object.entries(node)) {
+      if (["latest", "current", "state"].includes(key)) continue;
+      const found = findMetric(value, keys, depth + 1);
+      if (found !== null) return found;
+    }
+    return null;
+  }
+
+  function validateMacroMonitor(macro) {
+    if (!hasKeys(macro)) throw new Error("runtime bundle has no MACRO_MONITOR");
+    const missing = MACRO_CORE_GROUPS.filter(group => findMetric(macro, group) === null).map(group => group.join("/"));
+    if (missing.length) throw new Error(`runtime MACRO_MONITOR missing core metrics: ${missing.join(", ")}`);
   }
 
   function validateModelSpec(spec) {
@@ -87,9 +115,7 @@
     if (!/^[a-f0-9]{64}$/i.test(String(spec.model_spec_hash || ""))) throw new Error("runtime MODEL_SPEC has no valid SHA-256 hash");
     if (!hasKeys(spec.score_models)) throw new Error("runtime MODEL_SPEC has no score_models");
     for (const dataset of ["tff", "legacy", "disaggregated"]) {
-      if (!hasKeys(spec.score_models?.[dataset]?.category_weights)) {
-        throw new Error(`runtime MODEL_SPEC has no ${dataset} category weights`);
-      }
+      if (!hasKeys(spec.score_models?.[dataset]?.category_weights)) throw new Error(`runtime MODEL_SPEC has no ${dataset} category weights`);
     }
     return spec;
   }
@@ -98,6 +124,7 @@
     if (!base || typeof base !== "object") throw new Error("runtime bundle is not an object");
     if (!hasKeys(base.COT_DATA)) throw new Error("runtime bundle has no COT_DATA");
     if (!hasKeys(base.PRICE_DATA)) throw new Error("runtime bundle has no PRICE_DATA");
+    validateMacroMonitor(base.MACRO_MONITOR);
     validateModelSpec(base.MODEL_SPEC);
     return base;
   }
@@ -109,11 +136,7 @@
     let cursor = markerIndex + marker.length;
     while (cursor < text.length && /\s/.test(text[cursor])) cursor += 1;
     const start = cursor;
-    let depth = 0;
-    let started = false;
-    let inString = false;
-    let escaped = false;
-
+    let depth = 0, started = false, inString = false, escaped = false;
     for (; cursor < text.length; cursor += 1) {
       const char = text[cursor];
       if (inString) {
@@ -122,15 +145,8 @@
         else if (char === '"') inString = false;
         continue;
       }
-      if (char === '"') {
-        inString = true;
-        continue;
-      }
-      if (char === "{" || char === "[") {
-        depth += 1;
-        started = true;
-        continue;
-      }
+      if (char === '"') { inString = true; continue; }
+      if (char === "{" || char === "[") { depth += 1; started = true; continue; }
       if (char === "}" || char === "]") {
         depth -= 1;
         if (started && depth === 0) return JSON.parse(text.slice(start, cursor + 1));
@@ -162,14 +178,13 @@
     ]);
     if (!legacyResponse.ok) throw new Error(`interactive dashboard HTTP ${legacyResponse.status}`);
     const text = await legacyResponse.text();
-    const base = Object.fromEntries(
-      CONSTANTS.filter(name => name !== "MODEL_SPEC").map(name => [name, extractEmbeddedConstant(text, name)])
-    );
+    const base = Object.fromEntries(CONSTANTS.filter(name => name !== "MODEL_SPEC").map(name => [name, extractEmbeddedConstant(text, name)]));
     base.MODEL_SPEC = modelSpec;
     base.bundle_meta = {
       source: "legacy-html-runtime-recovery",
       source_html_bytes: text.length,
       recovered_at_utc: new Date().toISOString(),
+      macro_core_contract: "PASS",
       model_version: modelSpec.model_version,
       model_spec_hash: modelSpec.model_spec_hash
     };
@@ -183,10 +198,7 @@
     window.fetch = (input, init) => {
       const url = typeof input === "string" ? input : input?.url;
       if (url && /(^|\/)interactive_cot_dashboard\.html(?:[?#].*)?$/.test(url)) {
-        return Promise.resolve(new Response(syntheticHtml, {
-          status: 200,
-          headers: { "Content-Type": "text/html; charset=utf-8", "X-COT-Data-Source": source }
-        }));
+        return Promise.resolve(new Response(syntheticHtml, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "X-COT-Data-Source": source } }));
       }
       return originalFetch(input, init);
     };
@@ -199,21 +211,19 @@
   }
 
   async function boot() {
-    let base = null;
     try {
-      base = await loadCompactBase();
+      const base = await loadCompactBase();
       installSharedBase(base, "compact-base");
     } catch (compactError) {
-      console.warn("Compact data bundle unavailable; recovering from tracked legacy dashboard.", compactError);
+      console.warn("Compact data bundle incomplete; recovering from tracked legacy dashboard.", compactError);
       try {
-        base = await loadLegacyBase();
+        const base = await loadLegacyBase();
         installSharedBase(base, "legacy-html-runtime-recovery");
-        console.info("Recovered shared dashboard data from interactive_cot_dashboard.html with canonical model metadata.");
+        console.info("Recovered COT, price and macro data with canonical model metadata.");
       } catch (legacyError) {
         exposeRecoveryState(legacyError);
       }
     }
-
     loadApp();
     schedulePlotly();
   }
