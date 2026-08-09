@@ -92,7 +92,11 @@
   }
 
   const hasKeys = value => value && typeof value === "object" && Object.keys(value).length > 0;
-  const finiteNumber = value => Number.isFinite(Number(value)) ? Number(value) : null;
+  const finiteNumber = value => {
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  };
 
   function findMetric(node, keys, depth = 0) {
     if (!node || depth > 10 || typeof node !== "object") return null;
