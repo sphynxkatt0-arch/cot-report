@@ -1,7 +1,11 @@
 (() => {
   "use strict";
 
-  const finite = value => Number.isFinite(Number(value)) ? Number(value) : null;
+  const finite = value => {
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  };
   const esc = value => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
   const fmt = (value, digits = 1) => finite(value) === null ? "n/a" : finite(value).toFixed(digits);
   const pct = (value, digits = 1) => finite(value) === null ? "n/a" : `${finite(value).toFixed(digits)}%`;
