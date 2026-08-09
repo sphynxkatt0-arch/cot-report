@@ -230,15 +230,10 @@
     const syntheticHtml = CONSTANTS.map(name => `const ${name} = ${JSON.stringify(base[name] || {})};`).join("\n");
     let sharedMetalsResponse = null;
     const sharedMetalsFetch = (input, init) => {
-      if (!sharedMetalsResponse) {
-        sharedMetalsResponse = originalFetch(input, init).then(response => {
-          if (!response.ok) sharedMetalsResponse = null;
-          return response;
-        }).catch(error => {
-          sharedMetalsResponse = null;
-          throw error;
-        });
-      }
+      // Single-flight the metals payload for the entire page lifecycle, including
+      // degraded 404/5xx/network states. Multiple consumers should observe the
+      // same outcome instead of hammering a missing or unhealthy resource.
+      if (!sharedMetalsResponse) sharedMetalsResponse = originalFetch(input, init);
       return sharedMetalsResponse.then(response => response.clone());
     };
     window.fetch = (input, init) => {
