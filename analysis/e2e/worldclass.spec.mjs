@@ -91,6 +91,41 @@ const liveTrack = {
   }]
 };
 
+const publishedMacro = {
+  schema_version: 1,
+  generated_at_utc: '2026-08-09T03:32:57Z',
+  pillars: {
+    funding_microstructure: {
+      label: 'Funding microstructure',
+      score: 42.8,
+      state: 'Neutral',
+      coverage: 1.0,
+      reasons: ['repo rate dispersion 6.0 bp', 'largest short-term rate move 1.0 bp']
+    },
+    dealer_absorption: {
+      label: 'Dealer absorption',
+      score: 50.0,
+      state: 'Neutral',
+      coverage: 0.333,
+      reasons: ['published dealer-source context']
+    },
+    fiscal_cash_flow: {
+      label: 'Daily fiscal cash flow',
+      score: 75.4,
+      state: 'Supportive',
+      coverage: 1.0,
+      reasons: ['5d private cash effect +72.4 bn', '5d operating-cash change -36.2 bn']
+    },
+    auction_absorption: {
+      label: 'Treasury auction absorption',
+      score: 49.9,
+      state: 'Neutral',
+      coverage: 7,
+      reasons: ['same-tenor auction quality']
+    }
+  }
+};
+
 async function mockEvidence(page, sentiment = emptySentiment, track = emptyTrack) {
   await page.route('**/worldclass/market-sentiment.json*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sentiment) }));
   await page.route('**/worldclass/live-track-record.json*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(track) }));
@@ -146,4 +181,46 @@ test('new evidence panels have no automated WCAG A/AA violations', async ({ page
       .analyze();
     expect(results.violations, `${selector} accessibility violations`).toEqual([]);
   }
+});
+
+test('macro control room resolves server-backed values without browser cache', async ({ page }) => {
+  await mockEvidence(page);
+  await page.route('**/model_output/macro_liquidity_expansion.json*', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify(publishedMacro)
+  }));
+  await page.addInitScript(() => {
+    localStorage.removeItem('cot-macro-live-official-v1');
+    localStorage.removeItem('cot-macro-live-official-last-good-v1');
+  });
+  await page.route('https://data.financialresearch.gov/**', route => route.abort());
+  await page.route('https://api.fiscaldata.treasury.gov/**', route => route.abort());
+  await openDashboard(page);
+
+  const labels = ['SYSTEM LIQUIDITY', 'RESERVES', 'FUNDING', 'DEALERS', 'FISCAL CASH', 'AUCTION QUALITY'];
+  await page.waitForFunction(expected => {
+    const root = document.querySelector('#wcMacroControl');
+    if (!root) return false;
+    const cards = [...root.querySelectorAll('.wc-macro-pillar')];
+    return expected.every(label => {
+      const card = cards.find(item => item.querySelector(':scope > span')?.textContent?.trim().toUpperCase() === label);
+      const value = card?.querySelector(':scope > strong')?.textContent?.trim().toLowerCase();
+      return Boolean(value && value !== 'n/a');
+    });
+  }, labels);
+
+  const values = await page.evaluate(expected => {
+    const cards = [...document.querySelectorAll('#wcMacroControl .wc-macro-pillar')];
+    return Object.fromEntries(expected.map(label => {
+      const card = cards.find(item => item.querySelector(':scope > span')?.textContent?.trim().toUpperCase() === label);
+      return [label, card?.querySelector(':scope > strong')?.textContent?.trim() || 'n/a'];
+    }));
+  }, labels);
+
+  expect(values.FUNDING).toBe('43/100');
+  expect(values.DEALERS).toBe('50/100');
+  expect(values['FISCAL CASH']).toBe('75/100');
+  expect(values['AUCTION QUALITY']).toBe('50/100');
+  for (const label of labels) expect(values[label], `${label} should be populated`).not.toBe('n/a');
 });

@@ -5,11 +5,14 @@
   const BACKUP_KEY = "cot-macro-live-official-last-good-v1";
   const CACHE_FRESH_MS = 30 * 60 * 1000;
   const CACHE_MAX_MS = 24 * 60 * 60 * 1000;
+  const SERVER_STALE_MS = 72 * 60 * 60 * 1000;
   const STORE = window.__COT_MACRO_LIVE__ = window.__COT_MACRO_LIVE__ || {
     core: {},
+    server: {},
     official: {},
     updated_at: 0
   };
+  if (!STORE.server || typeof STORE.server !== "object") STORE.server = {};
 
   const finite = value => {
     const number = Number(value);
@@ -159,10 +162,7 @@
       for (const name of names) {
         const metric = primary?.[name];
         if (!metric?.ok) continue;
-        backup.metrics[name] = {
-          metric,
-          cached_at: primaryFetchedAt
-        };
+        backup.metrics[name] = { metric, cached_at: primaryFetchedAt };
       }
       backup.updated_at = Date.now();
       saveBackup(backup);
@@ -191,6 +191,55 @@
 
     STORE.official = official;
     STORE.updated_at = Date.now();
+  }
+
+  function findNamedObject(root, key, depth = 0, seen = new Set()) {
+    if (!root || depth > 10 || typeof root !== "object" || seen.has(root)) return null;
+    seen.add(root);
+    if (!Array.isArray(root) && root[key] && typeof root[key] === "object") return root[key];
+    for (const value of Object.values(root)) {
+      const found = findNamedObject(value, key, depth + 1, seen);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  function metricFromPillar(pillar, generatedAt) {
+    if (!pillar || typeof pillar !== "object") return null;
+    const score = finite(pillar.score);
+    const state = String(pillar.state || "Context");
+    if (score === null && !state) return null;
+    const reasons = Array.isArray(pillar.reasons) ? pillar.reasons.filter(Boolean).slice(0, 2) : [];
+    const generatedMs = Date.parse(generatedAt || "");
+    const stale = Number.isFinite(generatedMs) ? Date.now() - generatedMs > SERVER_STALE_MS : false;
+    return {
+      ok: score !== null,
+      display: score === null ? "n/a" : `${score.toFixed(0)}/100`,
+      state,
+      stale,
+      detail: `${reasons.join(" · ") || pillar.label || "published official-source payload"}${generatedAt ? ` · built ${String(generatedAt).slice(0, 10)}` : ""}`,
+      source: "server-plumbing"
+    };
+  }
+
+  async function loadServerState() {
+    try {
+      const version = window.__COT_RUNTIME_VERSION__ || Date.now();
+      const response = await fetch(`model_output/macro_liquidity_expansion.json?v=${encodeURIComponent(version)}`, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      const generatedAt = payload?.generated_at_utc || "";
+      STORE.server = {
+        funding: metricFromPillar(findNamedObject(payload, "funding_microstructure"), generatedAt),
+        dealers: metricFromPillar(findNamedObject(payload, "dealer_absorption"), generatedAt),
+        fiscal: metricFromPillar(findNamedObject(payload, "fiscal_cash_flow"), generatedAt),
+        auctions: metricFromPillar(findNamedObject(payload, "auction_absorption"), generatedAt)
+      };
+      STORE.updated_at = Date.now();
+      scheduleRender();
+    } catch (error) {
+      console.warn("Published macro control-room payload unavailable; retaining core/browser fallbacks.", error);
+    }
   }
 
   function cardByLabel(root, label) {
@@ -251,12 +300,17 @@
     const root = document.querySelector("#wcMacroControl");
     if (!root) return;
 
+    const funding = STORE.official.funding || STORE.server.funding || STORE.core.funding_fallback;
+    const dealers = STORE.official.dealers || STORE.server.dealers;
+    const fiscal = STORE.official.fiscal || STORE.server.fiscal;
+    const auctions = STORE.official.auctions || STORE.server.auctions;
+
     applyMetric(root, "SYSTEM LIQUIDITY", STORE.core.system_liquidity, "core");
     applyMetric(root, "RESERVES", STORE.core.reserves, "core");
-    applyMetric(root, "FUNDING", STORE.official.funding || STORE.core.funding_fallback, STORE.official.funding ? "official" : "core");
-    applyMetric(root, "DEALERS", STORE.official.dealers, "official");
-    applyMetric(root, "FISCAL CASH", STORE.official.fiscal, "official");
-    applyMetric(root, "AUCTION QUALITY", STORE.official.auctions, "official");
+    applyMetric(root, "FUNDING", funding, STORE.official.funding ? "official" : STORE.server.funding ? "server" : "core");
+    applyMetric(root, "DEALERS", dealers, STORE.official.dealers ? "official" : "server");
+    applyMetric(root, "FISCAL CASH", fiscal, STORE.official.fiscal ? "official" : "server");
+    applyMetric(root, "AUCTION QUALITY", auctions, STORE.official.auctions ? "official" : "server");
   }
 
   function scheduleRender() {
@@ -284,5 +338,6 @@
     if (polls >= 90) clearInterval(poll);
   }, 250);
 
+  loadServerState();
   scheduleRender();
 })();
