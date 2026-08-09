@@ -19,7 +19,7 @@ from __future__ import annotations
 import json
 import math
 import statistics
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -200,27 +200,38 @@ def select_non_overlapping(
     return selected
 
 
-def stability_summary(rows_by_count: dict[str, Any], metric_path: tuple[str, str]) -> dict[str, Any]:
+def stability_summary(
+    rows_by_count: dict[str, Any],
+    branch: str,
+    minimum_observations: int,
+) -> dict[str, Any]:
     edges: list[float] = []
+    excluded_counts: list[int] = []
     for count in COUNTS:
-        row = rows_by_count[str(count)]
-        branch, key = metric_path
-        value = finite(row[branch].get(key))
-        if value is not None:
-            edges.append(value)
+        metrics_row = rows_by_count[str(count)][branch]
+        observations = int(metrics_row.get("observations") or 0)
+        value = finite(metrics_row.get("edge_vs_unconditional_pct"))
+        if observations < minimum_observations or value is None:
+            excluded_counts.append(count)
+            continue
+        edges.append(value)
     positive = sum(1 for value in edges if value > 0)
     tested = len(edges)
     positive_fraction = positive / tested if tested else 0.0
     median_edge = statistics.median(edges) if edges else None
-    if tested >= 4 and positive_fraction >= 0.8 and median_edge is not None and median_edge > 0:
+    if tested < 3:
+        classification = "INSUFFICIENT"
+    elif tested >= 4 and positive_fraction >= 0.8 and median_edge is not None and median_edge > 0:
         classification = "ROBUST"
-    elif tested >= 3 and positive_fraction >= 0.5 and median_edge is not None and median_edge > 0:
+    elif positive_fraction >= 0.5 and median_edge is not None and median_edge > 0:
         classification = "MIXED"
     else:
         classification = "FRAGILE"
     return {
         "classification": classification,
         "classification_scope": "analog-count edge-sign stability only; not statistical significance or causal confidence",
+        "minimum_observations_per_count": minimum_observations,
+        "excluded_counts": excluded_counts,
         "positive_edge_counts": positive,
         "tested_counts": tested,
         "positive_edge_fraction": round(positive_fraction, 4),
@@ -255,8 +266,8 @@ def build_market_result(
             }
         horizons[horizon] = {
             "counts": rows_by_count,
-            "raw_parameter_stability": stability_summary(rows_by_count, ("raw_overlapping", "edge_vs_unconditional_pct")),
-            "non_overlapping_parameter_stability": stability_summary(rows_by_count, ("non_overlapping", "edge_vs_unconditional_pct")),
+            "raw_parameter_stability": stability_summary(rows_by_count, "raw_overlapping", minimum_observations=10),
+            "non_overlapping_parameter_stability": stability_summary(rows_by_count, "non_overlapping", minimum_observations=5),
         }
 
     return {
@@ -290,6 +301,7 @@ def main() -> None:
             "purpose": "robustness diagnosis only; tested N values are not optimized or promoted automatically",
             "overlap_correction": "non-overlapping realized forward price windows selected greedily in similarity order",
             "independent_episode_note": "reported episode counts are explicit non-overlapping selections, not an effective-N formula",
+            "episode_stability_minimum": "non-overlap sign-stability excludes N settings with fewer than 5 independent episodes",
         },
         "markets": {},
     }
