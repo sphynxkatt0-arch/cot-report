@@ -1,0 +1,58 @@
+name: World-class browser E2E
+
+on:
+  pull_request:
+    paths:
+      - "analysis/worldclass_dashboard.html"
+      - "analysis/worldclass/**"
+      - "analysis/e2e/**"
+      - "analysis/config/model_spec.json"
+      - ".github/workflows/worldclass-browser-e2e.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+
+      - name: Install pinned test dependencies
+        working-directory: analysis/e2e
+        run: npm install --no-audit --no-fund
+
+      - name: Install Chromium
+        working-directory: analysis/e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Serve production artifact tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 4173 --bind 127.0.0.1 --directory analysis >/tmp/cot-e2e-http.log 2>&1 &
+          echo $! >/tmp/cot-e2e-http.pid
+          for _ in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/worldclass_dashboard.html >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/cot-e2e-http.log
+          exit 1
+
+      - name: Run browser and WCAG checks
+        working-directory: analysis/e2e
+        run: npx playwright test --config=playwright.config.mjs
+
+      - uses: actions/upload-artifact@v5
+        if: ${{ !cancelled() }}
+        with:
+          name: worldclass-playwright-report
+          path: analysis/e2e/playwright-report/
+          retention-days: 14
