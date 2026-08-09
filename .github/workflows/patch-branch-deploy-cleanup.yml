@@ -3,6 +3,9 @@ name: One-time branch deploy cleanup
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+    types: [closed]
 
 permissions:
   contents: write
