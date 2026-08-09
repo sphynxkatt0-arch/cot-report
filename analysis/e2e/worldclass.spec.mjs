@@ -147,3 +147,36 @@ test('new evidence panels have no automated WCAG A/AA violations', async ({ page
     expect(results.violations, `${selector} accessibility violations`).toEqual([]);
   }
 });
+
+test('macro control room resolves server-backed values without browser cache', async ({ page }) => {
+  await mockEvidence(page);
+  await page.addInitScript(() => {
+    localStorage.removeItem('cot-macro-live-official-v1');
+    localStorage.removeItem('cot-macro-live-official-last-good-v1');
+  });
+  await page.route('https://data.financialresearch.gov/**', route => route.abort());
+  await page.route('https://api.fiscaldata.treasury.gov/**', route => route.abort());
+  await openDashboard(page);
+
+  const labels = ['SYSTEM LIQUIDITY', 'RESERVES', 'FUNDING', 'DEALERS', 'FISCAL CASH', 'AUCTION QUALITY'];
+  await page.waitForFunction(expected => {
+    const root = document.querySelector('#wcMacroControl');
+    if (!root) return false;
+    const cards = [...root.querySelectorAll('.wc-macro-pillar')];
+    return expected.every(label => {
+      const card = cards.find(item => item.querySelector(':scope > span')?.textContent?.trim().toUpperCase() === label);
+      const value = card?.querySelector(':scope > strong')?.textContent?.trim().toLowerCase();
+      return Boolean(value && value !== 'n/a');
+    });
+  }, labels);
+
+  const values = await page.evaluate(expected => {
+    const cards = [...document.querySelectorAll('#wcMacroControl .wc-macro-pillar')];
+    return Object.fromEntries(expected.map(label => {
+      const card = cards.find(item => item.querySelector(':scope > span')?.textContent?.trim().toUpperCase() === label);
+      return [label, card?.querySelector(':scope > strong')?.textContent?.trim() || 'n/a'];
+    }));
+  }, labels);
+
+  for (const label of labels) expect(values[label], `${label} should be populated`).not.toBe('n/a');
+});
