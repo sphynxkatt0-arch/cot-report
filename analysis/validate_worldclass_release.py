@@ -298,11 +298,11 @@ def validate_performance_budget() -> dict[str, int]:
         WORLDCLASS / "app.js",
         WORLDCLASS / "enhancements.css",
         WORLDCLASS / "kpi-accent.css",
-        WORLDCLASS / "terminal-v2.css",
+        WORLDCLASS / "terminal-v3.css",
         WORLDCLASS / "sentiment-panel.css",
         WORLDCLASS / "enhancements.js",
         WORLDCLASS / "sentiment-panel.js",
-        WORLDCLASS / "terminal-v2.js",
+        WORLDCLASS / "terminal-v3.js",
     ]
     optional_initial = [
         WORLDCLASS / "market-sentiment.json",
