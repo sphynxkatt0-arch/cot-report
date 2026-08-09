@@ -55,7 +55,23 @@ jobs:
           import json
           import validate_worldclass_release as release
 
+          budget = release.MAX_INITIAL_GZIP
+          release.MAX_INITIAL_GZIP = 10**12
           sizes = release.validate_performance_budget()
+          release.MAX_INITIAL_GZIP = budget
+          sizes['budget'] = budget
+
           print(json.dumps(sizes, indent=2, sort_keys=True))
-          print(f"Measured first-render payload: {sizes['initial_total']:,} / {sizes['budget']:,} gzip bytes")
+          ranked = sorted(
+              ((name, value) for name, value in sizes.items() if name not in {'initial_total', 'budget'}),
+              key=lambda item: item[1],
+              reverse=True,
+          )
+          print('Largest first-render assets:')
+          for name, value in ranked[:12]:
+              print(f'  {value:>9,}  {name}')
+          print(f"Measured first-render payload: {sizes['initial_total']:,} / {budget:,} gzip bytes")
+          assert sizes['initial_total'] <= budget, (
+              f"measured first-render payload {sizes['initial_total']:,} exceeds {budget:,} gzip bytes"
+          )
           PY
