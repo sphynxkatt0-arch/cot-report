@@ -4,6 +4,12 @@
 # normal GitHub Actions queue delays cannot suppress the Friday refresh.
 # Merged PRs also trigger deployment so GitHub-App merges do not depend solely
 # on the corresponding push event being delivered.
+#
+# Production intentionally publishes from the gh-pages branch. This avoids a
+# hard dependency on GitHub Actions artifact storage, whose account-level quota
+# can temporarily block actions/upload-pages-artifact even after old artifacts
+# have been deleted. The validated research/build pipeline still runs first;
+# only its static output is published.
 name: Refresh and Deploy
 
 on:
@@ -185,9 +191,13 @@ jobs:
           git fetch origin gh-pages --depth=1
           git show FETCH_HEAD:worldclass/metals.json > /tmp/metals.json 2>/dev/null || true
           git show FETCH_HEAD:model_output/macro_liquidity_expansion.json > /tmp/macro_liquidity_expansion.json 2>/dev/null || true
+          git show FETCH_HEAD:worldclass/market-sentiment.json > /tmp/market-sentiment.json 2>/dev/null || true
           if [ -s /tmp/metals.json ]; then cp /tmp/metals.json analysis/worldclass/metals.json; fi
           if [ -s /tmp/macro_liquidity_expansion.json ]; then
             cp /tmp/macro_liquidity_expansion.json analysis/model_output/macro_liquidity_expansion.json
+          fi
+          if [ -s /tmp/market-sentiment.json ]; then
+            cp /tmp/market-sentiment.json analysis/worldclass/market-sentiment.json
           fi
 
       - name: "[CFTC_AVAILABLE] Refresh Gold and Silver Disaggregated COT"
@@ -330,53 +340,24 @@ jobs:
       - name: "[BUILDING] Prepare production index"
         run: cp analysis/worldclass_dashboard.html analysis/index.html
 
-      - name: "[BUILDING] Prepare lightweight Pages artifact"
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf pages-dist
-          mkdir -p pages-dist/model_output
-          cp analysis/index.html pages-dist/index.html
-          cp -a analysis/worldclass pages-dist/worldclass
-          cp analysis/model_output/macro_liquidity_expansion.json pages-dist/model_output/macro_liquidity_expansion.json
-          if [ -d analysis/dashboard_template ]; then cp -a analysis/dashboard_template pages-dist/dashboard_template; fi
-          touch pages-dist/.nojekyll
-          test ! -e pages-dist/interactive_cot_dashboard.html
-          test "$(stat -c%s pages-dist/index.html)" -lt 200000
-          test -s pages-dist/worldclass/base.json
-          test -s pages-dist/worldclass/model-spec.json
-          test -s pages-dist/model_output/macro_liquidity_expansion.json
-          echo "Lightweight Pages artifact: $(du -sh pages-dist | cut -f1)"
-
-      - name: "[DEPLOYING] Clear previous Pages deployment artifacts"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          gh api --paginate "/repos/${{ github.repository }}/actions/artifacts?per_page=100" \
-            --jq '.artifacts[] | select(.name == "github-pages") | .id' \
-            | while read -r artifact_id; do
-                [ -n "$artifact_id" ] || continue
-                echo "Deleting old github-pages artifact ${artifact_id}"
-                gh api -X DELETE "/repos/${{ github.repository }}/actions/artifacts/${artifact_id}" || true
-              done
-
-      - name: "[DEPLOYING] Configure GitHub Pages"
-        uses: actions/configure-pages@v5
-
-      - name: "[DEPLOYING] Upload lightweight Pages artifact"
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: pages-dist
-          retention-days: 1
-
-      - name: "[DEPLOYING] Publish mirror to gh-pages"
+      - name: "[DEPLOYING] Publish validated site to gh-pages"
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./analysis
           force_orphan: true
+
+      - name: "[DEPLOYING] Align GitHub Pages source to gh-pages"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat >/tmp/pages-source.json <<'JSON'
+          {"build_type":"legacy","source":{"branch":"gh-pages","path":"/"}}
+          JSON
+          gh api -X PUT "/repos/${{ github.repository }}/pages" --input /tmp/pages-source.json
+          gh api "/repos/${{ github.repository }}/pages" --jq '{build_type,source,html_url,status}'
 
       - name: "[LIVE] Verify published gh-pages contract"
         env:
@@ -404,22 +385,70 @@ jobs:
           do
             size="$(gh api "/repos/${{ github.repository }}/contents/${path}?ref=gh-pages" --jq '.size')"
             test "${size}" -gt 0
-            echo "Published mirror ${path}: ${size} bytes"
+            echo "Published ${path}: ${size} bytes"
           done
 
-  deploy-public-pages:
-    name: Deploy public GitHub Pages
-    needs: refresh-and-deploy
-    if: needs.refresh-and-deploy.result == 'success'
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: "[LIVE] Deploy lightweight artifact to configured Pages source"
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: "[LIVE] Verify real public GitHub Pages shell and macro contract"
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo="${GITHUB_REPOSITORY#*/}"
+          base="https://${GITHUB_REPOSITORY_OWNER}.github.io/${repo}"
+          nonce="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          rm -rf /tmp/public-pages
+          mkdir -p /tmp/public-pages
+
+          ready=false
+          for attempt in $(seq 1 60); do
+            if curl -fsS --max-time 15 "${base}/?v=${nonce}-${attempt}" -o /tmp/public-pages/index.html \
+              && curl -fsS --max-time 15 "${base}/worldclass/model-spec.json?v=${nonce}-${attempt}" -o /tmp/public-pages/model-spec.json \
+              && curl -fsS --max-time 15 "${base}/worldclass/release-status.json?v=${nonce}-${attempt}" -o /tmp/public-pages/release-status.json \
+              && curl -fsS --max-time 15 "${base}/worldclass/bootstrap.js?v=${nonce}-${attempt}" -o /tmp/public-pages/bootstrap.js \
+              && curl -fsS --max-time 15 "${base}/worldclass/taxonomy-governance.js?v=${nonce}-${attempt}" -o /tmp/public-pages/taxonomy-governance.js \
+              && curl -fsS --max-time 15 "${base}/model_output/macro_liquidity_expansion.json?v=${nonce}-${attempt}" -o /tmp/public-pages/macro.json; then
+              if PYTHONPATH=analysis python - <<'PY'
+          import json, math
+          from pathlib import Path
+          import model_spec
+
+          root = Path('/tmp/public-pages')
+          index = root / 'index.html'
+          html = index.read_text()
+          spec = json.loads((root / 'model-spec.json').read_text())
+          release = json.loads((root / 'release-status.json').read_text())
+          macro = json.loads((root / 'macro.json').read_text())
+          expected = model_spec.load_model_spec()
+          expected_hash = model_spec.model_spec_hash(expected)
+
+          assert index.stat().st_size < 200_000, index.stat().st_size
+          assert 'worldclass/bootstrap.js' in html
+          assert 'taxonomy-governance.js' in html
+          assert 'const COT_DATA = ' not in html
+          assert spec.get('model_version') == expected.get('model_version')
+          assert spec.get('model_spec_hash') == expected_hash
+          assert release.get('state') in ('LIVE', 'DELAYED', 'DEGRADED')
+          assert release.get('data_contracts') == 'PASS'
+
+          pillars = macro.get('pillars') or {}
+          required = ('net_liquidity', 'bank_reserves', 'funding_microstructure', 'dealer_absorption', 'fiscal_cash_flow', 'auction_absorption')
+          for key in required:
+              assert isinstance(pillars.get(key), dict), key
+              assert pillars[key].get('state'), key
+          assert math.isfinite(float(pillars['net_liquidity']['value']))
+          assert math.isfinite(float(pillars['bank_reserves']['value']))
+          for key in ('funding_microstructure', 'dealer_absorption', 'fiscal_cash_flow', 'auction_absorption'):
+              assert math.isfinite(float(pillars[key]['score']))
+          PY
+              then
+                ready=true
+                echo "Public Pages reached validated branch deployment on attempt ${attempt}."
+                break
+              fi
+            fi
+            sleep 5
+          done
+
+          if [ "$ready" != true ]; then
+            echo "::error::Public GitHub Pages did not converge to the validated gh-pages deployment."
+            exit 1
+          fi
