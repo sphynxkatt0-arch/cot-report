@@ -38,7 +38,7 @@
   const RUNTIME_VERSION = String(window.__COT_RUNTIME_VERSION__ || scriptVersion || Date.now());
   window.__COT_RUNTIME_VERSION__ = RUNTIME_VERSION;
   window.__COT_APP_DATA_READY__ = window.__COT_APP_DATA_READY__ || new Promise(resolve => { window.__COT_RESOLVE_APP_DATA_READY__ = resolve; });
-  const CONSTANTS = ["COT_DATA","PRICE_DATA","FACTOR_DATA","LIQUIDITY_DATA","MACRO_MONITOR","MACRO_LENS","METADATA","MODEL_SPEC"];
+  const CONSTANTS = ["COT_DATA","PRICE_DATA","FACTOR_DATA","LIQUIDITY_DATA","MACRO_MONITOR","MACRO_LENS","METADATA","RESEARCH","MODEL_SPEC"];
   const MACRO_CORE_GROUPS = [
     ["net_liquidity_4w_change"],
     ["bank_reserves_4w_change", "bank_reserves"],
@@ -95,10 +95,11 @@
     addStylesheet("worldclass/enhancements.css", "data-worldclass-enhancements");
     addStylesheet("worldclass/kpi-accent.css", "data-worldclass-kpi-accent");
     addStylesheet("worldclass/terminal-v3.css", "data-worldclass-terminal-v3");
+    addStylesheet("worldclass/cross-actor.css", "data-worldclass-cross-actor");
     addStylesheet("worldclass/sentiment-panel.css", "data-worldclass-sentiment");
     addScript("worldclass/enhancements.js");
     addScript("worldclass/sentiment-panel.js");
-    addScript("worldclass/terminal-v3.js");
+    addScript("worldclass/terminal-v3.js", () => addScript("worldclass/cross-actor.js"));
     scheduleDeepIntelligence();
   }
 
