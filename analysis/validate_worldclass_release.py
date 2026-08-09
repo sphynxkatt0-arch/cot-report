@@ -21,6 +21,7 @@ import model_spec as model_cfg
 
 ROOT = Path(__file__).resolve().parent
 WORLDCLASS = ROOT / "worldclass"
+DASHBOARD = ROOT / "worldclass_dashboard.html"
 BASE = WORLDCLASS / "base.json"
 RUNTIME_MODEL = WORLDCLASS / "model-spec.json"
 METALS = WORLDCLASS / "metals.json"
@@ -283,26 +284,51 @@ def gzip_size(path: Path) -> int:
 
 
 def validate_performance_budget() -> dict[str, int]:
-    immediate = [
-        WORLDCLASS / "base.json",
-        WORLDCLASS / "app.js",
+    # Mirror the healthy first-render dependency graph. Plotly is intentionally
+    # excluded because bootstrap defers it to idle time; everything below is
+    # either in the HTML shell or requested by the first-render runtime.
+    required_initial = [
+        DASHBOARD,
         WORLDCLASS / "styles.css",
+        WORLDCLASS / "live-track-record-panel.css",
         WORLDCLASS / "bootstrap.js",
-        WORLDCLASS / "kpi-accent.css",
-        WORLDCLASS / "enhancements.js",
+        WORLDCLASS / "live-track-record-panel.js",
+        WORLDCLASS / "taxonomy-governance.js",
+        WORLDCLASS / "base.json",
+        WORLDCLASS / "metals.json",
+        WORLDCLASS / "app.js",
         WORLDCLASS / "enhancements.css",
-        WORLDCLASS / "decision-system.js",
+        WORLDCLASS / "kpi-accent.css",
         WORLDCLASS / "decision-system.css",
+        WORLDCLASS / "terminal-v2.css",
+        WORLDCLASS / "sentiment-panel.css",
+        WORLDCLASS / "enhancements.js",
+        WORLDCLASS / "sentiment-panel.js",
+        WORLDCLASS / "terminal-v2.js",
+        WORLDCLASS / "decision-system.js",
         WORLDCLASS / "macro-control-fallback.js",
         WORLDCLASS / "macro-state-renderer.js",
         WORLDCLASS / "macro-live-sources.js",
         WORLDCLASS / "regime_backtest.json",
         PLUMBING,
     ]
-    sizes = {str(path.relative_to(ROOT)): gzip_size(path) for path in immediate if path.exists()}
+    optional_initial = [
+        WORLDCLASS / "market-sentiment.json",
+        WORLDCLASS / "live-track-record.json",
+        STATUS,
+    ]
+
+    for path in required_initial:
+        assert path.exists(), f"initial runtime asset missing: {path.relative_to(ROOT)}"
+
+    assets = required_initial + [path for path in optional_initial if path.exists()]
+    sizes = {str(path.relative_to(ROOT)): gzip_size(path) for path in assets}
     total = sum(sizes.values())
-    assert total <= MAX_INITIAL_GZIP, f"initial non-Plotly payload {total:,} gzip bytes exceeds budget {MAX_INITIAL_GZIP:,}"
+    assert total <= MAX_INITIAL_GZIP, (
+        f"measured first-render non-Plotly payload {total:,} gzip bytes exceeds budget {MAX_INITIAL_GZIP:,}"
+    )
     sizes["initial_total"] = total
+    sizes["budget"] = MAX_INITIAL_GZIP
     return sizes
 
 
