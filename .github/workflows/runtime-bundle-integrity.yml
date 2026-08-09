@@ -1,0 +1,136 @@
+name: Runtime Bundle Integrity
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Refresh and Deploy"]
+    types: [completed]
+  schedule:
+    - cron: "17 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: false
+
+jobs:
+  verify-and-repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout canonical source
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          path: source
+          fetch-depth: 1
+
+      - name: Checkout published branch
+        uses: actions/checkout@v6
+        with:
+          ref: gh-pages
+          path: published
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Rebuild canonical compact bundle
+        run: python source/analysis/build_worldclass_bundle.py
+
+      - name: Validate canonical and published runtime bundles
+        id: integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          def validate(path: Path) -> None:
+              raw = path.read_bytes()
+              assert len(raw) > 10_000, f"{path}: suspiciously small ({len(raw)} bytes)"
+              payload = json.loads(raw)
+              assert isinstance(payload, dict) and payload, f"{path}: empty JSON object"
+
+              cot = payload.get("COT_DATA") or {}
+              for dataset in ("tff", "legacy"):
+                  markets = cot.get(dataset) or {}
+                  for market in ("sp500", "nq"):
+                      block = markets.get(market) or {}
+                      rows = block.get("records") or []
+                      assert len(rows) >= 2, f"{path}: {dataset}/{market} has no usable records"
+                      assert rows[-1].get("date"), f"{path}: {dataset}/{market} latest date missing"
+
+              prices = payload.get("PRICE_DATA") or {}
+              for market in ("sp500", "nq"):
+                  block = prices.get(market) or {}
+                  rows = block if isinstance(block, list) else block.get("records") or []
+                  assert rows, f"{path}: {market} price history missing"
+
+              model = payload.get("MODEL_SPEC") or {}
+              assert model.get("model_version"), f"{path}: runtime model version missing"
+              assert model.get("model_spec_hash"), f"{path}: runtime model hash missing"
+
+              meta = payload.get("bundle_meta") or {}
+              assert int(meta.get("source_html_bytes") or 0) > 0, f"{path}: source provenance missing"
+
+          canonical = Path("source/analysis/worldclass/base.json")
+          published = Path("published/worldclass/base.json")
+          validate(canonical)
+          print(f"Canonical runtime bundle valid: {canonical.stat().st_size:,} bytes")
+
+          repair = False
+          try:
+              validate(published)
+              print(f"Published runtime bundle valid: {published.stat().st_size:,} bytes")
+          except Exception as exc:
+              repair = True
+              print(f"::warning::Published runtime bundle invalid: {exc}")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
+              fh.write(f"repair={'true' if repair else 'false'}\n")
+          PY
+
+      - name: Repair published runtime bundle from canonical source
+        if: steps.integrity.outputs.repair == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp source/analysis/worldclass/base.json published/worldclass/base.json
+          cp source/analysis/worldclass/model-spec.json published/worldclass/model-spec.json
+          git -C published config user.name "github-actions[bot]"
+          git -C published config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C published add -- worldclass/base.json worldclass/model-spec.json
+          git -C published diff --cached --stat
+          git -C published commit -m "Repair invalid production runtime bundle"
+          git -C published push origin HEAD:gh-pages
+
+      - name: Verify final published runtime contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.integrity.outputs.repair }}" = "true" ]; then
+            git -C published fetch origin gh-pages --depth=1
+            git -C published reset --hard origin/gh-pages
+          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("published/worldclass/base.json")
+          raw = path.read_bytes()
+          assert len(raw) > 10_000
+          payload = json.loads(raw)
+          assert payload.get("COT_DATA")
+          assert payload.get("PRICE_DATA")
+          assert payload.get("MODEL_SPEC", {}).get("model_version")
+          for dataset in ("tff", "legacy"):
+              for market in ("sp500", "nq"):
+                  assert len(payload["COT_DATA"][dataset][market].get("records") or []) >= 2
+          print(f"Published runtime integrity PASS: {len(raw):,} bytes")
+          PY
