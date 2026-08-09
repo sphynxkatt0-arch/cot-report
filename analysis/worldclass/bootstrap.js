@@ -44,15 +44,10 @@
     return script;
   }
 
-  function loadEnhancements() {
-    addStylesheet("worldclass/enhancements.css", "data-worldclass-enhancements");
-    addStylesheet("worldclass/kpi-accent.css", "data-worldclass-kpi-accent");
+  function loadDeepIntelligence() {
+    if (document.documentElement.dataset.cotDeepIntelligence === "loaded") return;
+    document.documentElement.dataset.cotDeepIntelligence = "loaded";
     addStylesheet("worldclass/decision-system.css", "data-worldclass-decision-system");
-    addStylesheet("worldclass/terminal-v3.css", "data-worldclass-terminal-v3");
-    addStylesheet("worldclass/sentiment-panel.css", "data-worldclass-sentiment");
-    addScript("worldclass/enhancements.js");
-    addScript("worldclass/sentiment-panel.js");
-    addScript("worldclass/terminal-v3.js");
     addScript("worldclass/decision-system.js", () => {
       addScript("worldclass/macro-control-fallback.js", () => {
         addScript("worldclass/macro-state-renderer.js", () => {
@@ -60,6 +55,26 @@
         });
       });
     });
+  }
+
+  function scheduleDeepIntelligence() {
+    const schedule = () => {
+      if ("requestIdleCallback" in window) window.requestIdleCallback(loadDeepIntelligence, { timeout: 1800 });
+      else window.setTimeout(loadDeepIntelligence, 900);
+    };
+    if (document.readyState === "complete") schedule();
+    else window.addEventListener("load", schedule, { once: true });
+  }
+
+  function loadEnhancements() {
+    addStylesheet("worldclass/enhancements.css", "data-worldclass-enhancements");
+    addStylesheet("worldclass/kpi-accent.css", "data-worldclass-kpi-accent");
+    addStylesheet("worldclass/terminal-v3.css", "data-worldclass-terminal-v3");
+    addStylesheet("worldclass/sentiment-panel.css", "data-worldclass-sentiment");
+    addScript("worldclass/enhancements.js");
+    addScript("worldclass/sentiment-panel.js");
+    addScript("worldclass/terminal-v3.js");
+    scheduleDeepIntelligence();
   }
 
   function loadApp() {
@@ -217,10 +232,18 @@
     window.__COT_WORLDCLASS_BASE__ = base;
     window.__COT_BOOTSTRAP_SOURCE__ = source;
     const syntheticHtml = CONSTANTS.map(name => `const ${name} = ${JSON.stringify(base[name] || {})};`).join("\n");
+    let sharedMetalsResponse = null;
+    const sharedMetalsFetch = (input, init) => {
+      if (!sharedMetalsResponse) sharedMetalsResponse = originalFetch(input, init);
+      return sharedMetalsResponse.then(response => response.clone());
+    };
     window.fetch = (input, init) => {
       const url = typeof input === "string" ? input : input?.url;
       if (url && /(^|\/)interactive_cot_dashboard\.html(?:[?#].*)?$/.test(url)) {
         return Promise.resolve(new Response(syntheticHtml, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "X-COT-Data-Source": source } }));
+      }
+      if (url && /(^|\/)worldclass\/metals\.json(?:[?#].*)?$/.test(url)) {
+        return sharedMetalsFetch(input, init);
       }
       return originalFetch(input, init);
     };
