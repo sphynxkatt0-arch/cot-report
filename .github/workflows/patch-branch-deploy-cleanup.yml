@@ -2,8 +2,6 @@ name: One-time branch deploy cleanup
 
 on:
   push:
-    branches: [fix/branch-deploy-cleanup-20260809]
-  pull_request:
     branches: [main]
 
 permissions:
@@ -15,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: fix/branch-deploy-cleanup-20260809
+          ref: main
       - name: Remove unnecessary Pages admin mutation
         shell: python
         run: |
@@ -40,7 +38,7 @@ jobs:
           text = text.replace(old, '', 1)
           text = text.replace(
               '# Production intentionally publishes from the gh-pages branch. This avoids a\n# hard dependency on GitHub Actions artifact storage, whose account-level quota\n# can temporarily block actions/upload-pages-artifact even after old artifacts\n# have been deleted. The validated research/build pipeline still runs first;\n# only its static output is published.\n',
-              '# Production publishes the validated static site directly to gh-pages.\n# This avoids the Actions-artifact quota and matches the currently verified\n# public Pages path; the real github.io endpoint is contract-tested after push.\n'
+              '# Production publishes the validated static site directly to gh-pages.\n# This avoids the Actions-artifact quota and matches the verified public Pages\n# path; the real github.io endpoint is contract-tested after every deployment.\n'
           )
           path.write_text(text)
           Path('.github/workflows/patch-branch-deploy-cleanup.yml').unlink()
@@ -53,4 +51,4 @@ jobs:
           git add -- .github/workflows/refresh-and-deploy.yml
           git add -u -- .github/workflows/patch-branch-deploy-cleanup.yml
           git commit -m "Remove unnecessary Pages admin mutation"
-          git push origin HEAD:fix/branch-deploy-cleanup-20260809
+          git push origin HEAD:main
