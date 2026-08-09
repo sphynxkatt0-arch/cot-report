@@ -30,12 +30,18 @@ jobs:
           node --check analysis/worldclass/bootstrap.js
           node --check analysis/worldclass/sentiment-panel.js
           node --check analysis/worldclass/live-track-record-panel.js
+          node --check analysis/worldclass/taxonomy-governance.js
+          node --check analysis/worldclass/macro-state-renderer.js
+          node --check analysis/worldclass/macro-live-sources.js
           test -s analysis/worldclass/sentiment-panel.css
           test -s analysis/worldclass/live-track-record-panel.css
           grep -q 'live-track-record-panel.js' analysis/worldclass_dashboard.html
           grep -q 'live-track-record-panel.css' analysis/worldclass_dashboard.html
+          grep -q 'taxonomy-governance.js' analysis/worldclass_dashboard.html
           grep -q 'sentiment-panel.js' analysis/worldclass/bootstrap.js
           grep -q 'sentiment-panel.css' analysis/worldclass/bootstrap.js
+          grep -q 'validateMacroMonitor' analysis/worldclass/bootstrap.js
+          grep -q 'canonical MODEL_SPEC' analysis/worldclass/taxonomy-governance.js
       - name: Validate directional-only model governance
         run: |
           python - <<'PY'
@@ -116,31 +122,63 @@ jobs:
               && curl -fsS --max-time 15 "${base}/worldclass/sentiment-panel.css?v=${nonce}-${attempt}" -o /tmp/pages-contract/sentiment-panel.css \
               && curl -fsS --max-time 15 "${base}/worldclass/live-track-record-panel.js?v=${nonce}-${attempt}" -o /tmp/pages-contract/live-track-record-panel.js \
               && curl -fsS --max-time 15 "${base}/worldclass/live-track-record-panel.css?v=${nonce}-${attempt}" -o /tmp/pages-contract/live-track-record-panel.css \
+              && curl -fsS --max-time 15 "${base}/worldclass/bootstrap.js?v=${nonce}-${attempt}" -o /tmp/pages-contract/bootstrap.js \
+              && curl -fsS --max-time 15 "${base}/worldclass/taxonomy-governance.js?v=${nonce}-${attempt}" -o /tmp/pages-contract/taxonomy-governance.js \
+              && curl -fsS --max-time 15 "${base}/model_output/macro_liquidity_expansion.json?v=${nonce}-${attempt}" -o /tmp/pages-contract/macro-liquidity.json \
               && curl -fsS --max-time 15 "${base}/?v=${nonce}-${attempt}" -o /tmp/pages-contract/index.html; then
               if EXPECTED_VERSION="$EXPECTED_VERSION" EXPECTED_DIGEST="$EXPECTED_DIGEST" python - <<'PY'
-          import json, os
+          import json, math, os
           from pathlib import Path
+
           spec = json.loads(Path('/tmp/pages-contract/model-spec.json').read_text())
           track = json.loads(Path('/tmp/pages-contract/live-track-record.json').read_text())
+          macro = json.loads(Path('/tmp/pages-contract/macro-liquidity.json').read_text())
+          index = Path('/tmp/pages-contract/index.html')
+          html = index.read_text()
+          bootstrap = Path('/tmp/pages-contract/bootstrap.js').read_text()
+          governance = Path('/tmp/pages-contract/taxonomy-governance.js').read_text()
+
           assert spec['model_version'] == os.environ['EXPECTED_VERSION'], (spec['model_version'], os.environ['EXPECTED_VERSION'])
           assert spec['model_spec_hash'] == os.environ['EXPECTED_DIGEST'], (spec['model_spec_hash'], os.environ['EXPECTED_DIGEST'])
           assert track.get('ledger', {}).get('integrity') == 'PASS', track.get('ledger')
-          html = Path('/tmp/pages-contract/index.html').read_text()
+
+          # Root must be the lightweight application shell, not the multi-MB
+          # research artifact. This catches stale/alternate Pages sources.
+          assert index.stat().st_size < 200_000, f"public index unexpectedly large: {index.stat().st_size:,} bytes"
+          assert 'worldclass/bootstrap.js' in html
           assert 'live-track-record-panel.js' in html
           assert 'live-track-record-panel.css' in html
-          for asset in ('sentiment-panel.js', 'sentiment-panel.css', 'live-track-record-panel.js', 'live-track-record-panel.css'):
+          assert 'taxonomy-governance.js' in html
+          assert 'const COT_DATA = ' not in html
+
+          assert 'validateMacroMonitor' in bootstrap
+          assert 'canonical MODEL_SPEC' in governance
+
+          pillars = macro.get('pillars') or {}
+          required = ('net_liquidity', 'bank_reserves', 'funding_microstructure', 'dealer_absorption', 'fiscal_cash_flow', 'auction_absorption')
+          for key in required:
+              assert isinstance(pillars.get(key), dict), f"macro pillar missing: {key}"
+              assert pillars[key].get('state'), f"macro pillar state missing: {key}"
+          assert math.isfinite(float(pillars['net_liquidity']['value']))
+          assert math.isfinite(float(pillars['bank_reserves']['value']))
+          assert math.isfinite(float(pillars['funding_microstructure']['score']))
+          assert math.isfinite(float(pillars['dealer_absorption']['score']))
+          assert math.isfinite(float(pillars['fiscal_cash_flow']['score']))
+          assert math.isfinite(float(pillars['auction_absorption']['score']))
+
+          for asset in ('sentiment-panel.js', 'sentiment-panel.css', 'live-track-record-panel.js', 'live-track-record-panel.css', 'bootstrap.js', 'taxonomy-governance.js'):
               assert Path('/tmp/pages-contract', asset).stat().st_size > 100
           PY
               then
                 ready=true
-                echo "Public Pages contract reached expected model ${EXPECTED_VERSION} on attempt ${attempt}."
+                echo "Public Pages contract reached expected model ${EXPECTED_VERSION} with populated macro control room on attempt ${attempt}."
                 break
               fi
             fi
             sleep 5
           done
           if [ "$ready" != true ]; then
-            echo "::error::Public Pages did not converge to the expected production contract."
+            echo "::error::Public Pages did not converge to the expected shell + macro production contract."
             exit 1
           fi
 
@@ -173,9 +211,13 @@ jobs:
           spec = json.loads(Path('/tmp/pages-contract/model-spec.json').read_text())
           track = json.loads(Path('/tmp/pages-contract/live-track-record.json').read_text())
           sentiment = json.loads(Path('/tmp/pages-contract/market-sentiment.json').read_text())
+          macro = json.loads(Path('/tmp/pages-contract/macro-liquidity.json').read_text())
+          pillars = macro['pillars']
           print('## Production dashboard contract')
           print(f"- Model: `{spec['model_version']}` / `{spec['model_spec_hash'][:12]}…`")
           print(f"- Live ledger integrity: **{track['ledger']['integrity']}**")
+          print(f"- Public shell: **{Path('/tmp/pages-contract/index.html').stat().st_size:,} bytes**")
+          print(f"- Macro: liquidity **{pillars['net_liquidity']['value']:+.1f} bn**, reserves **{pillars['bank_reserves']['value']:+.1f} bn**, funding **{pillars['funding_microstructure']['score']:.1f}/100**")
           print(f"- Prospective forecasts: **{track.get('forecast_count', 0)}**")
           print(f"- Sentiment history days: **{sentiment.get('history_count', 0)}**")
           print(f"- Sentiment latest: **{'available' if sentiment.get('latest') else 'awaiting authenticated collection'}**")
