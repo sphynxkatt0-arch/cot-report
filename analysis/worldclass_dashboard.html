@@ -7,7 +7,7 @@
   <title>COT Intelligence | Positioning & Macro Liquidity</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="worldclass/styles.css">
-  <link rel="stylesheet" href="worldclass/live-track-record-panel.css?v=20260809-0245">
+  <link rel="stylesheet" href="worldclass/live-track-record-panel.css?v=20260809-0255">
   <!-- Plotly is lazy-loaded by worldclass/bootstrap.js after the decision surface renders. -->
 </head>
 <body>
@@ -170,20 +170,20 @@
 
       <section class="panel methodology">
         <div class="method-card">
-          <strong>Index futures</strong>
-          <p>S&amp;P 500, Nasdaq-100, VIX, Russell 2000 and Dow use CFTC Traders in Financial Futures where available, with Legacy retained as an alternate view.</p>
+          <strong>TFF directional score · v1.3</strong>
+          <p>Index-futures direction is driven only by Asset Manager / Institutional and Leveraged Funds. Dealer / Intermediary, Other Reportables and Nonreportables remain visible as context but carry zero directional weight.</p>
         </div>
         <div class="method-card">
-          <strong>Gold &amp; Silver</strong>
-          <p>Physical commodities use CFTC Disaggregated Futures Only. Under model v1.2, Managed Money is the sole directional metals input; Producer/Merchant, Swap Dealers, Other Reportables and Non-reportables remain visible as context.</p>
+          <strong>Legacy directional score · v1.3</strong>
+          <p>Non-Commercial is the sole directional Legacy input. Commercial, Total Reportable and Nonreportable positioning remain visible for descriptive analysis and carry zero score weight.</p>
         </div>
         <div class="method-card">
-          <strong>Model governance</strong>
-          <p>Dealer/Intermediary, Legacy Commercial and Total Reportable carry zero directional weight. Any other secondary actor must demonstrate incremental lookahead-safe holdout value before receiving a non-zero production weight.</p>
+          <strong>Gold &amp; Silver · v1.3</strong>
+          <p>Physical commodities use CFTC Disaggregated Futures Only. Managed Money is the sole directional metals input; Producer/Merchant, Swap Dealers, Other Reportables and Non-reportables remain visible as context.</p>
         </div>
         <div class="method-card">
-          <strong>Release timing</strong>
-          <p>COT observations are Tuesday “as of” positions released later in the week. The dashboard displays the report date explicitly and warns when an expected refresh is stale.</p>
+          <strong>Release timing & governance</strong>
+          <p>COT observations are Tuesday “as of” positions released later in the week. Secondary actors only receive future non-zero production weight after precommitted lookahead-safe holdout evidence demonstrates incremental value.</p>
         </div>
       </section>
     </main>
@@ -202,7 +202,7 @@
     </div>
   </div>
 
-  <script src="worldclass/bootstrap.js?v=20260809-0245"></script>
-  <script src="worldclass/live-track-record-panel.js?v=20260809-0245" defer></script>
+  <script src="worldclass/bootstrap.js?v=20260809-0255"></script>
+  <script src="worldclass/live-track-record-panel.js?v=20260809-0255" defer></script>
 </body>
 </html>
