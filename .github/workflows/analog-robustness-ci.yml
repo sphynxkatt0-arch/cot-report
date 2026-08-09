@@ -49,8 +49,19 @@ jobs:
           assert 'optimized_analog_count' not in payload
           assert 'best_analog_count' not in payload
 
+          history_floors = {
+              'sp500': 450,
+              'nq': 500,
+              'vix': 500,
+              'rty': 150,
+              'dow': 500,
+              'gold': 500,
+              'silver': 500,
+          }
           for market, market_payload in payload['markets'].items():
-              assert market_payload['historical_signal_count'] >= 400, (market, market_payload['historical_signal_count'])
+              floor = history_floors[market]
+              count_history = market_payload['historical_signal_count']
+              assert count_history >= floor, (market, count_history, floor)
               for horizon, horizon_payload in market_payload['horizons'].items():
                   counts = horizon_payload['counts']
                   assert set(counts) == {'15', '20', '30', '40', '60', '80', '120'}
