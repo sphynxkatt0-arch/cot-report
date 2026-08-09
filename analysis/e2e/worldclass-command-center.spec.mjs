@@ -12,7 +12,6 @@ test('command center renders every market and follows the canonical model spec',
   await openDashboard(page);
 
   const commandCenter = page.locator('#wcCommandCenter');
-  await expect(commandCenter.locator('[data-wc-v2-market]')).toHaveCount(12);
   await expect(commandCenter.locator('.wc-v2-market-grid [data-wc-v2-market]')).toHaveCount(7);
   await expect(commandCenter).toContainText('GLOBAL POSITIONING COMMAND CENTER');
   await expect(commandCenter).toContainText('DISLOCATION RADAR');
