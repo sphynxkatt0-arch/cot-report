@@ -48,11 +48,11 @@
     addStylesheet("worldclass/enhancements.css", "data-worldclass-enhancements");
     addStylesheet("worldclass/kpi-accent.css", "data-worldclass-kpi-accent");
     addStylesheet("worldclass/decision-system.css", "data-worldclass-decision-system");
-    addStylesheet("worldclass/terminal-v2.css", "data-worldclass-terminal-v2");
+    addStylesheet("worldclass/terminal-v3.css", "data-worldclass-terminal-v3");
     addStylesheet("worldclass/sentiment-panel.css", "data-worldclass-sentiment");
     addScript("worldclass/enhancements.js");
     addScript("worldclass/sentiment-panel.js");
-    addScript("worldclass/terminal-v2.js");
+    addScript("worldclass/terminal-v3.js");
     addScript("worldclass/decision-system.js", () => {
       addScript("worldclass/macro-control-fallback.js", () => {
         addScript("worldclass/macro-state-renderer.js", () => {
