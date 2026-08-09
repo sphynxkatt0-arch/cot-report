@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#07111f">
   <title>COT Intelligence | Positioning & Macro Liquidity</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="worldclass/styles.css">
-  <link rel="stylesheet" href="worldclass/live-track-record-panel.css?v=20260809-0300">
-  <!-- Plotly is lazy-loaded by worldclass/bootstrap.js after the decision surface renders. -->
+  <link rel="stylesheet" href="worldclass/styles.css?v=20260809-cache-safe-runtime-v1">
+  <link rel="stylesheet" href="worldclass/live-track-record-panel.css?v=20260809-cache-safe-runtime-v1">
+  <!-- Runtime JS is loaded below with the current release timestamp as a cache key. -->
 </head>
 <body>
   <div class="app-frame">
@@ -154,8 +154,47 @@
 
   <div id="loadingOverlay" class="loading-overlay"><div class="loading-card"><div class="loader"></div><strong>Building market view</strong><span>Loading COT, prices and macro liquidity…</span></div></div>
 
-  <script src="worldclass/bootstrap.js?v=20260809-0425"></script>
-  <script src="worldclass/live-track-record-panel.js?v=20260809-0300" defer></script>
-  <script src="worldclass/taxonomy-governance.js?v=20260809-0435" defer></script>
+  <script>
+    (() => {
+      "use strict";
+      const addScript = src => {
+        const script = document.createElement("script");
+        script.src = src;
+        document.body.appendChild(script);
+        return script;
+      };
+      const versioned = (path, version) => `${path}${path.includes("?") ? "&" : "?"}v=${encodeURIComponent(version)}`;
+
+      async function startCurrentRelease() {
+        let releaseVersion = null;
+        try {
+          const response = await fetch(`worldclass/release-status.json?v=${Date.now()}`, { cache: "no-store" });
+          if (response.ok) {
+            const release = await response.json();
+            releaseVersion = release.generated_at_utc || release.model?.model_spec_hash || null;
+          }
+        } catch (error) {
+          console.warn("Could not resolve current release version; using one-shot cache bypass.", error);
+        }
+
+        if (releaseVersion) {
+          const url = new URL(window.location.href);
+          if (url.searchParams.get("release") !== releaseVersion) {
+            url.searchParams.set("release", releaseVersion);
+            window.location.replace(url.toString());
+            return;
+          }
+        }
+
+        const runtimeVersion = releaseVersion || String(Date.now());
+        window.__COT_RUNTIME_VERSION__ = runtimeVersion;
+        addScript(versioned("worldclass/bootstrap.js", runtimeVersion));
+        addScript(versioned("worldclass/live-track-record-panel.js", runtimeVersion));
+        addScript(versioned("worldclass/taxonomy-governance.js", runtimeVersion));
+      }
+
+      startCurrentRelease();
+    })();
+  </script>
 </body>
 </html>
