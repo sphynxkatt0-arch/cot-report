@@ -28,6 +28,8 @@ jobs:
 
           paths=(
             index.html
+            worldclass/bootstrap.js
+            worldclass/app.js
             worldclass/model-spec.json
             worldclass/release-status.json
             worldclass/base.json
@@ -57,6 +59,21 @@ jobs:
           echo "PUBLIC_TITLE=$(grep -o '<title>[^<]*</title>' /tmp/live/index.html | head -1 || true)"
           echo "PUBLIC_HAS_BOOTSTRAP=$(grep -c 'worldclass/bootstrap.js' /tmp/live/index.html || true)"
           echo "PUBLIC_HAS_EMBEDDED_COT=$(grep -c 'const COT_DATA = ' /tmp/live/index.html || true)"
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('/tmp/live')
+          release = json.loads((root/'worldclass/release-status.json').read_text())
+          base = json.loads((root/'worldclass/base.json').read_text())
+          print('LIVE_RELEASE_STATE=' + str(release.get('state')))
+          print('LIVE_RELEASE_DATE=' + str(release.get('latest_cot_report_date')))
+          cot = base.get('COT_DATA') or {}
+          for dataset in ('tff','legacy'):
+              for market in ('sp500','nq'):
+                  rows = (((cot.get(dataset) or {}).get(market) or {}).get('records') or [])
+                  print(f'LIVE_ROWS {dataset}/{market}={len(rows)}')
+          PY
 
           if [ "$failed" -ne 0 ]; then
             exit 1
