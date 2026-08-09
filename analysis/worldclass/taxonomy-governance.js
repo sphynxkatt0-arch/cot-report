@@ -41,7 +41,7 @@
 
     const status = governed === 0 ? "CONTEXT ONLY" : "DIRECTIONAL INPUT";
     const sign = governed > 0 ? "+" : "";
-    role.innerHTML = `<strong>${label}</strong><span class="wc-role-copy">${meta.description}</span><small class="wc-role-governance">${status} · score weight ${sign}${weightKey}</small>`;
+    role.innerHTML = `<strong>${label}</strong><span class="wc-role-copy">${meta.description}</span><div class="wc-role-governance"><small>${status} · score weight ${sign}${weightKey}</small></div>`;
     role.dataset.governanceKey = meta.key;
     role.dataset.governanceWeight = weightKey;
   }
