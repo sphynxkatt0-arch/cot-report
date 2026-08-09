@@ -3,9 +3,10 @@
 
 Index research is extracted from the canonical interactive dashboard. Metals
 research uses a separately persisted full-history source with daily prices. The
-orchestrator can bootstrap that source from the pre-split deployed metals cache
-or restore it from the already-fetched gh-pages ref, then always rewrites the
-public metals bundle to its bounded presentation form after research completes.
+orchestrator can bootstrap that source from a pre-split deployed metals cache,
+restore it from gh-pages, or reconstruct it from official CFTC/Yahoo inputs on
+the first split-aware deployment. Browser presentation is always rewritten to
+its bounded runtime form only after full-history research completes.
 """
 from __future__ import annotations
 
@@ -88,12 +89,36 @@ def restore_full_metals_from_gh_pages() -> bool:
     return False
 
 
+def rebuild_full_metals_from_official() -> dict:
+    """One-time migration/recovery path when no valid full source exists.
+
+    Never manufacture research history from the compact browser bundle. Fetch
+    the canonical CFTC Disaggregated history and Yahoo daily price history using
+    the same governed metals builder used by scheduled refreshes.
+    """
+    print("No persisted full-history metals source found; rebuilding from official inputs.")
+    try:
+        runtime, research = metals_builder.build_payloads()
+    except Exception as exc:
+        raise FileNotFoundError(
+            "Full-history metals research is unavailable and official reconstruction failed; refusing to shorten Gold/Silver research."
+        ) from exc
+    if not metals_history_is_full(research):
+        raise RuntimeError("Official metals reconstruction did not meet full-history research floors")
+    atomic_write(FULL_METALS, research)
+    atomic_write(RUNTIME_METALS, runtime)
+    print(f"Reconstructed persistent full-history metals source at {FULL_METALS}")
+    return research
+
+
 def ensure_full_metals() -> dict:
     if FULL_METALS.exists():
         payload = read_json(FULL_METALS)
         if metals_history_is_full(payload):
             return payload
 
+    # Migration compatibility: a genuinely pre-split production cache can still
+    # seed the persistent source. A compact runtime never qualifies here.
     if RUNTIME_METALS.exists():
         runtime_payload = read_json(RUNTIME_METALS)
         if metals_history_is_full(runtime_payload):
@@ -104,9 +129,7 @@ def ensure_full_metals() -> dict:
     if restore_full_metals_from_gh_pages():
         return read_json(FULL_METALS)
 
-    raise FileNotFoundError(
-        "No valid full-history metals research source is available; refusing to shorten Gold/Silver research."
-    )
+    return rebuild_full_metals_from_official()
 
 
 def main() -> None:
