@@ -2,6 +2,31 @@
   "use strict";
 
   const originalFetch = window.fetch.bind(window);
+  let runtimeSyntheticHtml = null;
+  let runtimeSyntheticSource = null;
+  let sharedMetalsResponse = null;
+
+  // Install the shared runtime router synchronously, before bootstrap waits on
+  // base.json. Direct HTML helpers can therefore never race ahead and issue
+  // their own physical metals request.
+  window.fetch = (input, init) => {
+    const url = typeof input === "string" ? input : input?.url;
+    if (url && /(^|\/)worldclass\/metals\.json(?:[?#].*)?$/.test(url)) {
+      if (!sharedMetalsResponse) sharedMetalsResponse = originalFetch(input, init);
+      return sharedMetalsResponse.then(response => response.clone());
+    }
+    if (runtimeSyntheticHtml && url && /(^|\/)interactive_cot_dashboard\.html(?:[?#].*)?$/.test(url)) {
+      return Promise.resolve(new Response(runtimeSyntheticHtml, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "X-COT-Data-Source": runtimeSyntheticSource || "shared-runtime"
+        }
+      }));
+    }
+    return originalFetch(input, init);
+  };
+
   const bootstrapScript = document.currentScript;
   const scriptVersion = (() => {
     try {
@@ -231,22 +256,8 @@
   function installSharedBase(base, source) {
     window.__COT_WORLDCLASS_BASE__ = base;
     window.__COT_BOOTSTRAP_SOURCE__ = source;
-    const syntheticHtml = CONSTANTS.map(name => `const ${name} = ${JSON.stringify(base[name] || {})};`).join("\n");
-    let sharedMetalsResponse = null;
-    const sharedMetalsFetch = (input, init) => {
-      if (!sharedMetalsResponse) sharedMetalsResponse = originalFetch(input, init);
-      return sharedMetalsResponse.then(response => response.clone());
-    };
-    window.fetch = (input, init) => {
-      const url = typeof input === "string" ? input : input?.url;
-      if (url && /(^|\/)interactive_cot_dashboard\.html(?:[?#].*)?$/.test(url)) {
-        return Promise.resolve(new Response(syntheticHtml, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "X-COT-Data-Source": source } }));
-      }
-      if (url && /(^|\/)worldclass\/metals\.json(?:[?#].*)?$/.test(url)) {
-        return sharedMetalsFetch(input, init);
-      }
-      return originalFetch(input, init);
-    };
+    runtimeSyntheticSource = source;
+    runtimeSyntheticHtml = CONSTANTS.map(name => `const ${name} = ${JSON.stringify(base[name] || {})};`).join("\n");
   }
 
   function exposeRecoveryState(error) {
