@@ -1,0 +1,182 @@
+name: Dashboard production contract
+
+on:
+  pull_request:
+    paths:
+      - "analysis/worldclass_dashboard.html"
+      - "analysis/worldclass/**"
+      - "analysis/config/model_spec.json"
+      - "analysis/model_spec.py"
+      - ".github/workflows/dashboard-production-contract.yml"
+  workflow_run:
+    workflows: ["Refresh and Deploy"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  source-contract:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Validate dashboard evidence assets
+        run: |
+          set -euo pipefail
+          node --check analysis/worldclass/bootstrap.js
+          node --check analysis/worldclass/sentiment-panel.js
+          node --check analysis/worldclass/live-track-record-panel.js
+          test -s analysis/worldclass/sentiment-panel.css
+          test -s analysis/worldclass/live-track-record-panel.css
+          grep -q 'live-track-record-panel.js' analysis/worldclass_dashboard.html
+          grep -q 'live-track-record-panel.css' analysis/worldclass_dashboard.html
+          grep -q 'sentiment-panel.js' analysis/worldclass/bootstrap.js
+          grep -q 'sentiment-panel.css' analysis/worldclass/bootstrap.js
+      - name: Validate directional-only model governance
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          spec = json.loads(Path('analysis/config/model_spec.json').read_text())
+          assert spec['model_version'] == '1.3.0', spec['model_version']
+          assert spec['score_models']['tff']['category_weights'] == {
+              'dealer': 0.0,
+              'asset_mgr': 1.25,
+              'lev_money': 0.75,
+              'other_reportable': 0.0,
+              'non_reportable': 0.0,
+          }
+          assert spec['score_models']['legacy']['category_weights'] == {
+              'noncommercial': 1.0,
+              'commercial': 0.0,
+              'total_reportable': 0.0,
+              'nonreportable': 0.0,
+          }
+          assert spec['score_models']['disaggregated']['category_weights'] == {
+              'producer_merchant': 0.0,
+              'swap_dealer': 0.0,
+              'managed_money': 1.0,
+              'other_reportable': 0.0,
+              'non_reportable': 0.0,
+          }
+          print('Directional-only model governance contract passed')
+          PY
+
+  public-pages-contract:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Resolve expected model identity
+        id: expected
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(PYTHONPATH=analysis python - <<'PY'
+          import model_spec
+          print(model_spec.load_model_spec()['model_version'])
+          PY
+          )"
+          digest="$(PYTHONPATH=analysis python - <<'PY'
+          import model_spec
+          spec = model_spec.load_model_spec()
+          print(model_spec.model_spec_hash(spec))
+          PY
+          )"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+      - name: Verify public GitHub Pages endpoints
+        env:
+          EXPECTED_VERSION: ${{ steps.expected.outputs.version }}
+          EXPECTED_DIGEST: ${{ steps.expected.outputs.digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo="${GITHUB_REPOSITORY#*/}"
+          base="https://${GITHUB_REPOSITORY_OWNER}.github.io/${repo}"
+          nonce="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          rm -rf /tmp/pages-contract
+          mkdir -p /tmp/pages-contract
+
+          ready=false
+          for attempt in $(seq 1 60); do
+            if curl -fsS --max-time 15 "${base}/worldclass/model-spec.json?v=${nonce}-${attempt}" -o /tmp/pages-contract/model-spec.json \
+              && curl -fsS --max-time 15 "${base}/worldclass/live-track-record.json?v=${nonce}-${attempt}" -o /tmp/pages-contract/live-track-record.json \
+              && curl -fsS --max-time 15 "${base}/worldclass/sentiment-panel.js?v=${nonce}-${attempt}" -o /tmp/pages-contract/sentiment-panel.js \
+              && curl -fsS --max-time 15 "${base}/worldclass/sentiment-panel.css?v=${nonce}-${attempt}" -o /tmp/pages-contract/sentiment-panel.css \
+              && curl -fsS --max-time 15 "${base}/worldclass/live-track-record-panel.js?v=${nonce}-${attempt}" -o /tmp/pages-contract/live-track-record-panel.js \
+              && curl -fsS --max-time 15 "${base}/worldclass/live-track-record-panel.css?v=${nonce}-${attempt}" -o /tmp/pages-contract/live-track-record-panel.css \
+              && curl -fsS --max-time 15 "${base}/?v=${nonce}-${attempt}" -o /tmp/pages-contract/index.html; then
+              if EXPECTED_VERSION="$EXPECTED_VERSION" EXPECTED_DIGEST="$EXPECTED_DIGEST" python - <<'PY'
+          import json, os
+          from pathlib import Path
+          spec = json.loads(Path('/tmp/pages-contract/model-spec.json').read_text())
+          track = json.loads(Path('/tmp/pages-contract/live-track-record.json').read_text())
+          assert spec['model_version'] == os.environ['EXPECTED_VERSION'], (spec['model_version'], os.environ['EXPECTED_VERSION'])
+          assert spec['model_spec_hash'] == os.environ['EXPECTED_DIGEST'], (spec['model_spec_hash'], os.environ['EXPECTED_DIGEST'])
+          assert track.get('ledger', {}).get('integrity') == 'PASS', track.get('ledger')
+          html = Path('/tmp/pages-contract/index.html').read_text()
+          assert 'live-track-record-panel.js' in html
+          assert 'live-track-record-panel.css' in html
+          for asset in ('sentiment-panel.js', 'sentiment-panel.css', 'live-track-record-panel.js', 'live-track-record-panel.css'):
+              assert Path('/tmp/pages-contract', asset).stat().st_size > 100
+          PY
+              then
+                ready=true
+                echo "Public Pages contract reached expected model ${EXPECTED_VERSION} on attempt ${attempt}."
+                break
+              fi
+            fi
+            sleep 5
+          done
+          if [ "$ready" != true ]; then
+            echo "::error::Public Pages did not converge to the expected production contract."
+            exit 1
+          fi
+
+          sentiment_ready=false
+          for attempt in $(seq 1 60); do
+            if curl -fsS --max-time 15 "${base}/worldclass/market-sentiment.json?v=${nonce}-sentiment-${attempt}" -o /tmp/pages-contract/market-sentiment.json; then
+              if python - <<'PY'
+          import json
+          from pathlib import Path
+          payload = json.loads(Path('/tmp/pages-contract/market-sentiment.json').read_text())
+          assert payload.get('provider') == 'Adanos'
+          assert payload.get('sources') == ['reddit', 'x', 'news', 'polymarket']
+          assert isinstance(payload.get('history', []), list)
+          PY
+              then
+                sentiment_ready=true
+                break
+              fi
+            fi
+            sleep 5
+          done
+          if [ "$sentiment_ready" != true ]; then
+            echo "::error::Public sentiment presentation contract was not restored after deployment."
+            exit 1
+          fi
+
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          spec = json.loads(Path('/tmp/pages-contract/model-spec.json').read_text())
+          track = json.loads(Path('/tmp/pages-contract/live-track-record.json').read_text())
+          sentiment = json.loads(Path('/tmp/pages-contract/market-sentiment.json').read_text())
+          print('## Production dashboard contract')
+          print(f"- Model: `{spec['model_version']}` / `{spec['model_spec_hash'][:12]}…`")
+          print(f"- Live ledger integrity: **{track['ledger']['integrity']}**")
+          print(f"- Prospective forecasts: **{track.get('forecast_count', 0)}**")
+          print(f"- Sentiment history days: **{sentiment.get('history_count', 0)}**")
+          print(f"- Sentiment latest: **{'available' if sentiment.get('latest') else 'awaiting authenticated collection'}**")
+          PY
