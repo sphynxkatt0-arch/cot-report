@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: '.',
-  testMatch: /worldclass\.spec\.mjs/,
+  testMatch: /worldclass.*\.spec\.mjs/,
   timeout: 45_000,
   expect: { timeout: 10_000 },
   workers: process.env.CI ? 1 : undefined,
