@@ -1,0 +1,89 @@
+name: Analog robustness CI
+
+on:
+  pull_request:
+    paths:
+      - "analysis/evaluate_analog_robustness.py"
+      - "analysis/build_worldclass_backtest.py"
+      - "analysis/build_worldclass_research_artifacts.py"
+      - "analysis/build_worldclass_metals.py"
+      - "analysis/config/model_spec.json"
+      - ".github/workflows/analog-robustness-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  robustness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Source syntax
+        run: python -m py_compile analysis/evaluate_analog_robustness.py
+
+      - name: Run full-history analog robustness study
+        run: python analysis/evaluate_analog_robustness.py
+
+      - name: Validate robustness evidence contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('analysis/worldclass/research/analog-robustness.json')
+          assert path.is_file() and path.stat().st_size > 0
+          payload = json.loads(path.read_text())
+          assert payload['tested_analog_counts'] == [15, 20, 30, 40, 60, 80, 120]
+          assert payload['governed_analog_count'] == 40
+          assert len(payload['model_spec_hash']) == 64
+          required = {'sp500', 'nq', 'vix', 'rty', 'dow', 'gold', 'silver'}
+          assert required == set(payload['markets'])
+          assert 'optimized_analog_count' not in payload
+          assert 'best_analog_count' not in payload
+
+          history_floors = {
+              'sp500': 450,
+              'nq': 500,
+              'vix': 500,
+              'rty': 150,
+              'dow': 500,
+              'gold': 500,
+              'silver': 500,
+          }
+          allowed = {'ROBUST', 'MIXED', 'FRAGILE', 'INSUFFICIENT'}
+          for market, market_payload in payload['markets'].items():
+              floor = history_floors[market]
+              count_history = market_payload['historical_signal_count']
+              assert count_history >= floor, (market, count_history, floor)
+              for horizon, horizon_payload in market_payload['horizons'].items():
+                  counts = horizon_payload['counts']
+                  assert set(counts) == {'15', '20', '30', '40', '60', '80', '120'}
+                  for count, row in counts.items():
+                      raw = row['raw_overlapping']
+                      independent = row['non_overlapping']
+                      assert raw['observations'] <= int(count)
+                      assert independent['observations'] == independent['independent_episode_count']
+                      assert independent['observations'] <= raw['observations']
+
+                  raw_stability = horizon_payload['raw_parameter_stability']
+                  episode_stability = horizon_payload['non_overlapping_parameter_stability']
+                  assert raw_stability['classification'] in allowed
+                  assert episode_stability['classification'] in allowed
+                  assert raw_stability['minimum_observations_per_count'] == 10
+                  assert episode_stability['minimum_observations_per_count'] == 5
+                  for stability in (raw_stability, episode_stability):
+                      if stability['classification'] == 'INSUFFICIENT':
+                          assert stability['tested_counts'] < 3, stability
+                      else:
+                          assert stability['tested_counts'] >= 3, stability
+
+          print('Analog robustness and non-overlapping episode contract passed')
+          PY

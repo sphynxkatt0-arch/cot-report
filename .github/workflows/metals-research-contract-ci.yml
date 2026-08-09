@@ -1,0 +1,85 @@
+name: Metals research contract CI
+
+on:
+  pull_request:
+    paths:
+      - "analysis/evaluate_disaggregated_weights.py"
+      - "analysis/build_worldclass_metals.py"
+      - "analysis/config/model_spec.json"
+      - ".github/workflows/metals-research-contract-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate actor-study research source contract
+        run: |
+          python - <<'PY'
+          import sys
+          from pathlib import Path
+
+          analysis = Path('analysis').resolve()
+          sys.path.insert(0, str(analysis))
+          import evaluate_disaggregated_weights as study
+
+          expected = analysis / 'worldclass' / 'research' / 'metals-full.json'
+          assert study.RESEARCH_SOURCE == 'worldclass/research/metals-full.json', study.RESEARCH_SOURCE
+          assert study.METALS.resolve() == expected, (study.METALS, expected)
+          assert study.METALS.name == 'metals-full.json'
+          assert study.METALS.parent.name == 'research'
+          assert study.MIN_FULL_HISTORY_COT_ROWS >= 500
+          assert study.MIN_DAILY_TO_WEEKLY_RATIO >= 3.0
+
+          invalid = {
+              'research_contract': {
+                  'full_history': False,
+                  'daily_price_history': True,
+                  'browser_loaded': False,
+              }
+          }
+          try:
+              study.validate_research_payload(invalid)
+          except RuntimeError:
+              pass
+          else:
+              raise AssertionError('actor study accepted a non-full-history payload')
+
+          invalid = {
+              'research_contract': {
+                  'full_history': True,
+                  'daily_price_history': False,
+                  'browser_loaded': False,
+              }
+          }
+          try:
+              study.validate_research_payload(invalid)
+          except RuntimeError:
+              pass
+          else:
+              raise AssertionError('actor study accepted non-daily price history')
+
+          invalid = {
+              'research_contract': {
+                  'full_history': True,
+                  'daily_price_history': True,
+                  'browser_loaded': True,
+              }
+          }
+          try:
+              study.validate_research_payload(invalid)
+          except RuntimeError:
+              pass
+          else:
+              raise AssertionError('actor study accepted a browser-loaded payload')
+
+          print('Metals actor study is pinned to full-history daily research data')
+          PY
