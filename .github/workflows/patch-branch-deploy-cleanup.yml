@@ -3,6 +3,8 @@ name: One-time branch deploy cleanup
 on:
   push:
     branches: [fix/branch-deploy-cleanup-20260809]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
@@ -49,7 +51,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- .github/workflows/refresh-and-deploy.yml
-          git rm --cached --ignore-unmatch .github/workflows/patch-branch-deploy-cleanup.yml >/dev/null 2>&1 || true
           git add -u -- .github/workflows/patch-branch-deploy-cleanup.yml
           git commit -m "Remove unnecessary Pages admin mutation"
           git push origin HEAD:fix/branch-deploy-cleanup-20260809
