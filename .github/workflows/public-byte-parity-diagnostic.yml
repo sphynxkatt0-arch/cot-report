@@ -1,0 +1,64 @@
+name: Public byte parity diagnostic
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/public-byte-parity-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Compare public bytes with gh-pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin gh-pages:refs/remotes/origin/gh-pages
+          base="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}"
+          nonce="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -p /tmp/live /tmp/branch
+
+          paths=(
+            index.html
+            worldclass/model-spec.json
+            worldclass/release-status.json
+            worldclass/base.json
+            model_output/macro_liquidity_expansion.json
+          )
+
+          failed=0
+          for path in "${paths[@]}"; do
+            mkdir -p "/tmp/live/$(dirname "$path")" "/tmp/branch/$(dirname "$path")"
+            git show "origin/gh-pages:${path}" > "/tmp/branch/${path}"
+            curl -fsS --compressed --max-time 45 -D "/tmp/live/${path}.headers" "${base}/${path}?diag=${nonce}" -o "/tmp/live/${path}"
+            branch_bytes="$(wc -c < "/tmp/branch/${path}")"
+            live_bytes="$(wc -c < "/tmp/live/${path}")"
+            branch_sha="$(sha256sum "/tmp/branch/${path}" | cut -d' ' -f1)"
+            live_sha="$(sha256sum "/tmp/live/${path}" | cut -d' ' -f1)"
+            echo "PARITY path=${path} branch_bytes=${branch_bytes} live_bytes=${live_bytes} branch_sha=${branch_sha} live_sha=${live_sha}"
+            echo "HEADERS ${path}:"
+            tr -d '\r' < "/tmp/live/${path}.headers" | grep -Ei '^(HTTP/|content-type:|content-length:|content-encoding:|etag:|last-modified:|cache-control:|age:|x-cache:)' || true
+            if ! cmp -s "/tmp/branch/${path}" "/tmp/live/${path}"; then
+              echo "::error::PUBLIC_MISMATCH ${path}"
+              failed=1
+            else
+              echo "PUBLIC_MATCH ${path}"
+            fi
+          done
+
+          echo "PUBLIC_TITLE=$(grep -o '<title>[^<]*</title>' /tmp/live/index.html | head -1 || true)"
+          echo "PUBLIC_HAS_BOOTSTRAP=$(grep -c 'worldclass/bootstrap.js' /tmp/live/index.html || true)"
+          echo "PUBLIC_HAS_EMBEDDED_COT=$(grep -c 'const COT_DATA = ' /tmp/live/index.html || true)"
+
+          if [ "$failed" -ne 0 ]; then
+            exit 1
+          fi
+          echo "PUBLIC_BYTE_PARITY=PASS"
