@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 """Evaluate Disaggregated COT actor weights for Gold and Silver.
 
-The study is deliberately separate from the production model. It uses the same
-lookahead-safe expanding percentile transform and Friday release anchoring as the
-production COT backtest, then compares a Managed-Money-only baseline with each
-secondary actor added one at a time plus the v1.1 production blend.
+This is a research-only study. It must consume the persistent full-history
+Gold/Silver research payload, which contains complete normalized COT history and
+daily prices. The compact browser runtime is intentionally invalid for this
+study because governed horizon steps are expressed in trading days.
 
-A secondary actor is eligible for directional weight only if it improves the
-2022+ holdout versus Managed Money alone on BOTH Gold and Silver for BOTH the
-4-week and 13-week horizons in:
-  1. score/forward-return Pearson correlation, and
-  2. top-quintile minus bottom-quintile forward-return spread.
+The study uses the same lookahead-safe expanding percentile transform and Friday
+release anchoring as the production COT backtest, then compares a Managed-Money-
+only baseline with secondary-actor variants. It never mutates production model
+weights.
 
 Output:
   analysis/worldclass/metal-weight-study.json
@@ -28,12 +27,18 @@ from typing import Any
 import model_spec as model_cfg
 
 ROOT = Path(__file__).resolve().parent
-METALS = ROOT / "worldclass" / "metals.json"
+RESEARCH_SOURCE = "worldclass/research/metals-full.json"
+METALS = ROOT / RESEARCH_SOURCE
 OUT = ROOT / "worldclass" / "metal-weight-study.json"
 MODEL_SPEC = model_cfg.load_model_spec()
+MODEL_SPEC_HASH = model_cfg.model_spec_hash(MODEL_SPEC)
+MODEL_VERSION = str(MODEL_SPEC["model_version"])
 MIN_LOOKBACK_WEEKS = int(MODEL_SPEC["lookback"]["minimum_weeks"])
 HORIZONS = model_cfg.horizons(MODEL_SPEC)
 HOLDOUT_START = date(2022, 1, 1)
+TRAIN_END = HOLDOUT_START - timedelta(days=1)
+MIN_FULL_HISTORY_COT_ROWS = 500
+MIN_DAILY_TO_WEEKLY_RATIO = 3.0
 
 ZERO = {
     "producer_merchant": 0.0,
@@ -144,26 +149,52 @@ def pearson(xs: list[float], ys: list[float]) -> float | None:
     return sum(a * b for a, b in zip(dx, dy)) / denom
 
 
-def horizon_metrics(signals: list[dict[str, Any]], horizon: str, segment_start: date | None) -> dict[str, Any]:
-    usable = []
+def period_bounds(items: list[tuple[date, float, float]]) -> tuple[str | None, str | None]:
+    if not items:
+        return None, None
+    return items[0][0].isoformat(), items[-1][0].isoformat()
+
+
+def horizon_metrics(
+    signals: list[dict[str, Any]],
+    horizon: str,
+    segment_start: date | None = None,
+    segment_end: date | None = None,
+) -> dict[str, Any]:
+    usable: list[tuple[date, float, float]] = []
     for signal in signals:
-        if segment_start is not None and signal["report_date"] < segment_start:
+        report_date = signal["report_date"]
+        if segment_start is not None and report_date < segment_start:
+            continue
+        if segment_end is not None and report_date > segment_end:
             continue
         value = signal["returns"].get(horizon)
         if value is not None:
-            usable.append((signal["score"], value))
+            usable.append((report_date, signal["score"], value))
+    usable.sort(key=lambda item: item[0])
+    period_start, period_end = period_bounds(usable)
     if len(usable) < 10:
-        return {"n": len(usable), "pearson_r": None, "extreme_spread_pct": None}
-    scores = [item[0] for item in usable]
-    returns = [item[1] for item in usable]
-    ranked = sorted(usable, key=lambda item: item[0])
+        return {
+            "n": len(usable),
+            "period_start": period_start,
+            "period_end": period_end,
+            "pearson_r": None,
+            "extreme_spread_pct": None,
+        }
+    scored_returns = [(score, value) for _, score, value in usable]
+    scores = [item[0] for item in scored_returns]
+    returns = [item[1] for item in scored_returns]
+    ranked = sorted(scored_returns, key=lambda item: item[0])
     bucket = max(1, len(ranked) // 5)
     bottom = [ret for _, ret in ranked[:bucket]]
     top = [ret for _, ret in ranked[-bucket:]]
     spread = statistics.mean(top) - statistics.mean(bottom)
+    corr = pearson(scores, returns)
     return {
         "n": len(usable),
-        "pearson_r": round(pearson(scores, returns) or 0.0, 6),
+        "period_start": period_start,
+        "period_end": period_end,
+        "pearson_r": round(corr, 6) if corr is not None else None,
         "extreme_spread_pct": round(spread, 6),
         "top_quintile_return_pct": round(statistics.mean(top), 6),
         "bottom_quintile_return_pct": round(statistics.mean(bottom), 6),
@@ -198,6 +229,50 @@ def build_signals(rows: list[dict[str, Any]], price_payload: dict[str, Any], wei
     return signals
 
 
+def market_source_period(payload: dict[str, Any], market: str) -> dict[str, Any]:
+    market_payload = payload["markets"][market]
+    cot_rows = [row for row in market_payload.get("records") or [] if isinstance(row, dict) and parse_date(row.get("date"))]
+    prices = price_records(payload["prices"][market])
+    cot_dates = sorted(parse_date(row.get("date")) for row in cot_rows if parse_date(row.get("date")) is not None)
+    return {
+        "cot_rows": len(cot_rows),
+        "cot_start": cot_dates[0].isoformat() if cot_dates else None,
+        "cot_end": cot_dates[-1].isoformat() if cot_dates else None,
+        "daily_price_rows": len(prices),
+        "price_start": prices[0]["date"].isoformat() if prices else None,
+        "price_end": prices[-1]["date"].isoformat() if prices else None,
+    }
+
+
+def validate_research_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    contract = payload.get("research_contract")
+    if not isinstance(contract, dict):
+        raise RuntimeError(f"{RESEARCH_SOURCE}: missing research_contract")
+    if contract.get("full_history") is not True:
+        raise RuntimeError(f"{RESEARCH_SOURCE}: research_contract.full_history must be true")
+    if contract.get("daily_price_history") is not True:
+        raise RuntimeError(f"{RESEARCH_SOURCE}: research_contract.daily_price_history must be true")
+    if contract.get("browser_loaded") is True:
+        raise RuntimeError(f"{RESEARCH_SOURCE}: browser-loaded runtime payload is forbidden for actor research")
+
+    markets = payload.get("markets") or {}
+    prices = payload.get("prices") or {}
+    for market in ("gold", "silver"):
+        cot_rows = ((markets.get(market) or {}).get("records") or [])
+        price_rows = ((prices.get(market) or {}).get("records") or [])
+        if len(cot_rows) < MIN_FULL_HISTORY_COT_ROWS:
+            raise RuntimeError(
+                f"{RESEARCH_SOURCE}: {market} has only {len(cot_rows)} COT rows; "
+                f"need >= {MIN_FULL_HISTORY_COT_ROWS}"
+            )
+        if len(price_rows) < int(len(cot_rows) * MIN_DAILY_TO_WEEKLY_RATIO):
+            raise RuntimeError(
+                f"{RESEARCH_SOURCE}: {market} price history is too sparse for daily horizons "
+                f"({len(price_rows)} price rows vs {len(cot_rows)} COT rows)"
+            )
+    return contract
+
+
 def better(candidate: float | None, baseline: float | None) -> bool:
     if candidate is None or baseline is None:
         return False
@@ -206,19 +281,35 @@ def better(candidate: float | None, baseline: float | None) -> bool:
 
 def main() -> None:
     if not METALS.exists():
-        raise FileNotFoundError(f"Missing {METALS}; run build_worldclass_metals.py first")
+        raise FileNotFoundError(
+            f"Missing persistent full-history research source {METALS}; "
+            "run build_worldclass_metals.py first. Compact worldclass/metals.json is not a valid fallback."
+        )
     payload = json.loads(METALS.read_text(encoding="utf-8"))
+    research_contract = validate_research_payload(payload)
+
     result: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "study": "disaggregated metal actor incremental predictive value",
-        "production_model_at_study_start": "1.1.0",
+        "production_model_at_study_start": MODEL_VERSION,
+        "model_spec_hash": MODEL_SPEC_HASH,
         "holdout_start": HOLDOUT_START.isoformat(),
+        "research_provenance": {
+            "research_source": RESEARCH_SOURCE,
+            "full_history": True,
+            "daily_price_history": True,
+            "browser_loaded": False,
+            "source_contract": research_contract,
+        },
         "methodology": {
             "score_transform": "expanding percentile of actor net/open-interest percentage",
             "release_anchor": "first available close on/after report date + 3 calendar days",
+            "horizon_steps": HORIZONS,
+            "horizon_step_frequency": "daily trading observations",
             "extremes": "top score quintile return minus bottom score quintile return",
             "eligibility_rule": "secondary actor must improve both Pearson r and extreme spread vs Managed Money only for Gold and Silver at both 4w and 13w on the 2022+ holdout",
             "lookahead_safe": True,
+            "parameter_governance": "research output cannot mutate production actor weights",
         },
         "variants": VARIANTS,
         "markets": {},
@@ -228,13 +319,17 @@ def main() -> None:
     for market in ("gold", "silver"):
         rows = payload["markets"][market]["records"]
         prices = payload["prices"][market]
-        market_result: dict[str, Any] = {"variant_results": {}}
+        market_result: dict[str, Any] = {
+            "source_period": market_source_period(payload, market),
+            "variant_results": {},
+        }
         for variant, weights in VARIANTS.items():
             signals = build_signals(rows, prices, weights)
             market_result["variant_results"][variant] = {
                 "signal_count": len(signals),
-                "full_history": {h: horizon_metrics(signals, h, None) for h in HORIZONS},
-                "holdout_2022_plus": {h: horizon_metrics(signals, h, HOLDOUT_START) for h in HORIZONS},
+                "full_history": {h: horizon_metrics(signals, h) for h in HORIZONS},
+                "train_pre_2022": {h: horizon_metrics(signals, h, segment_end=TRAIN_END) for h in HORIZONS},
+                "holdout_2022_plus": {h: horizon_metrics(signals, h, segment_start=HOLDOUT_START) for h in HORIZONS},
             }
         result["markets"][market] = market_result
 
@@ -250,16 +345,18 @@ def main() -> None:
                 corr_ok = better(cand[horizon]["pearson_r"], base[horizon]["pearson_r"])
                 spread_ok = better(cand[horizon]["extreme_spread_pct"], base[horizon]["extreme_spread_pct"])
                 checks.extend((corr_ok, spread_ok))
-                details.append({
-                    "market": market,
-                    "horizon": horizon,
-                    "baseline_r": base[horizon]["pearson_r"],
-                    "candidate_r": cand[horizon]["pearson_r"],
-                    "baseline_spread_pct": base[horizon]["extreme_spread_pct"],
-                    "candidate_spread_pct": cand[horizon]["extreme_spread_pct"],
-                    "correlation_improved": corr_ok,
-                    "spread_improved": spread_ok,
-                })
+                details.append(
+                    {
+                        "market": market,
+                        "horizon": horizon,
+                        "baseline_r": base[horizon]["pearson_r"],
+                        "candidate_r": cand[horizon]["pearson_r"],
+                        "baseline_spread_pct": base[horizon]["extreme_spread_pct"],
+                        "candidate_spread_pct": cand[horizon]["extreme_spread_pct"],
+                        "correlation_improved": corr_ok,
+                        "spread_improved": spread_ok,
+                    }
+                )
         result["secondary_actor_verdicts"][actor] = {
             "candidate": variant,
             "eligible_for_directional_weight": all(checks),
@@ -271,19 +368,36 @@ def main() -> None:
     OUT.write_text(json.dumps(result, indent=2, default=str) + "\n", encoding="utf-8")
 
     print("METAL_WEIGHT_STUDY_BEGIN")
+    print(
+        f"source={RESEARCH_SOURCE} full_history={research_contract.get('full_history')} "
+        f"daily_price_history={research_contract.get('daily_price_history')} model={MODEL_VERSION}"
+    )
     for market in ("gold", "silver"):
-        print(f"{market.upper()} holdout 2022+")
-        for variant in VARIANTS:
-            metrics = result["markets"][market]["variant_results"][variant]["holdout_2022_plus"]
-            m4 = metrics["4w"]
-            m13 = metrics["13w"]
-            print(
-                f"  {variant:22s} 4w r={m4['pearson_r']:+.4f} spread={m4['extreme_spread_pct']:+.3f}% | "
-                f"13w r={m13['pearson_r']:+.4f} spread={m13['extreme_spread_pct']:+.3f}%"
-            )
+        source_period = result["markets"][market]["source_period"]
+        print(
+            f"{market.upper()} source COT={source_period['cot_start']}..{source_period['cot_end']} "
+            f"({source_period['cot_rows']} rows) prices={source_period['price_start']}..{source_period['price_end']} "
+            f"({source_period['daily_price_rows']} daily rows)"
+        )
+        for segment in ("full_history", "train_pre_2022", "holdout_2022_plus"):
+            print(f"  {segment}")
+            for variant in VARIANTS:
+                metrics = result["markets"][market]["variant_results"][variant][segment]
+                parts = []
+                for horizon in ("4w", "13w", "26w"):
+                    m = metrics[horizon]
+                    r = m.get("pearson_r")
+                    spread = m.get("extreme_spread_pct")
+                    r_text = "n/a" if r is None else f"{r:+.4f}"
+                    spread_text = "n/a" if spread is None else f"{spread:+.3f}%"
+                    parts.append(f"{horizon} n={m['n']} r={r_text} spread={spread_text}")
+                print(f"    {variant:22s} " + " | ".join(parts))
     print("SECONDARY ACTOR ELIGIBILITY")
     for actor, verdict in result["secondary_actor_verdicts"].items():
-        print(f"  {actor:20s} eligible={verdict['eligible_for_directional_weight']} checks={verdict['passed_checks']}/{verdict['total_checks']}")
+        print(
+            f"  {actor:20s} eligible={verdict['eligible_for_directional_weight']} "
+            f"checks={verdict['passed_checks']}/{verdict['total_checks']}"
+        )
     print("METAL_WEIGHT_STUDY_END")
     print(f"Saved {OUT}")
 
