@@ -30,13 +30,20 @@
 
   function patchRole(role) {
     const strong = role.querySelector("strong");
-    const meta = ROLE_META[strong?.textContent?.trim()];
+    const label = strong?.textContent?.trim();
+    const meta = ROLE_META[label];
     if (!strong || !meta) return;
+
     const weight = Number(modelWeights()[meta.key] ?? 0);
     const governed = Number.isFinite(weight) ? weight : 0;
+    const weightKey = governed.toFixed(2);
+    if (role.dataset.governanceKey === meta.key && role.dataset.governanceWeight === weightKey) return;
+
     const status = governed === 0 ? "CONTEXT ONLY" : "DIRECTIONAL INPUT";
     const sign = governed > 0 ? "+" : "";
-    role.innerHTML = `<strong>${strong.textContent.trim()}</strong><span class="wc-role-copy">${meta.description}</span><small class="wc-role-governance">${status} · score weight ${sign}${governed.toFixed(2)}</small>`;
+    role.innerHTML = `<strong>${label}</strong><span class="wc-role-copy">${meta.description}</span><small class="wc-role-governance">${status} · score weight ${sign}${weightKey}</small>`;
+    role.dataset.governanceKey = meta.key;
+    role.dataset.governanceWeight = weightKey;
   }
 
   function patchBanner() {
