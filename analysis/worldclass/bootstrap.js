@@ -213,10 +213,26 @@
     window.__COT_WORLDCLASS_BASE__ = base;
     window.__COT_BOOTSTRAP_SOURCE__ = source;
     const syntheticHtml = CONSTANTS.map(name => `const ${name} = ${JSON.stringify(base[name] || {})};`).join("\n");
+    let sharedMetalsResponse = null;
+    const sharedMetalsFetch = (input, init) => {
+      if (!sharedMetalsResponse) {
+        sharedMetalsResponse = originalFetch(input, init).then(response => {
+          if (!response.ok) sharedMetalsResponse = null;
+          return response;
+        }).catch(error => {
+          sharedMetalsResponse = null;
+          throw error;
+        });
+      }
+      return sharedMetalsResponse.then(response => response.clone());
+    };
     window.fetch = (input, init) => {
       const url = typeof input === "string" ? input : input?.url;
       if (url && /(^|\/)interactive_cot_dashboard\.html(?:[?#].*)?$/.test(url)) {
         return Promise.resolve(new Response(syntheticHtml, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "X-COT-Data-Source": source } }));
+      }
+      if (url && /(^|\/)worldclass\/metals\.json(?:[?#].*)?$/.test(url)) {
+        return sharedMetalsFetch(input, init);
       }
       return originalFetch(input, init);
     };
