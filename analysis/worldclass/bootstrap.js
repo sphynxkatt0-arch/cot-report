@@ -69,11 +69,11 @@
   function loadEnhancements() {
     addStylesheet("worldclass/enhancements.css", "data-worldclass-enhancements");
     addStylesheet("worldclass/kpi-accent.css", "data-worldclass-kpi-accent");
-    addStylesheet("worldclass/terminal-v2.css", "data-worldclass-terminal-v2");
+    addStylesheet("worldclass/terminal-v3.css", "data-worldclass-terminal-v3");
     addStylesheet("worldclass/sentiment-panel.css", "data-worldclass-sentiment");
     addScript("worldclass/enhancements.js");
     addScript("worldclass/sentiment-panel.js");
-    addScript("worldclass/terminal-v2.js");
+    addScript("worldclass/terminal-v3.js");
     scheduleDeepIntelligence();
   }
 
@@ -107,7 +107,11 @@
   }
 
   const hasKeys = value => value && typeof value === "object" && Object.keys(value).length > 0;
-  const finiteNumber = value => Number.isFinite(Number(value)) ? Number(value) : null;
+  const finiteNumber = value => {
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  };
 
   function findMetric(node, keys, depth = 0) {
     if (!node || depth > 10 || typeof node !== "object") return null;
@@ -230,9 +234,9 @@
     const syntheticHtml = CONSTANTS.map(name => `const ${name} = ${JSON.stringify(base[name] || {})};`).join("\n");
     let sharedMetalsResponse = null;
     const sharedMetalsFetch = (input, init) => {
-      // Single-flight the metals payload for the entire page lifecycle, including
-      // degraded 404/5xx/network states. Multiple consumers should observe the
-      // same outcome instead of hammering a missing or unhealthy resource.
+      // Keep the metals resource single-flight for this page lifecycle even
+      // when the origin returns an error. Every consumer observes the same
+      // result instead of retrying the same unhealthy endpoint independently.
       if (!sharedMetalsResponse) sharedMetalsResponse = originalFetch(input, init);
       return sharedMetalsResponse.then(response => response.clone());
     };
