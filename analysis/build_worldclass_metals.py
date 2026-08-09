@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Build browser and research Gold/Silver COT datasets.
+"""Build presentation and research Gold/Silver COT datasets.
 
 Physical commodities use the CFTC Disaggregated Futures Only taxonomy. The
-public browser artifact is compact; a hidden temporary full-history artifact is
-written for research builders and deleted after research generation. This keeps
-startup transfer small without shortening lookahead-safe backtests.
+public browser artifact is compact, while `worldclass/research/metals-full.json`
+retains the complete normalized COT history plus daily prices for lookahead-safe
+research. The research file is never requested by the dashboard runtime.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import sys
@@ -22,7 +23,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent
 OUT_DIR = ROOT / "worldclass"
 OUT = OUT_DIR / "metals.json"
-RESEARCH_OUT = OUT_DIR / ".metals-research.tmp.json"
+RESEARCH_OUT = OUT_DIR / "research" / "metals-full.json"
 
 CFTC_DATASET = "72hh-3qpy"
 CFTC_API = f"https://publicreporting.cftc.gov/resource/{CFTC_DATASET}.json"
@@ -224,16 +225,51 @@ def payload_shell(markets: dict[str, Any], prices: dict[str, Any], generated_at:
         "source": {
             "name": "CFTC Public Reporting — Disaggregated Futures Only",
             "dataset_id": CFTC_DATASET,
-            "price_source": "Yahoo Finance daily futures close, aligned to COT report dates for browser presentation",
+            "price_source": "Yahoo Finance daily futures close",
         },
         "markets": markets,
         "prices": prices,
     }
 
 
-def build_payloads() -> tuple[dict[str, Any], dict[str, Any]]:
+def runtime_from_research(research: dict[str, Any]) -> dict[str, Any]:
     runtime_markets: dict[str, Any] = {}
     runtime_prices: dict[str, Any] = {}
+    source_counts: dict[str, int] = {}
+    for market, cfg in MARKETS.items():
+        source_market = (research.get("markets") or {}).get(market) or {}
+        full_rows = source_market.get("records") or []
+        if len(full_rows) < BROWSER_COT_WEEKS:
+            raise RuntimeError(f"{market}: full research source has only {len(full_rows)} COT rows")
+        rows = compact_runtime_rows(full_rows)
+        source_counts[market] = len(full_rows)
+        runtime_markets[market] = {
+            **{key: value for key, value in source_market.items() if key != "records"},
+            "records": rows,
+            "latest_date": rows[-1]["date"],
+        }
+        runtime_prices[market] = {
+            "label": cfg["label"],
+            "symbol": cfg["symbol"],
+            "records": aligned_runtime_prices(rows),
+        }
+
+    runtime = payload_shell(
+        runtime_markets,
+        runtime_prices,
+        str(research.get("generated_at_utc") or datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")),
+    )
+    runtime["runtime_contract"] = {
+        "history_window_weeks": BROWSER_COT_WEEKS,
+        "price_frequency": "COT-aligned weekly close",
+        "full_history_research_separate": True,
+        "research_source": "worldclass/research/metals-full.json",
+        "source_cot_rows": source_counts,
+    }
+    return runtime
+
+
+def build_payloads() -> tuple[dict[str, Any], dict[str, Any]]:
     research_markets: dict[str, Any] = {}
     research_prices: dict[str, Any] = {}
     source_counts: dict[str, int] = {}
@@ -245,33 +281,17 @@ def build_payloads() -> tuple[dict[str, Any], dict[str, Any]]:
         print(f"Fetching {cfg['label']} CFTC disaggregated rows...", flush=True)
         raw = fetch_cftc_rows(cfg["code"])
         full_rows = normalize_market_rows(raw, prices, market)
-        rows = compact_runtime_rows(full_rows)
-        latest = rows[-1]
         source_counts[market] = len(full_rows)
-        categories = {key: value["label"] for key, value in CATEGORIES.items()}
-        contract_spec = {
-            "cftc_code": cfg["code"],
-            "contract": cfg["contract"],
-            "multiplier": cfg["multiplier"],
-            "unit": cfg["unit"],
-        }
-        runtime_markets[market] = {
-            "label": f"{cfg['label']} CFTC Disaggregated Futures Only",
-            "categories": categories,
-            "records": rows,
-            "contract_spec": contract_spec,
-            "latest_date": latest["date"],
-        }
-        runtime_prices[market] = {
-            "label": cfg["label"],
-            "symbol": cfg["symbol"],
-            "records": aligned_runtime_prices(rows),
-        }
         research_markets[market] = {
             "label": f"{cfg['label']} CFTC Disaggregated Futures Only",
-            "categories": categories,
+            "categories": {key: value["label"] for key, value in CATEGORIES.items()},
             "records": full_rows,
-            "contract_spec": contract_spec,
+            "contract_spec": {
+                "cftc_code": cfg["code"],
+                "contract": cfg["contract"],
+                "multiplier": cfg["multiplier"],
+                "unit": cfg["unit"],
+            },
             "latest_date": full_rows[-1]["date"],
         }
         research_prices[market] = {
@@ -279,26 +299,16 @@ def build_payloads() -> tuple[dict[str, Any], dict[str, Any]]:
             "symbol": cfg["symbol"],
             "records": prices,
         }
-        print(
-            f"  {cfg['label']}: {len(full_rows)} research COT rows; "
-            f"{len(rows)} browser rows through {latest['date']}"
-        )
+        print(f"  {cfg['label']}: {len(full_rows)} full-history COT rows through {full_rows[-1]['date']}")
 
-    runtime = payload_shell(runtime_markets, runtime_prices, generated_at)
-    runtime["runtime_contract"] = {
-        "history_window_weeks": BROWSER_COT_WEEKS,
-        "price_frequency": "COT-aligned weekly close",
-        "full_history_research_separate": True,
-        "source_cot_rows": source_counts,
-    }
     research = payload_shell(research_markets, research_prices, generated_at)
     research["research_contract"] = {
         "full_history": True,
         "daily_price_history": True,
-        "ephemeral": True,
+        "browser_loaded": False,
         "source_cot_rows": source_counts,
     }
-    return runtime, research
+    return runtime_from_research(research), research
 
 
 def build_payload() -> dict[str, Any]:
@@ -307,29 +317,50 @@ def build_payload() -> dict[str, Any]:
 
 
 def atomic_write(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".write.tmp")
     temporary.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
     temporary.replace(path)
 
 
+def compact_saved_research() -> None:
+    if not RESEARCH_OUT.exists():
+        raise FileNotFoundError(f"Missing persistent full-history metals source: {RESEARCH_OUT}")
+    research = json.loads(RESEARCH_OUT.read_text(encoding="utf-8"))
+    runtime = runtime_from_research(research)
+    atomic_write(OUT, runtime)
+    print(f"Compacted persistent research source into browser runtime {OUT}")
+
+
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--compact-from-research",
+        action="store_true",
+        help="Rebuild only the compact browser payload from the persistent full-history research source.",
+    )
+    args = parser.parse_args()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    RESEARCH_OUT.unlink(missing_ok=True)
+
+    if args.compact_from_research:
+        compact_saved_research()
+        return
+
     try:
         runtime, research = build_payloads()
     except Exception as exc:
-        if OUT.exists():
+        if OUT.exists() and RESEARCH_OUT.exists():
             print(
-                f"WARNING: metals refresh failed ({exc}). Keeping cached {OUT}; full-history metals research is unavailable for this run.",
+                f"WARNING: metals refresh failed ({exc}). Keeping cached browser and full-history research payloads.",
                 file=sys.stderr,
             )
             return
         raise
 
-    atomic_write(OUT, runtime)
     atomic_write(RESEARCH_OUT, research)
-    print(f"Saved browser runtime {OUT}")
-    print(f"Saved ephemeral full-history research source {RESEARCH_OUT}")
+    atomic_write(OUT, runtime)
+    print(f"Saved persistent full-history research source {RESEARCH_OUT}")
+    print(f"Saved compact browser runtime {OUT}")
 
 
 if __name__ == "__main__":
