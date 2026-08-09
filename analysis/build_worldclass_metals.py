@@ -1,23 +1,10 @@
 #!/usr/bin/env python3
-"""Build the Gold/Silver dataset used by the world-class COT dashboard.
+"""Build browser and research Gold/Silver COT datasets.
 
-Physical commodities are deliberately sourced from the CFTC *Disaggregated
-Futures Only* report rather than Traders in Financial Futures (TFF). That keeps
-the dashboard faithful to the CFTC taxonomy: Producer/Merchant, Swap Dealers,
-Managed Money, Other Reportables and Non-reportables.
-
-The public browser artifact is intentionally compact. Full-history research is
-built separately from the canonical research dashboard by
-``build_worldclass_research_artifacts.py``; the runtime bundle therefore keeps a
-six-year weekly window and COT-aligned prices instead of shipping thousands of
-daily price rows on first render.
-
-Output:
-  analysis/worldclass/metals.json
-
-The builder is cache-safe. If an upstream service is temporarily unavailable
-and a previous metals.json exists, the prior good file is retained so the
-public dashboard continues to work.
+Physical commodities use the CFTC Disaggregated Futures Only taxonomy. The
+public browser artifact is compact; a hidden temporary full-history artifact is
+written for research builders and deleted after research generation. This keeps
+startup transfer small without shortening lookahead-safe backtests.
 """
 
 from __future__ import annotations
@@ -35,6 +22,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent
 OUT_DIR = ROOT / "worldclass"
 OUT = OUT_DIR / "metals.json"
+RESEARCH_OUT = OUT_DIR / ".metals-research.tmp.json"
 
 CFTC_DATASET = "72hh-3qpy"
 CFTC_API = f"https://publicreporting.cftc.gov/resource/{CFTC_DATASET}.json"
@@ -123,8 +111,6 @@ def clean_date(value: Any) -> str:
 
 
 def fetch_cftc_rows(code: str) -> list[dict[str, Any]]:
-    # Query a deterministic official-history slice. Runtime compaction happens
-    # only after normalization so upstream validation still sees the full pull.
     params = {
         "$limit": "5000",
         "$order": "report_date_as_yyyy_mm_dd ASC",
@@ -211,8 +197,6 @@ def normalize_market_rows(
         if complete_categories >= 4:
             normalized.append(item)
 
-    # The public endpoint can occasionally contain revised duplicates. Keep
-    # the final observation per report date, matching the rest of this repo.
     deduped = {row["date"]: row for row in normalized}
     rows = [deduped[key] for key in sorted(deduped)]
     if len(rows) < 100:
@@ -232,10 +216,28 @@ def aligned_runtime_prices(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
-def build_payload() -> dict[str, Any]:
-    market_payload: dict[str, Any] = {}
-    price_payload: dict[str, Any] = {}
+def payload_shell(markets: dict[str, Any], prices: dict[str, Any], generated_at: str) -> dict[str, Any]:
+    return {
+        "dataset": "disaggregated",
+        "dataset_label": "CFTC Disaggregated Futures Only",
+        "generated_at_utc": generated_at,
+        "source": {
+            "name": "CFTC Public Reporting — Disaggregated Futures Only",
+            "dataset_id": CFTC_DATASET,
+            "price_source": "Yahoo Finance daily futures close, aligned to COT report dates for browser presentation",
+        },
+        "markets": markets,
+        "prices": prices,
+    }
+
+
+def build_payloads() -> tuple[dict[str, Any], dict[str, Any]]:
+    runtime_markets: dict[str, Any] = {}
+    runtime_prices: dict[str, Any] = {}
+    research_markets: dict[str, Any] = {}
+    research_prices: dict[str, Any] = {}
     source_counts: dict[str, int] = {}
+    generated_at = datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
     for market, cfg in MARKETS.items():
         print(f"Fetching {cfg['label']} prices...", flush=True)
@@ -246,65 +248,88 @@ def build_payload() -> dict[str, Any]:
         rows = compact_runtime_rows(full_rows)
         latest = rows[-1]
         source_counts[market] = len(full_rows)
-        market_payload[market] = {
+        categories = {key: value["label"] for key, value in CATEGORIES.items()}
+        contract_spec = {
+            "cftc_code": cfg["code"],
+            "contract": cfg["contract"],
+            "multiplier": cfg["multiplier"],
+            "unit": cfg["unit"],
+        }
+        runtime_markets[market] = {
             "label": f"{cfg['label']} CFTC Disaggregated Futures Only",
-            "categories": {key: value["label"] for key, value in CATEGORIES.items()},
+            "categories": categories,
             "records": rows,
-            "contract_spec": {
-                "cftc_code": cfg["code"],
-                "contract": cfg["contract"],
-                "multiplier": cfg["multiplier"],
-                "unit": cfg["unit"],
-            },
+            "contract_spec": contract_spec,
             "latest_date": latest["date"],
         }
-        price_payload[market] = {
+        runtime_prices[market] = {
             "label": cfg["label"],
             "symbol": cfg["symbol"],
             "records": aligned_runtime_prices(rows),
         }
+        research_markets[market] = {
+            "label": f"{cfg['label']} CFTC Disaggregated Futures Only",
+            "categories": categories,
+            "records": full_rows,
+            "contract_spec": contract_spec,
+            "latest_date": full_rows[-1]["date"],
+        }
+        research_prices[market] = {
+            "label": cfg["label"],
+            "symbol": cfg["symbol"],
+            "records": prices,
+        }
         print(
-            f"  {cfg['label']}: {len(full_rows)} source COT rows; "
+            f"  {cfg['label']}: {len(full_rows)} research COT rows; "
             f"{len(rows)} browser rows through {latest['date']}"
         )
 
-    return {
-        "dataset": "disaggregated",
-        "dataset_label": "CFTC Disaggregated Futures Only",
-        "generated_at_utc": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
-        "runtime_contract": {
-            "history_window_weeks": BROWSER_COT_WEEKS,
-            "price_frequency": "COT-aligned weekly close",
-            "full_history_research_separate": True,
-            "source_cot_rows": source_counts,
-        },
-        "source": {
-            "name": "CFTC Public Reporting — Disaggregated Futures Only",
-            "dataset_id": CFTC_DATASET,
-            "price_source": "Yahoo Finance daily futures close, aligned to COT report dates",
-        },
-        "markets": market_payload,
-        "prices": price_payload,
+    runtime = payload_shell(runtime_markets, runtime_prices, generated_at)
+    runtime["runtime_contract"] = {
+        "history_window_weeks": BROWSER_COT_WEEKS,
+        "price_frequency": "COT-aligned weekly close",
+        "full_history_research_separate": True,
+        "source_cot_rows": source_counts,
     }
+    research = payload_shell(research_markets, research_prices, generated_at)
+    research["research_contract"] = {
+        "full_history": True,
+        "daily_price_history": True,
+        "ephemeral": True,
+        "source_cot_rows": source_counts,
+    }
+    return runtime, research
+
+
+def build_payload() -> dict[str, Any]:
+    runtime, _ = build_payloads()
+    return runtime
+
+
+def atomic_write(path: Path, payload: dict[str, Any]) -> None:
+    temporary = path.with_suffix(path.suffix + ".write.tmp")
+    temporary.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
+    temporary.replace(path)
 
 
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    RESEARCH_OUT.unlink(missing_ok=True)
     try:
-        payload = build_payload()
+        runtime, research = build_payloads()
     except Exception as exc:
         if OUT.exists():
             print(
-                f"WARNING: metals refresh failed ({exc}). Keeping cached {OUT}.",
+                f"WARNING: metals refresh failed ({exc}). Keeping cached {OUT}; full-history metals research is unavailable for this run.",
                 file=sys.stderr,
             )
             return
         raise
 
-    temporary = OUT.with_suffix(".json.tmp")
-    temporary.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
-    temporary.replace(OUT)
-    print(f"Saved {OUT}")
+    atomic_write(OUT, runtime)
+    atomic_write(RESEARCH_OUT, research)
+    print(f"Saved browser runtime {OUT}")
+    print(f"Saved ephemeral full-history research source {RESEARCH_OUT}")
 
 
 if __name__ == "__main__":
