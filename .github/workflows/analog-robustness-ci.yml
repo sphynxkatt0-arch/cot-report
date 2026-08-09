@@ -58,6 +58,7 @@ jobs:
               'gold': 500,
               'silver': 500,
           }
+          allowed = {'ROBUST', 'MIXED', 'FRAGILE', 'INSUFFICIENT'}
           for market, market_payload in payload['markets'].items():
               floor = history_floors[market]
               count_history = market_payload['historical_signal_count']
@@ -71,8 +72,18 @@ jobs:
                       assert raw['observations'] <= int(count)
                       assert independent['observations'] == independent['independent_episode_count']
                       assert independent['observations'] <= raw['observations']
-                  assert horizon_payload['raw_parameter_stability']['classification'] in {'ROBUST', 'MIXED', 'FRAGILE'}
-                  assert horizon_payload['non_overlapping_parameter_stability']['classification'] in {'ROBUST', 'MIXED', 'FRAGILE'}
+
+                  raw_stability = horizon_payload['raw_parameter_stability']
+                  episode_stability = horizon_payload['non_overlapping_parameter_stability']
+                  assert raw_stability['classification'] in allowed
+                  assert episode_stability['classification'] in allowed
+                  assert raw_stability['minimum_observations_per_count'] == 10
+                  assert episode_stability['minimum_observations_per_count'] == 5
+                  for stability in (raw_stability, episode_stability):
+                      if stability['classification'] == 'INSUFFICIENT':
+                          assert stability['tested_counts'] < 3, stability
+                      else:
+                          assert stability['tested_counts'] >= 3, stability
 
           print('Analog robustness and non-overlapping episode contract passed')
           PY
