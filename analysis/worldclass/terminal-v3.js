@@ -13,7 +13,11 @@
   const MARKET_ORDER = Object.keys(MARKET_META);
   const state = { metals: null, release: null, track: null, selected: "sp500", compact: false };
   const $ = selector => document.querySelector(selector);
-  const finite = value => Number.isFinite(Number(value)) ? Number(value) : null;
+  const finite = value => {
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  };
   const esc = value => String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -105,7 +109,7 @@
     if (rows.length < 2) return null;
     const end = finite(rows.at(-1)?.price);
     const start = finite(rows[Math.max(0, rows.length - 1 - lookback)]?.price);
-    return end !== null && start ? ((end / start) - 1) * 100 : null;
+    return end !== null && start !== null && start !== 0 ? ((end / start) - 1) * 100 : null;
   }
 
   function ageDays(date) {
@@ -143,7 +147,7 @@
     const releaseMarket = state.release?.market_states?.[market] || state.release?.markets?.[market] || null;
     const releaseState = String(releaseMarket?.state || releaseMarket?.status || "UNKNOWN").toUpperCase();
     const dataPoints = [scored.score, macroScore, price3m, latestDate].filter(value => value !== null && value !== undefined).length;
-    const fresh = cotAge !== null && cotAge <= 10 && !["DELAYED", "DEGRADED"].includes(releaseState);
+    const fresh = cotAge !== null && cotAge <= 10 && releaseState === "LIVE";
     const coverage = dataPoints >= 4 && fresh ? "High" : dataPoints >= 3 ? "Medium" : "Low";
     const scoreDelta = scored.score !== null && priorScored.score !== null ? scored.score - priorScored.score : null;
     const dislocation = scored.score === null ? -1 : Math.abs(scored.score - 50) + Math.min(20, Math.abs(scoreDelta || 0) * 2);
@@ -171,13 +175,24 @@
     return "Balanced";
   }
 
+  function macroLabel(score) {
+    const n = finite(score);
+    if (n === null) return "unavailable";
+    if (n >= 70) return "strongly supportive";
+    if (n >= 60) return "supportive";
+    if (n <= 30) return "strongly restrictive";
+    if (n <= 40) return "restrictive";
+    return "neutral";
+  }
+
   function regime(snapshot) {
+    const values = [snapshot.score, snapshot.macroScore, snapshot.price3m];
     const signs = [
       directionalSign(snapshot.score, 60, 40),
       directionalSign(snapshot.macroScore, 60, 40),
       directionalSign(snapshot.price3m, 3, -3)
     ];
-    const observed = signs.filter((_, index) => [snapshot.score, snapshot.macroScore, snapshot.price3m][index] !== null).length;
+    const observed = values.filter(value => finite(value) !== null).length;
     const bullish = signs.filter(x => x > 0).length;
     const bearish = signs.filter(x => x < 0).length;
     if (bullish >= 2 && bullish > bearish) return { label: "Risk-on alignment", tone: "positive", detail: `${bullish}/${observed || 3} observed layers are supportive.`, alignment: bullish };
@@ -199,8 +214,7 @@
     const r = regime(snapshot);
     if (r.alignment >= 2) score += 1;
     if (snapshot.cotAge !== null && snapshot.cotAge > 10) score -= 2;
-    if (["DELAYED", "DEGRADED"].includes(snapshot.releaseState)) score -= 2;
-    if (String(state.track?.ledger?.integrity || "PASS").toUpperCase() !== "PASS") score -= 2;
+    if (snapshot.releaseState !== "LIVE") score -= 2;
     if (score >= 4) return { label: "High", tone: "positive" };
     if (score >= 2) return { label: "Medium", tone: "neutral" };
     return { label: "Low", tone: "negative" };
@@ -225,7 +239,7 @@
     if (snapshot.score !== null) parts.push(`COT is ${stateLabel(snapshot.score).toLowerCase()} at ${snapshot.score.toFixed(0)}/100`);
     if (impulse !== null) parts.push(`weekly impulse is ${signed(impulse, 1)} pts`);
     if (snapshot.leadActor?.rank !== null) parts.push(actor);
-    if (snapshot.macroScore !== null) parts.push(`macro is ${stateLabel(snapshot.macroScore).toLowerCase()} at ${snapshot.macroScore.toFixed(0)}/100`);
+    if (snapshot.macroScore !== null) parts.push(`macro is ${macroLabel(snapshot.macroScore)} at ${snapshot.macroScore.toFixed(0)}/100`);
     if (snapshot.price3m !== null) parts.push(`3M price is ${signed(snapshot.price3m, 1, "%")}`);
     const whyNow = parts.length ? `${parts.join("; ")}.` : "Insufficient live inputs for a decision brief.";
 
@@ -252,6 +266,7 @@
   }
 
   function trackState() {
+    if (!state.track) return { label: "UNAVAILABLE", tone: "neutral", detail: "prospective ledger unavailable" };
     const integrity = String(state.track?.ledger?.integrity || "UNKNOWN").toUpperCase();
     if (integrity !== "PASS") return { label: integrity, tone: "negative", detail: "ledger integrity" };
     const matured = Number(state.track?.matured_signal_count || 0);
