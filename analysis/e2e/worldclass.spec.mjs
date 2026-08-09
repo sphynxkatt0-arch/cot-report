@@ -166,6 +166,9 @@ test('renders live sentiment and prospective forecast evidence', async ({ page }
   await expect(page.locator('#liveTrackRecordPanel')).toContainText('Nasdaq-100');
   await expect(page.locator('#liveTrackRecordPanel')).toContainText('+2.40%');
   await expect(page.locator('#liveTrackRecordPanel')).toContainText('CHAMPION');
+  const champion = page.locator('#liveTrackRecordPanel .live-track-family.champion');
+  await expect(champion).toContainText('n/a');
+  await expect(champion).not.toContainText('0.0%');
 });
 
 test('new evidence panels have no automated WCAG A/AA violations', async ({ page }) => {

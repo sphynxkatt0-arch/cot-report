@@ -48,11 +48,11 @@
     addStylesheet("worldclass/enhancements.css", "data-worldclass-enhancements");
     addStylesheet("worldclass/kpi-accent.css", "data-worldclass-kpi-accent");
     addStylesheet("worldclass/decision-system.css", "data-worldclass-decision-system");
-    addStylesheet("worldclass/terminal-v2.css", "data-worldclass-terminal-v2");
+    addStylesheet("worldclass/terminal-v3.css", "data-worldclass-terminal-v3");
     addStylesheet("worldclass/sentiment-panel.css", "data-worldclass-sentiment");
     addScript("worldclass/enhancements.js");
     addScript("worldclass/sentiment-panel.js");
-    addScript("worldclass/terminal-v2.js");
+    addScript("worldclass/terminal-v3.js");
     addScript("worldclass/decision-system.js", () => {
       addScript("worldclass/macro-control-fallback.js", () => {
         addScript("worldclass/macro-state-renderer.js", () => {
@@ -92,7 +92,11 @@
   }
 
   const hasKeys = value => value && typeof value === "object" && Object.keys(value).length > 0;
-  const finiteNumber = value => Number.isFinite(Number(value)) ? Number(value) : null;
+  const finiteNumber = value => {
+    if (value === null || value === undefined || value === "") return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  };
 
   function findMetric(node, keys, depth = 0) {
     if (!node || depth > 10 || typeof node !== "object") return null;
