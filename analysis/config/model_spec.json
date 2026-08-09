@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "model_version": "1.2.0",
+  "model_version": "1.3.0",
   "score_models": {
     "tff": {
       "category_weights": {
         "dealer": 0.0,
         "asset_mgr": 1.25,
         "lev_money": 0.75,
-        "other_reportable": -1.0,
-        "non_reportable": -1.0
+        "other_reportable": 0.0,
+        "non_reportable": 0.0
       }
     },
     "legacy": {
@@ -16,7 +16,7 @@
         "noncommercial": 1.0,
         "commercial": 0.0,
         "total_reportable": 0.0,
-        "nonreportable": -0.75
+        "nonreportable": 0.0
       }
     },
     "disaggregated": {

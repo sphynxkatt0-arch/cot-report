@@ -7,6 +7,7 @@
   <title>COT Intelligence | Positioning & Macro Liquidity</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="worldclass/styles.css">
+  <link rel="stylesheet" href="worldclass/live-track-record-panel.css?v=20260809-0300">
   <!-- Plotly is lazy-loaded by worldclass/bootstrap.js after the decision surface renders. -->
 </head>
 <body>
@@ -48,7 +49,6 @@
       </section>
 
       <section id="alertStrip" class="alert-strip" hidden></section>
-
       <section id="headlineCards" class="headline-grid" aria-label="Current market summary"></section>
 
       <section class="panel workbench-panel">
@@ -86,13 +86,7 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>Trader group</th>
-                <th>Latest net/OI</th>
-                <th>Δ net/OI</th>
-                <th>Δ long</th>
-                <th>Δ short</th>
-                <th>Δ net</th>
-                <th>Flow</th>
+                <th>Trader group</th><th>Latest net/OI</th><th>Δ net/OI</th><th>Δ long</th><th>Δ short</th><th>Δ net</th><th>Flow</th>
               </tr>
             </thead>
             <tbody id="weeklyChangeRows"></tbody>
@@ -103,104 +97,65 @@
       <section class="two-column">
         <section class="panel">
           <div class="panel-head compact">
-            <div>
-              <div class="panel-kicker">POSITIONING REGIME</div>
-              <h3>Historical extremes & score contribution</h3>
-            </div>
+            <div><div class="panel-kicker">POSITIONING REGIME</div><h3>Historical extremes & score contribution</h3></div>
             <div class="panel-meta">Percentiles use the selected instrument's visible history</div>
           </div>
           <div id="positioningPanel" class="positioning-panel"></div>
         </section>
-
         <section class="panel score-panel">
-          <div class="panel-head compact">
-            <div>
-              <div class="panel-kicker">DIRECTIONAL COT SCORE</div>
-              <h3>Transparent, category-weighted positioning signal</h3>
-            </div>
-          </div>
+          <div class="panel-head compact"><div><div class="panel-kicker">DIRECTIONAL COT SCORE</div><h3>Transparent, governed positioning signal</h3></div></div>
           <div id="cotScorePanel"></div>
         </section>
       </section>
 
       <section class="section-heading">
-        <div>
-          <div class="section-number">02</div>
-          <div>
-            <h2>Macro liquidity</h2>
-            <p>Liquidity plumbing, funding stress, real rates, credit, dollar and volatility.</p>
-          </div>
-        </div>
+        <div><div class="section-number">02</div><div><h2>Macro liquidity</h2><p>Liquidity plumbing, funding stress, real rates, credit, dollar and volatility.</p></div></div>
       </section>
 
       <section id="macroCards" class="macro-grid"></section>
 
       <section class="two-column macro-columns">
         <section class="panel">
-          <div class="panel-head compact">
-            <div>
-              <div class="panel-kicker">LIQUIDITY TREND</div>
-              <h3>Unified macro score</h3>
-            </div>
-            <div class="panel-meta">0 = restrictive · 100 = supportive</div>
-          </div>
+          <div class="panel-head compact"><div><div class="panel-kicker">LIQUIDITY TREND</div><h3>Unified macro score</h3></div><div class="panel-meta">0 = restrictive · 100 = supportive</div></div>
           <div id="macroChart" class="macro-chart"></div>
         </section>
         <section class="panel">
-          <div class="panel-head compact">
-            <div>
-              <div class="panel-kicker">CURRENT MACRO STATE</div>
-              <h3>What is driving the regime</h3>
-            </div>
-          </div>
+          <div class="panel-head compact"><div><div class="panel-kicker">CURRENT MACRO STATE</div><h3>What is driving the regime</h3></div></div>
           <div id="macroDrivers" class="driver-list"></div>
         </section>
       </section>
 
       <section class="section-heading">
-        <div>
-          <div class="section-number">03</div>
-          <div>
-            <h2>Data integrity & methodology</h2>
-            <p>Every score stays tied to the underlying weekly report and source taxonomy.</p>
-          </div>
-        </div>
+        <div><div class="section-number">03</div><div><h2>Data integrity & methodology</h2><p>Every score stays tied to the underlying weekly report, governed model version and source taxonomy.</p></div></div>
       </section>
 
       <section class="panel methodology">
         <div class="method-card">
-          <strong>Index futures</strong>
-          <p>S&amp;P 500, Nasdaq-100, VIX, Russell 2000 and Dow use CFTC Traders in Financial Futures where available, with Legacy retained as an alternate view.</p>
+          <strong>TFF directional score · v1.3</strong>
+          <p>Index-futures direction is driven only by Asset Manager / Institutional and Leveraged Funds. Dealer / Intermediary, Other Reportables and Nonreportables remain visible as context but carry zero directional weight.</p>
         </div>
         <div class="method-card">
-          <strong>Gold &amp; Silver</strong>
-          <p>Physical commodities use CFTC Disaggregated Futures Only: Producer/Merchant, Swap Dealers, Managed Money, Other Reportables and Non-reportables.</p>
+          <strong>Legacy directional score · v1.3</strong>
+          <p>Non-Commercial is the sole directional Legacy input. Commercial, Total Reportable and Nonreportable positioning remain visible for descriptive analysis and carry zero score weight.</p>
         </div>
         <div class="method-card">
-          <strong>Contrarian groups</strong>
-          <p>Other Reportables and Non-reportables are modeled with inverse score association in the directional COT score. Their contribution is always shown rather than hidden.</p>
+          <strong>Gold &amp; Silver · v1.3</strong>
+          <p>Physical commodities use CFTC Disaggregated Futures Only. Managed Money is the sole directional metals input; Producer/Merchant, Swap Dealers, Other Reportables and Non-reportables remain visible as context.</p>
         </div>
         <div class="method-card">
-          <strong>Release timing</strong>
-          <p>COT observations are Tuesday “as of” positions released later in the week. The dashboard displays the report date explicitly and warns when an expected refresh is stale.</p>
+          <strong>Release timing & governance</strong>
+          <p>COT observations are Tuesday “as of” positions released later in the week. Secondary actors only receive future non-zero production weight after precommitted lookahead-safe holdout evidence demonstrates incremental value.</p>
         </div>
       </section>
     </main>
 
-    <footer>
-      <div>COT Intelligence · Research dashboard</div>
-      <div id="footerFreshness"></div>
-    </footer>
+    <footer><div>COT Intelligence · Research dashboard</div><div id="footerFreshness"></div></footer>
   </div>
 
-  <div id="loadingOverlay" class="loading-overlay">
-    <div class="loading-card">
-      <div class="loader"></div>
-      <strong>Building market view</strong>
-      <span>Loading COT, prices and macro liquidity…</span>
-    </div>
-  </div>
+  <div id="loadingOverlay" class="loading-overlay"><div class="loading-card"><div class="loader"></div><strong>Building market view</strong><span>Loading COT, prices and macro liquidity…</span></div></div>
 
-  <script src="worldclass/bootstrap.js?v=20260808-2340"></script>
+  <script src="worldclass/bootstrap.js?v=20260809-0300"></script>
+  <script src="worldclass/live-track-record-panel.js?v=20260809-0300" defer></script>
+  <script src="worldclass/taxonomy-governance.js?v=20260809-0300" defer></script>
 </body>
 </html>
