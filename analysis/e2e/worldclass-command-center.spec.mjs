@@ -84,9 +84,10 @@ test('command center never hides delayed release health behind a neutral score',
   await openDashboard(page, delayed, healthyTrack);
 
   const commandCenter = page.locator('#wcCommandCenter');
+  const nqCard = commandCenter.locator('.wc-v3-market-grid [data-wc-v3-market="nq"]');
   await expect(commandCenter.locator('.wc-v3-integrity')).toContainText('DELAYED');
-  await expect(commandCenter.locator('[data-wc-v3-market="nq"]')).toContainText('DELAYED');
-  await commandCenter.locator('[data-wc-v3-market="nq"]').click();
+  await expect(nqCard).toContainText('DELAYED');
+  await nqCard.click();
   await expect(commandCenter.locator('.wc-v3-verdict-meta')).toContainText('Evidence quality');
 });
 
