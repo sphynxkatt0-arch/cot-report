@@ -22,14 +22,27 @@
     return root;
   }
 
+  function renderAwaitingCollection(root, payload) {
+    root.innerHTML = `
+      <div class="sentiment-topline">
+        <div><span class="panel-kicker">DAILY MARKET SENTIMENT</span><h3>Media, social & prediction-market mood</h3><p class="panel-meta">Separate observational layer; it never substitutes a neutral value when source data is missing.</p></div>
+        <div class="sentiment-date"><strong>AWAITING COLLECTION</strong><span>0/4 authenticated sources</span></div>
+      </div>
+      <div class="sentiment-setup-state">
+        <strong>No authenticated Adanos snapshot has been collected yet.</strong>
+        <span>The dashboard and immutable sentiment ledger are deployed. Collection requires the GitHub Actions repository secret <code>ADANOS_API_KEY</code>; after the first successful collection, Reddit, X, financial news and Polymarket readings will appear here automatically.</span>
+        <small>Presentation contract generated ${esc(payload?.generated_at_utc || "n/a")} · no sentiment value is fabricated while data is absent.</small>
+      </div>
+      <div class="sentiment-source-grid awaiting">
+        ${order.map(key => `<article class="sentiment-source unavailable"><div><strong>${esc(labels[key])}</strong><span>AWAITING DATA</span></div><b>—</b><small>No authenticated daily observation yet.</small></article>`).join("")}
+      </div>`;
+  }
+
   function render(payload) {
     const root = ensureRoot();
     if (!root) return;
     const latest = payload?.latest;
-    if (!latest) {
-      root.innerHTML = `<div class="sentiment-empty">Daily sentiment is configured. The first immutable Adanos snapshot will appear after a successful scheduled collection.</div>`;
-      return;
-    }
+    if (!latest) return renderAwaitingCollection(root, payload);
     const composite = latest.composite || {};
     const sources = latest.sources || {};
     const driverRows = [];
@@ -78,7 +91,7 @@
       render(await response.json());
     } catch (error) {
       console.warn("Market sentiment unavailable", error);
-      root.innerHTML = `<div class="sentiment-empty">Daily market sentiment is unavailable. COT and macro layers remain independent.</div>`;
+      root.innerHTML = `<div class="sentiment-empty"><strong>Daily market sentiment could not be loaded.</strong><span>COT and macro layers remain independent; no neutral sentiment substitute is used.</span></div>`;
     }
   }
 
