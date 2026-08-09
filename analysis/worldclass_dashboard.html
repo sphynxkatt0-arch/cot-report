@@ -7,6 +7,7 @@
   <title>COT Intelligence | Positioning & Macro Liquidity</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="worldclass/styles.css">
+  <link rel="stylesheet" href="worldclass/live-track-record-panel.css?v=20260809-0245">
   <!-- Plotly is lazy-loaded by worldclass/bootstrap.js after the decision surface renders. -->
 </head>
 <body>
@@ -116,7 +117,7 @@
           <div class="panel-head compact">
             <div>
               <div class="panel-kicker">DIRECTIONAL COT SCORE</div>
-              <h3>Transparent, category-weighted positioning signal</h3>
+              <h3>Transparent, governed positioning signal</h3>
             </div>
           </div>
           <div id="cotScorePanel"></div>
@@ -162,7 +163,7 @@
           <div class="section-number">03</div>
           <div>
             <h2>Data integrity & methodology</h2>
-            <p>Every score stays tied to the underlying weekly report and source taxonomy.</p>
+            <p>Every score stays tied to the underlying weekly report, governed model version and source taxonomy.</p>
           </div>
         </div>
       </section>
@@ -174,11 +175,11 @@
         </div>
         <div class="method-card">
           <strong>Gold &amp; Silver</strong>
-          <p>Physical commodities use CFTC Disaggregated Futures Only: Producer/Merchant, Swap Dealers, Managed Money, Other Reportables and Non-reportables.</p>
+          <p>Physical commodities use CFTC Disaggregated Futures Only. Under model v1.2, Managed Money is the sole directional metals input; Producer/Merchant, Swap Dealers, Other Reportables and Non-reportables remain visible as context.</p>
         </div>
         <div class="method-card">
-          <strong>Contrarian groups</strong>
-          <p>Other Reportables and Non-reportables are modeled with inverse score association in the directional COT score. Their contribution is always shown rather than hidden.</p>
+          <strong>Model governance</strong>
+          <p>Dealer/Intermediary, Legacy Commercial and Total Reportable carry zero directional weight. Any other secondary actor must demonstrate incremental lookahead-safe holdout value before receiving a non-zero production weight.</p>
         </div>
         <div class="method-card">
           <strong>Release timing</strong>
@@ -201,6 +202,7 @@
     </div>
   </div>
 
-  <script src="worldclass/bootstrap.js?v=20260808-2340"></script>
+  <script src="worldclass/bootstrap.js?v=20260809-0245"></script>
+  <script src="worldclass/live-track-record-panel.js?v=20260809-0245" defer></script>
 </body>
 </html>
