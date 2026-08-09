@@ -33,6 +33,7 @@ jobs:
             --disable-dev-shm-usage \
             --enable-logging=stderr \
             --log-level=0 \
+            --window-size=1920,1080 \
             --virtual-time-budget=30000 \
             --dump-dom "$url" > /tmp/dom.html 2> /tmp/chrome.log
           status=$?
@@ -41,18 +42,20 @@ jobs:
           echo "DOM_BYTES=$(wc -c < /tmp/dom.html)"
           echo "LOADING_DONE_COUNT=$(grep -c 'id=\"loadingOverlay\" class=\"loading-overlay done\"' /tmp/dom.html || true)"
           echo "LOAD_FAILURE_COUNT=$(grep -c 'Dashboard data failed to load' /tmp/dom.html || true)"
-          echo "HEADLINE_CARD_COUNT=$(grep -o 'class=\"headline-card' /tmp/dom.html | wc -l)"
+          echo "METRIC_CARD_COUNT=$(grep -o 'class=\"metric-card[^\"]*\"' /tmp/dom.html | wc -l)"
           echo "WEEKLY_ROW_COUNT=$(grep -o '<tr>' /tmp/dom.html | wc -l)"
-          echo "POSITION_ROW_COUNT=$(grep -o 'class=\"position-row' /tmp/dom.html | wc -l)"
-          echo "MACRO_CARD_COUNT=$(grep -o 'class=\"macro-card' /tmp/dom.html | wc -l)"
+          echo "POSITION_ROW_COUNT=$(grep -o 'class=\"position-row\"' /tmp/dom.html | wc -l)"
+          echo "MACRO_CARD_COUNT=$(grep -o 'class=\"macro-card\"' /tmp/dom.html | wc -l)"
           echo "NA_COUNT=$(grep -o '>n/a<' /tmp/dom.html | wc -l)"
           echo "FRESHNESS=$(grep -o 'id=\"freshnessPill\"[^>]*>.*</div>' /tmp/dom.html | head -1 | sed -E 's/<[^>]+>/ /g' | tr -s ' ' || true)"
+          echo '--- RENDERED HEADLINE VALUES ---'
+          grep -o '<div class="metric-value">[^<]*</div>' /tmp/dom.html | sed -E 's/<[^>]+>//g' || true
+          echo '--- RENDERED MACRO VALUES ---'
+          grep -o '<div class="macro-card-value[^>]*>[^<]*</div>' /tmp/dom.html | sed -E 's/<[^>]+>//g' | head -20 || true
           echo '--- CHROME ERRORS/WARNINGS ---'
           grep -Ei 'error|failed|exception|uncaught|warning|ERR_' /tmp/chrome.log | tail -100 || true
-          echo '--- IMPORTANT DOM FRAGMENTS ---'
-          grep -Eo 'Dashboard data failed to load|Building market view|COT score|Latest report|Net / open interest|Unified liquidity|Net liquidity 4W|Bank reserves|SOFR − IORB' /tmp/dom.html | sort | uniq -c || true
           test "$status" -eq 0
           test "$(grep -c 'Dashboard data failed to load' /tmp/dom.html || true)" -eq 0
-          test "$(grep -o 'class=\"headline-card' /tmp/dom.html | wc -l)" -ge 3
-          test "$(grep -o 'class=\"position-row' /tmp/dom.html | wc -l)" -ge 2
-          test "$(grep -o 'class=\"macro-card' /tmp/dom.html | wc -l)" -ge 6
+          test "$(grep -o 'class=\"metric-card[^\"]*\"' /tmp/dom.html | wc -l)" -ge 5
+          test "$(grep -o 'class=\"position-row\"' /tmp/dom.html | wc -l)" -ge 2
+          test "$(grep -o 'class=\"macro-card\"' /tmp/dom.html | wc -l)" -ge 6
