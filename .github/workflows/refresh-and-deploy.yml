@@ -347,18 +347,6 @@ jobs:
           publish_dir: ./analysis
           force_orphan: true
 
-      - name: "[DEPLOYING] Align GitHub Pages source to gh-pages"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          cat >/tmp/pages-source.json <<'JSON'
-          {"build_type":"legacy","source":{"branch":"gh-pages","path":"/"}}
-          JSON
-          gh api -X PUT "/repos/${{ github.repository }}/pages" --input /tmp/pages-source.json
-          gh api "/repos/${{ github.repository }}/pages" --jq '{build_type,source,html_url,status}'
-
       - name: "[LIVE] Verify published gh-pages contract"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
