@@ -2,14 +2,20 @@
 """Build the Gold/Silver dataset used by the world-class COT dashboard.
 
 Physical commodities are deliberately sourced from the CFTC *Disaggregated
-Futures Only* report rather than Traders in Financial Futures (TFF).  That
-keeps the dashboard faithful to the CFTC taxonomy: Producer/Merchant,
-Swap Dealers, Managed Money, Other Reportables and Non-reportables.
+Futures Only* report rather than Traders in Financial Futures (TFF). That keeps
+the dashboard faithful to the CFTC taxonomy: Producer/Merchant, Swap Dealers,
+Managed Money, Other Reportables and Non-reportables.
+
+The public browser artifact is intentionally compact. Full-history research is
+built separately from the canonical research dashboard by
+``build_worldclass_research_artifacts.py``; the runtime bundle therefore keeps a
+six-year weekly window and COT-aligned prices instead of shipping thousands of
+daily price rows on first render.
 
 Output:
   analysis/worldclass/metals.json
 
-The builder is cache-safe.  If an upstream service is temporarily unavailable
+The builder is cache-safe. If an upstream service is temporarily unavailable
 and a previous metals.json exists, the prior good file is retained so the
 public dashboard continues to work.
 """
@@ -33,6 +39,7 @@ OUT = OUT_DIR / "metals.json"
 CFTC_DATASET = "72hh-3qpy"
 CFTC_API = f"https://publicreporting.cftc.gov/resource/{CFTC_DATASET}.json"
 START_DATE = "2016-01-01T00:00:00.000"
+BROWSER_COT_WEEKS = 312
 
 MARKETS = {
     "gold": {
@@ -116,9 +123,8 @@ def clean_date(value: Any) -> str:
 
 
 def fetch_cftc_rows(code: str) -> list[dict[str, Any]]:
-    # Query a small, auditable slice of the official CFTC Socrata dataset.
-    # $where also guards against a same-code historical record outside our
-    # dashboard horizon, while $order gives deterministic output.
+    # Query a deterministic official-history slice. Runtime compaction happens
+    # only after normalization so upstream validation still sees the full pull.
     params = {
         "$limit": "5000",
         "$order": "report_date_as_yyyy_mm_dd ASC",
@@ -154,16 +160,16 @@ def fetch_yahoo_prices(symbol: str) -> list[dict[str, Any]]:
         price = finite(close)
         if price is None:
             continue
-        date = datetime.fromtimestamp(int(timestamp), UTC).date().isoformat()
-        by_date[date] = price
+        day = datetime.fromtimestamp(int(timestamp), UTC).date().isoformat()
+        by_date[day] = price
     if not by_date:
         raise RuntimeError(f"Yahoo returned no usable close values for {symbol}")
-    return [{"date": date, "price": round(price, 6)} for date, price in sorted(by_date.items())]
+    return [{"date": day, "price": round(price, 6)} for day, price in sorted(by_date.items())]
 
 
-def price_at_or_before(prices: list[dict[str, Any]], date: str) -> float | None:
+def price_at_or_before(prices: list[dict[str, Any]], day: str) -> float | None:
     dates = [row["date"] for row in prices]
-    index = bisect_right(dates, date) - 1
+    index = bisect_right(dates, day) - 1
     if index < 0:
         return None
     return finite(prices[index].get("price"))
@@ -177,16 +183,16 @@ def normalize_market_rows(
     cfg = MARKETS[market]
     normalized: list[dict[str, Any]] = []
     for row in raw_rows:
-        date = clean_date(row.get("report_date_as_yyyy_mm_dd"))
+        day = clean_date(row.get("report_date_as_yyyy_mm_dd"))
         open_interest = finite(row.get("open_interest_all"))
-        if not date or open_interest is None or open_interest <= 0:
+        if not day or open_interest is None or open_interest <= 0:
             continue
 
         item: dict[str, Any] = {
-            "date": date,
+            "date": day,
             "contract": str(row.get("market_and_exchange_names") or cfg["contract"]).strip(),
             "open_interest": round(open_interest, 6),
-            "price": price_at_or_before(prices, date),
+            "price": price_at_or_before(prices, day),
         }
         complete_categories = 0
         for key, cat in CATEGORIES.items():
@@ -205,7 +211,7 @@ def normalize_market_rows(
         if complete_categories >= 4:
             normalized.append(item)
 
-    # The public endpoint can occasionally contain revised duplicates.  Keep
+    # The public endpoint can occasionally contain revised duplicates. Keep
     # the final observation per report date, matching the rest of this repo.
     deduped = {row["date"]: row for row in normalized}
     rows = [deduped[key] for key in sorted(deduped)]
@@ -214,17 +220,32 @@ def normalize_market_rows(
     return rows
 
 
+def compact_runtime_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return rows[-BROWSER_COT_WEEKS:]
+
+
+def aligned_runtime_prices(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {"date": row["date"], "price": row["price"]}
+        for row in rows
+        if finite(row.get("price")) is not None
+    ]
+
+
 def build_payload() -> dict[str, Any]:
     market_payload: dict[str, Any] = {}
     price_payload: dict[str, Any] = {}
+    source_counts: dict[str, int] = {}
 
     for market, cfg in MARKETS.items():
         print(f"Fetching {cfg['label']} prices...", flush=True)
         prices = fetch_yahoo_prices(cfg["symbol"])
         print(f"Fetching {cfg['label']} CFTC disaggregated rows...", flush=True)
         raw = fetch_cftc_rows(cfg["code"])
-        rows = normalize_market_rows(raw, prices, market)
+        full_rows = normalize_market_rows(raw, prices, market)
+        rows = compact_runtime_rows(full_rows)
         latest = rows[-1]
+        source_counts[market] = len(full_rows)
         market_payload[market] = {
             "label": f"{cfg['label']} CFTC Disaggregated Futures Only",
             "categories": {key: value["label"] for key, value in CATEGORIES.items()},
@@ -240,18 +261,27 @@ def build_payload() -> dict[str, Any]:
         price_payload[market] = {
             "label": cfg["label"],
             "symbol": cfg["symbol"],
-            "records": prices,
+            "records": aligned_runtime_prices(rows),
         }
-        print(f"  {cfg['label']}: {len(rows)} weekly COT rows through {latest['date']}")
+        print(
+            f"  {cfg['label']}: {len(full_rows)} source COT rows; "
+            f"{len(rows)} browser rows through {latest['date']}"
+        )
 
     return {
         "dataset": "disaggregated",
         "dataset_label": "CFTC Disaggregated Futures Only",
         "generated_at_utc": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "runtime_contract": {
+            "history_window_weeks": BROWSER_COT_WEEKS,
+            "price_frequency": "COT-aligned weekly close",
+            "full_history_research_separate": True,
+            "source_cot_rows": source_counts,
+        },
         "source": {
             "name": "CFTC Public Reporting — Disaggregated Futures Only",
             "dataset_id": CFTC_DATASET,
-            "price_source": "Yahoo Finance daily futures close",
+            "price_source": "Yahoo Finance daily futures close, aligned to COT report dates",
         },
         "markets": market_payload,
         "prices": price_payload,
