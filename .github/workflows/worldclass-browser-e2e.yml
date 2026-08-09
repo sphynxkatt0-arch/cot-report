@@ -7,6 +7,8 @@ on:
       - "analysis/worldclass/**"
       - "analysis/e2e/**"
       - "analysis/config/model_spec.json"
+      - "analysis/build_worldclass_bundle.py"
+      - "analysis/model_spec.py"
       - ".github/workflows/worldclass-browser-e2e.yml"
 
 permissions:
@@ -22,6 +24,12 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/*
+
+      - name: Rebuild production runtime contract
+        run: |
+          python3 analysis/build_worldclass_bundle.py
+          test -s analysis/worldclass/base.json
+          test -s analysis/worldclass/model-spec.json
 
       - name: Install pinned test dependencies
         working-directory: analysis/e2e
