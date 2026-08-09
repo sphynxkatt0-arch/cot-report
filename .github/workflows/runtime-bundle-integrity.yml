@@ -49,8 +49,47 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           import json
+          import math
           import os
           from pathlib import Path
+
+          MACRO_CORE_GROUPS = (
+              ("net_liquidity_4w_change",),
+              ("bank_reserves_4w_change", "bank_reserves"),
+              ("sofr_iorb_spread", "effr_iorb_spread"),
+          )
+
+          def finite(value):
+              try:
+                  number = float(value)
+              except (TypeError, ValueError):
+                  return None
+              return number if math.isfinite(number) else None
+
+          def find_metric(node, keys, depth=0):
+              if depth > 10:
+                  return None
+              if isinstance(node, dict):
+                  for key in keys:
+                      if key in node and finite(node.get(key)) is not None:
+                          return finite(node.get(key))
+                  preferred = [node.get(key) for key in ("latest", "current", "state")]
+                  for value in preferred:
+                      found = find_metric(value, keys, depth + 1)
+                      if found is not None:
+                          return found
+                  for key, value in node.items():
+                      if key in {"latest", "current", "state"}:
+                          continue
+                      found = find_metric(value, keys, depth + 1)
+                      if found is not None:
+                          return found
+              elif isinstance(node, list):
+                  for value in reversed(node):
+                      found = find_metric(value, keys, depth + 1)
+                      if found is not None:
+                          return found
+              return None
 
           def validate(path: Path) -> None:
               raw = path.read_bytes()
@@ -72,6 +111,11 @@ jobs:
                   block = prices.get(market) or {}
                   rows = block if isinstance(block, list) else block.get("records") or []
                   assert rows, f"{path}: {market} price history missing"
+
+              macro = payload.get("MACRO_MONITOR") or {}
+              assert isinstance(macro, dict) and macro, f"{path}: MACRO_MONITOR missing"
+              for group in MACRO_CORE_GROUPS:
+                  assert find_metric(macro, group) is not None, f"{path}: macro metric missing: {'/'.join(group)}"
 
               model = payload.get("MODEL_SPEC") or {}
               assert model.get("model_version"), f"{path}: runtime model version missing"
@@ -121,7 +165,34 @@ jobs:
           fi
           python - <<'PY'
           import json
+          import math
           from pathlib import Path
+
+          def finite(value):
+              try:
+                  number = float(value)
+              except (TypeError, ValueError):
+                  return None
+              return number if math.isfinite(number) else None
+
+          def find_metric(node, keys, depth=0):
+              if depth > 10:
+                  return None
+              if isinstance(node, dict):
+                  for key in keys:
+                      if key in node and finite(node.get(key)) is not None:
+                          return finite(node.get(key))
+                  for value in node.values():
+                      found = find_metric(value, keys, depth + 1)
+                      if found is not None:
+                          return found
+              elif isinstance(node, list):
+                  for value in reversed(node):
+                      found = find_metric(value, keys, depth + 1)
+                      if found is not None:
+                          return found
+              return None
+
           path = Path("published/worldclass/base.json")
           raw = path.read_bytes()
           assert len(raw) > 10_000
@@ -129,8 +200,12 @@ jobs:
           assert payload.get("COT_DATA")
           assert payload.get("PRICE_DATA")
           assert payload.get("MODEL_SPEC", {}).get("model_version")
+          macro = payload.get("MACRO_MONITOR") or {}
+          assert find_metric(macro, ("net_liquidity_4w_change",)) is not None
+          assert find_metric(macro, ("bank_reserves_4w_change", "bank_reserves")) is not None
+          assert find_metric(macro, ("sofr_iorb_spread", "effr_iorb_spread")) is not None
           for dataset in ("tff", "legacy"):
               for market in ("sp500", "nq"):
                   assert len(payload["COT_DATA"][dataset][market].get("records") or []) >= 2
-          print(f"Published runtime integrity PASS: {len(raw):,} bytes")
+          print(f"Published runtime integrity PASS: {len(raw):,} bytes · macro core PASS")
           PY
