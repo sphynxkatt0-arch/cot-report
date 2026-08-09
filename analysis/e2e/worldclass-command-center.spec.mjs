@@ -38,6 +38,16 @@ test('command center market selection synchronizes with the research workbench',
   await expect(page.locator('#wcCommandCenter .wc-v2-verdict h3')).toContainText('Gold');
 });
 
+test('shared metals payload performs one physical request during initial render', async ({ page }) => {
+  let metalsRequests = 0;
+  page.on('request', request => {
+    if (/\/worldclass\/metals\.json(?:\?|$)/.test(request.url())) metalsRequests += 1;
+  });
+
+  await openDashboard(page);
+  expect(metalsRequests).toBe(1);
+});
+
 test('command center passes automated WCAG A/AA checks', async ({ page }) => {
   await openDashboard(page);
   const results = await new AxeBuilder({ page })
