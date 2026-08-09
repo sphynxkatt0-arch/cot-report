@@ -91,6 +91,16 @@ test('command center never hides delayed release health behind a neutral score',
   await expect(commandCenter.locator('.wc-v3-verdict-meta')).toContainText('Evidence quality');
 });
 
+test('shared metals payload performs one physical request during initial render', async ({ page }) => {
+  let metalsRequests = 0;
+  page.on('request', request => {
+    if (/\/worldclass\/metals\.json(?:\?|$)/.test(request.url())) metalsRequests += 1;
+  });
+
+  await openDashboard(page);
+  expect(metalsRequests).toBe(1);
+});
+
 test('command center passes automated WCAG A/AA checks', async ({ page }) => {
   await openDashboard(page);
   const results = await new AxeBuilder({ page })
