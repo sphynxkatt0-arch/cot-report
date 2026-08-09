@@ -22,6 +22,9 @@ on:
 
 permissions:
   contents: write
+  actions: write
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages-deploy
@@ -138,6 +141,7 @@ jobs:
           node --check analysis/worldclass/macro-control-fallback.js
           node --check analysis/worldclass/macro-state-renderer.js
           node --check analysis/worldclass/macro-live-sources.js
+          node --check analysis/worldclass/taxonomy-governance.js
 
       - name: "[VALIDATING] Canonical model specification"
         run: |
@@ -313,6 +317,7 @@ jobs:
           test -s analysis/worldclass/macro-control-fallback.js
           test -s analysis/worldclass/macro-state-renderer.js
           test -s analysis/worldclass/macro-live-sources.js
+          test -s analysis/worldclass/taxonomy-governance.js
           echo "Research HTML: $(du -h analysis/interactive_cot_dashboard.html | cut -f1)"
           echo "Browser bundle: $(du -h analysis/worldclass/base.json | cut -f1)"
           echo "Model contract: $(du -h analysis/worldclass/model-spec.json | cut -f1)"
@@ -325,7 +330,48 @@ jobs:
       - name: "[BUILDING] Prepare production index"
         run: cp analysis/worldclass_dashboard.html analysis/index.html
 
-      - name: "[DEPLOYING] Publish to gh-pages"
+      - name: "[BUILDING] Prepare lightweight Pages artifact"
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf pages-dist
+          mkdir -p pages-dist/model_output
+          cp analysis/index.html pages-dist/index.html
+          cp -a analysis/worldclass pages-dist/worldclass
+          cp analysis/model_output/macro_liquidity_expansion.json pages-dist/model_output/macro_liquidity_expansion.json
+          if [ -d analysis/dashboard_template ]; then cp -a analysis/dashboard_template pages-dist/dashboard_template; fi
+          touch pages-dist/.nojekyll
+          test ! -e pages-dist/interactive_cot_dashboard.html
+          test "$(stat -c%s pages-dist/index.html)" -lt 200000
+          test -s pages-dist/worldclass/base.json
+          test -s pages-dist/worldclass/model-spec.json
+          test -s pages-dist/model_output/macro_liquidity_expansion.json
+          echo "Lightweight Pages artifact: $(du -sh pages-dist | cut -f1)"
+
+      - name: "[DEPLOYING] Clear previous Pages deployment artifacts"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --paginate "/repos/${{ github.repository }}/actions/artifacts?per_page=100" \
+            --jq '.artifacts[] | select(.name == "github-pages") | .id' \
+            | while read -r artifact_id; do
+                [ -n "$artifact_id" ] || continue
+                echo "Deleting old github-pages artifact ${artifact_id}"
+                gh api -X DELETE "/repos/${{ github.repository }}/actions/artifacts/${artifact_id}" || true
+              done
+
+      - name: "[DEPLOYING] Configure GitHub Pages"
+        uses: actions/configure-pages@v5
+
+      - name: "[DEPLOYING] Upload lightweight Pages artifact"
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: pages-dist
+          retention-days: 1
+
+      - name: "[DEPLOYING] Publish mirror to gh-pages"
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -352,10 +398,28 @@ jobs:
             worldclass/macro-control-fallback.js \
             worldclass/macro-state-renderer.js \
             worldclass/macro-live-sources.js \
+            worldclass/taxonomy-governance.js \
             worldclass/bootstrap.js \
             index.html
           do
             size="$(gh api "/repos/${{ github.repository }}/contents/${path}?ref=gh-pages" --jq '.size')"
             test "${size}" -gt 0
-            echo "Published ${path}: ${size} bytes"
+            echo "Published mirror ${path}: ${size} bytes"
           done
+
+  deploy-public-pages:
+    name: Deploy public GitHub Pages
+    needs: refresh-and-deploy
+    if: needs.refresh-and-deploy.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: "[LIVE] Deploy lightweight artifact to configured Pages source"
+        id: deployment
+        uses: actions/deploy-pages@v4
