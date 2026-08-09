@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "model_version": "1.0.0",
+  "model_version": "1.1.0",
   "score_models": {
     "tff": {
       "category_weights": {
@@ -14,7 +14,7 @@
     "legacy": {
       "category_weights": {
         "noncommercial": 1.0,
-        "commercial": -0.75,
+        "commercial": 0.0,
         "total_reportable": 0.0,
         "nonreportable": -0.75
       }
