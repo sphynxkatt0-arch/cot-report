@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "model_version": "1.1.0",
+  "model_version": "1.2.0",
   "score_models": {
     "tff": {
       "category_weights": {
@@ -21,11 +21,11 @@
     },
     "disaggregated": {
       "category_weights": {
-        "producer_merchant": -0.75,
-        "swap_dealer": -0.35,
-        "managed_money": 1.25,
-        "other_reportable": -0.75,
-        "non_reportable": -0.75
+        "producer_merchant": 0.0,
+        "swap_dealer": 0.0,
+        "managed_money": 1.0,
+        "other_reportable": 0.0,
+        "non_reportable": 0.0
       }
     }
   },
