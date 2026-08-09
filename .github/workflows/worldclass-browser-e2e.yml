@@ -57,10 +57,3 @@ jobs:
       - name: Run browser and WCAG checks
         working-directory: analysis/e2e
         run: npx playwright test --config=playwright.config.mjs
-
-      - uses: actions/upload-artifact@v5
-        if: ${{ !cancelled() }}
-        with:
-          name: worldclass-playwright-report
-          path: analysis/e2e/playwright-report/
-          retention-days: 14
