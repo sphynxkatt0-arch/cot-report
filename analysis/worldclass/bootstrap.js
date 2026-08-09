@@ -2,6 +2,31 @@
   "use strict";
 
   const originalFetch = window.fetch.bind(window);
+  let runtimeSyntheticHtml = null;
+  let runtimeSyntheticSource = null;
+  let sharedMetalsResponse = null;
+
+  // Install the shared runtime router synchronously, before bootstrap waits on
+  // base.json. Direct HTML helpers can therefore never race ahead and issue
+  // their own physical metals request.
+  window.fetch = (input, init) => {
+    const url = typeof input === "string" ? input : input?.url;
+    if (url && /(^|\/)worldclass\/metals\.json(?:[?#].*)?$/.test(url)) {
+      if (!sharedMetalsResponse) sharedMetalsResponse = originalFetch(input, init);
+      return sharedMetalsResponse.then(response => response.clone());
+    }
+    if (runtimeSyntheticHtml && url && /(^|\/)interactive_cot_dashboard\.html(?:[?#].*)?$/.test(url)) {
+      return Promise.resolve(new Response(runtimeSyntheticHtml, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "X-COT-Data-Source": runtimeSyntheticSource || "shared-runtime"
+        }
+      }));
+    }
+    return originalFetch(input, init);
+  };
+
   const bootstrapScript = document.currentScript;
   const scriptVersion = (() => {
     try {
@@ -44,15 +69,10 @@
     return script;
   }
 
-  function loadEnhancements() {
-    addStylesheet("worldclass/enhancements.css", "data-worldclass-enhancements");
-    addStylesheet("worldclass/kpi-accent.css", "data-worldclass-kpi-accent");
+  function loadDeepIntelligence() {
+    if (document.documentElement.dataset.cotDeepIntelligence === "loaded") return;
+    document.documentElement.dataset.cotDeepIntelligence = "loaded";
     addStylesheet("worldclass/decision-system.css", "data-worldclass-decision-system");
-    addStylesheet("worldclass/terminal-v3.css", "data-worldclass-terminal-v3");
-    addStylesheet("worldclass/sentiment-panel.css", "data-worldclass-sentiment");
-    addScript("worldclass/enhancements.js");
-    addScript("worldclass/sentiment-panel.js");
-    addScript("worldclass/terminal-v3.js");
     addScript("worldclass/decision-system.js", () => {
       addScript("worldclass/macro-control-fallback.js", () => {
         addScript("worldclass/macro-state-renderer.js", () => {
@@ -60,6 +80,26 @@
         });
       });
     });
+  }
+
+  function scheduleDeepIntelligence() {
+    const schedule = () => {
+      if ("requestIdleCallback" in window) window.requestIdleCallback(loadDeepIntelligence, { timeout: 1800 });
+      else window.setTimeout(loadDeepIntelligence, 900);
+    };
+    if (document.readyState === "complete") schedule();
+    else window.addEventListener("load", schedule, { once: true });
+  }
+
+  function loadEnhancements() {
+    addStylesheet("worldclass/enhancements.css", "data-worldclass-enhancements");
+    addStylesheet("worldclass/kpi-accent.css", "data-worldclass-kpi-accent");
+    addStylesheet("worldclass/terminal-v3.css", "data-worldclass-terminal-v3");
+    addStylesheet("worldclass/sentiment-panel.css", "data-worldclass-sentiment");
+    addScript("worldclass/enhancements.js");
+    addScript("worldclass/sentiment-panel.js");
+    addScript("worldclass/terminal-v3.js");
+    scheduleDeepIntelligence();
   }
 
   function loadApp() {
@@ -216,14 +256,8 @@
   function installSharedBase(base, source) {
     window.__COT_WORLDCLASS_BASE__ = base;
     window.__COT_BOOTSTRAP_SOURCE__ = source;
-    const syntheticHtml = CONSTANTS.map(name => `const ${name} = ${JSON.stringify(base[name] || {})};`).join("\n");
-    window.fetch = (input, init) => {
-      const url = typeof input === "string" ? input : input?.url;
-      if (url && /(^|\/)interactive_cot_dashboard\.html(?:[?#].*)?$/.test(url)) {
-        return Promise.resolve(new Response(syntheticHtml, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", "X-COT-Data-Source": source } }));
-      }
-      return originalFetch(input, init);
-    };
+    runtimeSyntheticSource = source;
+    runtimeSyntheticHtml = CONSTANTS.map(name => `const ${name} = ${JSON.stringify(base[name] || {})};`).join("\n");
   }
 
   function exposeRecoveryState(error) {

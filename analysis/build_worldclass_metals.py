@@ -1,21 +1,15 @@
 #!/usr/bin/env python3
-"""Build the Gold/Silver dataset used by the world-class COT dashboard.
+"""Build presentation and research Gold/Silver COT datasets.
 
-Physical commodities are deliberately sourced from the CFTC *Disaggregated
-Futures Only* report rather than Traders in Financial Futures (TFF).  That
-keeps the dashboard faithful to the CFTC taxonomy: Producer/Merchant,
-Swap Dealers, Managed Money, Other Reportables and Non-reportables.
-
-Output:
-  analysis/worldclass/metals.json
-
-The builder is cache-safe.  If an upstream service is temporarily unavailable
-and a previous metals.json exists, the prior good file is retained so the
-public dashboard continues to work.
+Physical commodities use the CFTC Disaggregated Futures Only taxonomy. The
+public browser artifact is compact, while `worldclass/research/metals-full.json`
+retains the complete normalized COT history plus daily prices for lookahead-safe
+research. The research file is never requested by the dashboard runtime.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import math
 import sys
@@ -29,10 +23,12 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent
 OUT_DIR = ROOT / "worldclass"
 OUT = OUT_DIR / "metals.json"
+RESEARCH_OUT = OUT_DIR / "research" / "metals-full.json"
 
 CFTC_DATASET = "72hh-3qpy"
 CFTC_API = f"https://publicreporting.cftc.gov/resource/{CFTC_DATASET}.json"
 START_DATE = "2016-01-01T00:00:00.000"
+BROWSER_COT_WEEKS = 312
 
 MARKETS = {
     "gold": {
@@ -116,9 +112,6 @@ def clean_date(value: Any) -> str:
 
 
 def fetch_cftc_rows(code: str) -> list[dict[str, Any]]:
-    # Query a small, auditable slice of the official CFTC Socrata dataset.
-    # $where also guards against a same-code historical record outside our
-    # dashboard horizon, while $order gives deterministic output.
     params = {
         "$limit": "5000",
         "$order": "report_date_as_yyyy_mm_dd ASC",
@@ -154,16 +147,16 @@ def fetch_yahoo_prices(symbol: str) -> list[dict[str, Any]]:
         price = finite(close)
         if price is None:
             continue
-        date = datetime.fromtimestamp(int(timestamp), UTC).date().isoformat()
-        by_date[date] = price
+        day = datetime.fromtimestamp(int(timestamp), UTC).date().isoformat()
+        by_date[day] = price
     if not by_date:
         raise RuntimeError(f"Yahoo returned no usable close values for {symbol}")
-    return [{"date": date, "price": round(price, 6)} for date, price in sorted(by_date.items())]
+    return [{"date": day, "price": round(price, 6)} for day, price in sorted(by_date.items())]
 
 
-def price_at_or_before(prices: list[dict[str, Any]], date: str) -> float | None:
+def price_at_or_before(prices: list[dict[str, Any]], day: str) -> float | None:
     dates = [row["date"] for row in prices]
-    index = bisect_right(dates, date) - 1
+    index = bisect_right(dates, day) - 1
     if index < 0:
         return None
     return finite(prices[index].get("price"))
@@ -177,16 +170,16 @@ def normalize_market_rows(
     cfg = MARKETS[market]
     normalized: list[dict[str, Any]] = []
     for row in raw_rows:
-        date = clean_date(row.get("report_date_as_yyyy_mm_dd"))
+        day = clean_date(row.get("report_date_as_yyyy_mm_dd"))
         open_interest = finite(row.get("open_interest_all"))
-        if not date or open_interest is None or open_interest <= 0:
+        if not day or open_interest is None or open_interest <= 0:
             continue
 
         item: dict[str, Any] = {
-            "date": date,
+            "date": day,
             "contract": str(row.get("market_and_exchange_names") or cfg["contract"]).strip(),
             "open_interest": round(open_interest, 6),
-            "price": price_at_or_before(prices, date),
+            "price": price_at_or_before(prices, day),
         }
         complete_categories = 0
         for key, cat in CATEGORIES.items():
@@ -205,8 +198,6 @@ def normalize_market_rows(
         if complete_categories >= 4:
             normalized.append(item)
 
-    # The public endpoint can occasionally contain revised duplicates.  Keep
-    # the final observation per report date, matching the rest of this repo.
     deduped = {row["date"]: row for row in normalized}
     rows = [deduped[key] for key in sorted(deduped)]
     if len(rows) < 100:
@@ -214,67 +205,162 @@ def normalize_market_rows(
     return rows
 
 
-def build_payload() -> dict[str, Any]:
-    market_payload: dict[str, Any] = {}
-    price_payload: dict[str, Any] = {}
+def compact_runtime_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return rows[-BROWSER_COT_WEEKS:]
+
+
+def aligned_runtime_prices(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {"date": row["date"], "price": row["price"]}
+        for row in rows
+        if finite(row.get("price")) is not None
+    ]
+
+
+def payload_shell(markets: dict[str, Any], prices: dict[str, Any], generated_at: str) -> dict[str, Any]:
+    return {
+        "dataset": "disaggregated",
+        "dataset_label": "CFTC Disaggregated Futures Only",
+        "generated_at_utc": generated_at,
+        "source": {
+            "name": "CFTC Public Reporting — Disaggregated Futures Only",
+            "dataset_id": CFTC_DATASET,
+            "price_source": "Yahoo Finance daily futures close",
+        },
+        "markets": markets,
+        "prices": prices,
+    }
+
+
+def runtime_from_research(research: dict[str, Any]) -> dict[str, Any]:
+    runtime_markets: dict[str, Any] = {}
+    runtime_prices: dict[str, Any] = {}
+    source_counts: dict[str, int] = {}
+    for market, cfg in MARKETS.items():
+        source_market = (research.get("markets") or {}).get(market) or {}
+        full_rows = source_market.get("records") or []
+        if len(full_rows) < BROWSER_COT_WEEKS:
+            raise RuntimeError(f"{market}: full research source has only {len(full_rows)} COT rows")
+        rows = compact_runtime_rows(full_rows)
+        source_counts[market] = len(full_rows)
+        runtime_markets[market] = {
+            **{key: value for key, value in source_market.items() if key != "records"},
+            "records": rows,
+            "latest_date": rows[-1]["date"],
+        }
+        runtime_prices[market] = {
+            "label": cfg["label"],
+            "symbol": cfg["symbol"],
+            "records": aligned_runtime_prices(rows),
+        }
+
+    runtime = payload_shell(
+        runtime_markets,
+        runtime_prices,
+        str(research.get("generated_at_utc") or datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")),
+    )
+    runtime["runtime_contract"] = {
+        "history_window_weeks": BROWSER_COT_WEEKS,
+        "price_frequency": "COT-aligned weekly close",
+        "full_history_research_separate": True,
+        "research_source": "worldclass/research/metals-full.json",
+        "source_cot_rows": source_counts,
+    }
+    return runtime
+
+
+def build_payloads() -> tuple[dict[str, Any], dict[str, Any]]:
+    research_markets: dict[str, Any] = {}
+    research_prices: dict[str, Any] = {}
+    source_counts: dict[str, int] = {}
+    generated_at = datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
     for market, cfg in MARKETS.items():
         print(f"Fetching {cfg['label']} prices...", flush=True)
         prices = fetch_yahoo_prices(cfg["symbol"])
         print(f"Fetching {cfg['label']} CFTC disaggregated rows...", flush=True)
         raw = fetch_cftc_rows(cfg["code"])
-        rows = normalize_market_rows(raw, prices, market)
-        latest = rows[-1]
-        market_payload[market] = {
+        full_rows = normalize_market_rows(raw, prices, market)
+        source_counts[market] = len(full_rows)
+        research_markets[market] = {
             "label": f"{cfg['label']} CFTC Disaggregated Futures Only",
             "categories": {key: value["label"] for key, value in CATEGORIES.items()},
-            "records": rows,
+            "records": full_rows,
             "contract_spec": {
                 "cftc_code": cfg["code"],
                 "contract": cfg["contract"],
                 "multiplier": cfg["multiplier"],
                 "unit": cfg["unit"],
             },
-            "latest_date": latest["date"],
+            "latest_date": full_rows[-1]["date"],
         }
-        price_payload[market] = {
+        research_prices[market] = {
             "label": cfg["label"],
             "symbol": cfg["symbol"],
             "records": prices,
         }
-        print(f"  {cfg['label']}: {len(rows)} weekly COT rows through {latest['date']}")
+        print(f"  {cfg['label']}: {len(full_rows)} full-history COT rows through {full_rows[-1]['date']}")
 
-    return {
-        "dataset": "disaggregated",
-        "dataset_label": "CFTC Disaggregated Futures Only",
-        "generated_at_utc": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
-        "source": {
-            "name": "CFTC Public Reporting — Disaggregated Futures Only",
-            "dataset_id": CFTC_DATASET,
-            "price_source": "Yahoo Finance daily futures close",
-        },
-        "markets": market_payload,
-        "prices": price_payload,
+    research = payload_shell(research_markets, research_prices, generated_at)
+    research["research_contract"] = {
+        "full_history": True,
+        "daily_price_history": True,
+        "browser_loaded": False,
+        "source_cot_rows": source_counts,
     }
+    return runtime_from_research(research), research
+
+
+def build_payload() -> dict[str, Any]:
+    runtime, _ = build_payloads()
+    return runtime
+
+
+def atomic_write(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".write.tmp")
+    temporary.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
+    temporary.replace(path)
+
+
+def compact_saved_research() -> None:
+    if not RESEARCH_OUT.exists():
+        raise FileNotFoundError(f"Missing persistent full-history metals source: {RESEARCH_OUT}")
+    research = json.loads(RESEARCH_OUT.read_text(encoding="utf-8"))
+    runtime = runtime_from_research(research)
+    atomic_write(OUT, runtime)
+    print(f"Compacted persistent research source into browser runtime {OUT}")
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--compact-from-research",
+        action="store_true",
+        help="Rebuild only the compact browser payload from the persistent full-history research source.",
+    )
+    args = parser.parse_args()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    if args.compact_from_research:
+        compact_saved_research()
+        return
+
     try:
-        payload = build_payload()
+        runtime, research = build_payloads()
     except Exception as exc:
-        if OUT.exists():
+        if OUT.exists() and RESEARCH_OUT.exists():
             print(
-                f"WARNING: metals refresh failed ({exc}). Keeping cached {OUT}.",
+                f"WARNING: metals refresh failed ({exc}). Keeping cached browser and full-history research payloads.",
                 file=sys.stderr,
             )
             return
         raise
 
-    temporary = OUT.with_suffix(".json.tmp")
-    temporary.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
-    temporary.replace(OUT)
-    print(f"Saved {OUT}")
+    atomic_write(RESEARCH_OUT, research)
+    atomic_write(OUT, runtime)
+    print(f"Saved persistent full-history research source {RESEARCH_OUT}")
+    print(f"Saved compact browser runtime {OUT}")
 
 
 if __name__ == "__main__":
