@@ -1,0 +1,53 @@
+name: Public control-room diagnostic
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/public-control-room-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Render public control room
+        shell: bash
+        run: |
+          set -euo pipefail
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          test -n "$chrome"
+          url="https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/?control_diag=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          timeout 70 "$chrome" \
+            --headless=new \
+            --no-sandbox \
+            --disable-gpu \
+            --disable-dev-shm-usage \
+            --window-size=1920,1080 \
+            --virtual-time-budget=30000 \
+            --dump-dom "$url" > /tmp/dom.html 2> /tmp/chrome.log
+          python - <<'PY'
+          import html, re
+          from pathlib import Path
+          text = Path('/tmp/dom.html').read_text(errors='replace')
+          labels = ['SYSTEM LIQUIDITY','RESERVES','FUNDING','DEALERS','FISCAL CASH','AUCTION QUALITY']
+          print('DOM_BYTES', len(text))
+          print('LOAD_FAILURE', 'Dashboard data failed to load' in text)
+          found = {}
+          pattern = re.compile(r'<[^>]*class="[^"]*wc-macro-pillar[^"]*"[^>]*>\s*<span>(.*?)</span>\s*<strong>(.*?)</strong>\s*<em>(.*?)</em>\s*<small>(.*?)</small>', re.I|re.S)
+          def clean(value):
+              value = re.sub(r'<[^>]+>', '', value)
+              return html.unescape(value).strip()
+          for match in pattern.finditer(text):
+              label, value, state, detail = map(clean, match.groups())
+              found[label.upper()] = (value, state, detail)
+          for label in labels:
+              value, state, detail = found.get(label, ('MISSING','MISSING',''))
+              print(f'CONTROL {label} | value={value} | state={state} | detail={detail}')
+              assert value and value.lower() != 'n/a' and value != 'MISSING', f'{label} is empty: {value}'
+          assert 'Dashboard data failed to load' not in text
+          print('PUBLIC_CONTROL_ROOM=PASS')
+          PY
