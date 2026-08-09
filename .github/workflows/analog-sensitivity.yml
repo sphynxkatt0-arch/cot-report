@@ -1,0 +1,27 @@
+name: NQ analog sensitivity diagnostic
+
+on:
+  pull_request:
+    paths:
+      - "analysis/diagnose_nq_analog_sensitivity.py"
+      - "analysis/build_worldclass_backtest.py"
+      - "analysis/build_worldclass_research_artifacts.py"
+      - "analysis/config/model_spec.json"
+      - "analysis/interactive_cot_dashboard.html"
+      - ".github/workflows/analog-sensitivity.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  nq-sensitivity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Run governed NQ analog-count sensitivity
+        working-directory: analysis
+        run: python diagnose_nq_analog_sensitivity.py
