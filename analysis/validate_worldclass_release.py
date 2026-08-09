@@ -21,6 +21,7 @@ import model_spec as model_cfg
 
 ROOT = Path(__file__).resolve().parent
 WORLDCLASS = ROOT / "worldclass"
+DASHBOARD = ROOT / "worldclass_dashboard.html"
 BASE = WORLDCLASS / "base.json"
 RUNTIME_MODEL = WORLDCLASS / "model-spec.json"
 METALS = WORLDCLASS / "metals.json"
@@ -103,8 +104,6 @@ def validate_actor_taxonomy(dataset: str, market: str, payload: dict[str, Any]) 
         f"{dataset}/{market}: actor taxonomy mismatch; "
         f"missing={sorted(expected - actual)} extra={sorted(actual - expected)}"
     )
-    # Gold/Silver are required to have Disaggregated coverage, but valid Legacy
-    # history may coexist. Only the Disaggregated actor schema is metal-specific.
     if dataset == "disaggregated":
         assert market in METAL_MARKETS, f"{dataset}/{market}: Disaggregated production payload is reserved for metals"
 
@@ -222,7 +221,7 @@ def validate_runtime_model_contract(base: dict[str, Any], runtime_model: dict[st
         assert runtime.get("model_version") == MODEL_VERSION, f"{name}: model_version mismatch"
         assert runtime.get("model_spec_hash") == MODEL_SPEC_HASH, f"{name}: model_spec_hash mismatch"
         assert runtime.get("score_models") == MODEL_SPEC.get("score_models"), f"{name}: score models diverge"
-        assert runtime.get("actor_taxonomy") == MODEL_SPEC.get("actor_taxonomy"), f"{name}: actor taxonomy diverges"
+        assert runtime.get("actor_taxonomy") == MODEL_SPEC.get("actor_taxonomy"), f"{name}: actor taxonomy diverge"
         assert runtime.get("horizons") == MODEL_SPEC.get("horizons"), f"{name}: horizons diverge"
     assert embedded == runtime_model, "embedded and standalone runtime model contracts differ"
     bundle_meta = base.get("bundle_meta") or {}
@@ -231,7 +230,6 @@ def validate_runtime_model_contract(base: dict[str, Any], runtime_model: dict[st
 
 
 def validate_macro_plumbing(plumbing: dict[str, Any]) -> dict[str, Any]:
-    """Require the macro contract, while treating third-party outages as degraded health."""
     assert isinstance(plumbing, dict) and plumbing, "macro plumbing payload is empty"
     assert plumbing.get("schema_version") == 1, "macro plumbing schema_version must be 1"
     assert plumbing.get("model_version"), "macro plumbing model_version missing"
@@ -250,9 +248,6 @@ def validate_macro_plumbing(plumbing: dict[str, Any]) -> dict[str, Any]:
         assert isinstance(pillars.get(key), dict), f"macro plumbing pillar missing: {key}"
         assert pillars[key].get("state"), f"macro plumbing pillar state missing: {key}"
 
-    # These two values come from the same validated macro monitor already shown
-    # by the top cards, so their absence indicates a real internal data-contract
-    # break and remains a hard deployment failure.
     assert finite_number(pillars["net_liquidity"].get("value")) is not None, "macro plumbing net_liquidity value missing"
     assert finite_number(pillars["bank_reserves"].get("value")) is not None, "macro plumbing bank_reserves value missing"
 
@@ -283,26 +278,55 @@ def gzip_size(path: Path) -> int:
 
 
 def validate_performance_budget() -> dict[str, int]:
-    immediate = [
-        WORLDCLASS / "base.json",
-        WORLDCLASS / "app.js",
+    """Measure the production first-render graph, not the entire eventual page."""
+    required_initial = [
+        DASHBOARD,
         WORLDCLASS / "styles.css",
+        WORLDCLASS / "live-track-record-panel.css",
         WORLDCLASS / "bootstrap.js",
-        WORLDCLASS / "kpi-accent.css",
-        WORLDCLASS / "enhancements.js",
+        WORLDCLASS / "live-track-record-panel.js",
+        WORLDCLASS / "taxonomy-governance.js",
+        WORLDCLASS / "base.json",
+        WORLDCLASS / "metals.json",
+        WORLDCLASS / "app.js",
         WORLDCLASS / "enhancements.css",
-        WORLDCLASS / "decision-system.js",
+        WORLDCLASS / "kpi-accent.css",
+        WORLDCLASS / "terminal-v3.css",
+        WORLDCLASS / "sentiment-panel.css",
+        WORLDCLASS / "enhancements.js",
+        WORLDCLASS / "sentiment-panel.js",
+        WORLDCLASS / "terminal-v3.js",
+    ]
+    optional_initial = [
+        WORLDCLASS / "market-sentiment.json",
+        WORLDCLASS / "live-track-record.json",
+        STATUS,
+    ]
+    deferred_after_load = [
         WORLDCLASS / "decision-system.css",
+        WORLDCLASS / "decision-system.js",
         WORLDCLASS / "macro-control-fallback.js",
         WORLDCLASS / "macro-state-renderer.js",
         WORLDCLASS / "macro-live-sources.js",
         WORLDCLASS / "regime_backtest.json",
         PLUMBING,
     ]
-    sizes = {str(path.relative_to(ROOT)): gzip_size(path) for path in immediate if path.exists()}
+
+    for path in required_initial:
+        assert path.exists(), f"initial runtime asset missing: {path.relative_to(ROOT)}"
+    for path in deferred_after_load:
+        assert path.exists(), f"deferred runtime asset missing: {path.relative_to(ROOT)}"
+
+    assets = required_initial + [path for path in optional_initial if path.exists()]
+    sizes = {str(path.relative_to(ROOT)): gzip_size(path) for path in assets}
     total = sum(sizes.values())
-    assert total <= MAX_INITIAL_GZIP, f"initial non-Plotly payload {total:,} gzip bytes exceeds budget {MAX_INITIAL_GZIP:,}"
+    deferred_total = sum(gzip_size(path) for path in deferred_after_load)
+    assert total <= MAX_INITIAL_GZIP, (
+        f"measured first-render non-Plotly payload {total:,} gzip bytes exceeds budget {MAX_INITIAL_GZIP:,}"
+    )
     sizes["initial_total"] = total
+    sizes["deferred_after_load_total"] = deferred_total
+    sizes["budget"] = MAX_INITIAL_GZIP
     return sizes
 
 
@@ -403,6 +427,7 @@ def main() -> None:
     elif plumbing_health["unavailable_external_pillars"]:
         print(f"::warning::Macro plumbing partial coverage; unavailable: {', '.join(plumbing_health['unavailable_external_pillars'])}.")
     print(f"Initial non-Plotly gzip payload: {performance['initial_total']:,} bytes")
+    print(f"Deferred deep-intelligence gzip payload: {performance['deferred_after_load_total']:,} bytes")
     if delayed:
         print(f"::warning::{status['message']}")
 
