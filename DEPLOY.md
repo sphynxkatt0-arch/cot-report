@@ -1,96 +1,76 @@
-# Deploying the COT Dashboard
+# Deploying COT Intelligence
 
-The COT dashboard is a **self-contained HTML file** (~13 MB) with all historical data
-embedded as JSON. Deployment is simply a matter of hosting this static file.
+The production dashboard now uses a **lightweight application shell + compact runtime data**, while the large full-history research HTML remains a build/research artifact. The public site should not serve the multi-megabyte research document as its root page.
 
----
+## GitHub Pages production setup
 
-## Option A: GitHub Pages (Recommended, Free)
+In **Settings → Pages**, keep **Source = GitHub Actions**.
 
-The included GitHub Actions workflow automatically refreshes data and deploys
-every week.
+The `Refresh and Deploy` workflow is the authoritative production pipeline. It:
 
-1. **Push** the repository to GitHub.
-2. Go to **Settings → Secrets and variables → Actions** and add:
-   | Secret | Description |
-   |---|---|
-   | `FRED_API_KEY` | Your [FRED API key](https://fred.stlouisfed.org/docs/api/api_key.html) *(optional – fallback data exists)* |
-3. Go to **Settings → Pages** and set **Source** to **"GitHub Actions"**.
-4. The workflow triggers automatically on:
-   - Push to `main`
-   - **Every Saturday at 08:00 UTC** (COT data releases Friday)
-   - Manual dispatch from the **Actions** tab
-5. To trigger manually: **Actions → "Refresh and Deploy" → Run workflow**.
+1. Validates Python/JavaScript syntax, the canonical model specification, macro parsers, live-ledger integrity, data contracts and lookahead safety.
+2. Refreshes CFTC/FRED/Treasury/OFR inputs on scheduled/manual refreshes.
+3. Builds the compact `worldclass/base.json`, research/backtest artifacts, model identity and macro-control-room payload.
+4. Builds a lightweight Pages artifact containing the production shell, `worldclass/` runtime assets, macro payload and chart runtime. The multi-megabyte `interactive_cot_dashboard.html` research artifact is intentionally excluded from the public Pages artifact.
+5. Uploads the artifact with one-day retention and deploys it using the official `actions/deploy-pages` path required by the repository's **GitHub Actions** Pages source.
+6. Publishes the full `analysis/` directory to `gh-pages` as a **last-valid cache/mirror** used by refresh recovery and integrity tooling. `gh-pages` is not the configured public Pages source.
+7. Runs public production-contract checks against the actual `github.io` URL. The checks require a lightweight root shell, the canonical model identity, guarded runtime bootstrap and populated macro-control-room pillars.
 
-> [!TIP]
-> If the refresh step fails (API downtime, rate limits), the workflow still
-> deploys the last successfully built HTML so the site stays up.
+### Why both Pages Actions and `gh-pages` exist
 
----
+The repository previously switched from Pages artifacts to direct `gh-pages` publishing because accumulated deployment artifacts hit storage limits. That left the repository's Pages setting (`GitHub Actions`) inconsistent with the deployment method. The current workflow solves both problems:
 
-## Option B: Vercel (Static, Free)
+- old `github-pages` deployment artifacts are removed before upload;
+- the new Pages artifact has one-day retention;
+- the public artifact excludes the large research HTML;
+- `gh-pages` remains available for last-valid data/cache recovery without being mistaken for the active Pages source.
 
-A `vercel.json` is included for quick static deploys.
+## Production URL
+
+`https://sphynxkatt0-arch.github.io/cot-report/`
+
+A healthy deployment must serve the lightweight `index.html` shell from this URL. The production contract fails if the root grows above 200 KB or if it contains the embedded `const COT_DATA = ...` research payload.
+
+## Automated schedule
+
+CFTC refresh is scheduled for **Friday at 21:35 Europe/Stockholm**. Two UTC cron expressions are used and a timezone gate selects the one that maps to 21:35, so CET/CEST changes do not move the intended local refresh time.
+
+If the expected CFTC release is delayed, the dashboard keeps the last valid observations and exposes the delayed state instead of fabricating a neutral update.
+
+## Required / optional secrets
+
+| Secret | Purpose |
+|---|---|
+| `FRED_API_KEY` | Optional FRED API access. The pipeline retains last-valid data/fallback paths when the key/feed is unavailable. |
+
+GitHub's automatically supplied `GITHUB_TOKEN` handles branch mirrors, artifact cleanup and Pages deployment using the workflow permissions declared in `.github/workflows/refresh-and-deploy.yml`.
+
+## Production data safeguards
+
+The deployment is blocked or repaired when any of these contracts fail:
+
+- required index/metal COT coverage and valid dates;
+- price history availability;
+- canonical `MODEL_SPEC` version/hash;
+- lookahead-safe backtests;
+- compact runtime bundle integrity;
+- macro core fields (net-liquidity impulse, reserve impulse/level, funding spread);
+- server macro-control-room pillars;
+- public Pages lightweight-shell and macro rendering contract.
+
+The hourly `Runtime Bundle Integrity` workflow independently checks the published compact bundle and repairs the `gh-pages` mirror from canonical source data when needed.
+
+## Local development
 
 ```bash
-# 1. Install Vercel CLI
-npm i -g vercel
-
-# 2. Rebuild the dashboard locally
-python analysis/serve_interactive_cot_dashboard.py --refresh-only
-
-# 3. Deploy
-vercel --prod
-```
-
-> [!NOTE]
-> Vercel free tier has no cron/build support. You must rebuild locally and
-> redeploy whenever you want fresh data. Combine with GitHub Actions for
-> automation.
-
----
-
-## Option C: Cloudflare Pages (Static, Free)
-
-1. Connect your GitHub repository in the Cloudflare Pages dashboard.
-2. **Build command**: leave empty (the HTML is pre-built).
-3. **Output directory**: `analysis`
-4. Deploy. Cloudflare will serve the static files with its global CDN.
-
----
-
-## Local Development
-
-```bash
-# Full refresh + open in browser
+# Full refresh + local server
 python analysis/serve_interactive_cot_dashboard.py --open
 
-# Refresh data only (no server)
+# Refresh data only
 python analysis/serve_interactive_cot_dashboard.py --refresh-only
 
-# Serve existing HTML without re-fetching data
+# Serve existing data without refreshing
 python analysis/serve_interactive_cot_dashboard.py --skip-refresh
-
-# Refresh without legacy analysis (faster)
-python analysis/serve_interactive_cot_dashboard.py --refresh-only --no-legacy
 ```
 
-### FRED API Key
-
-Provide your key via **either**:
-- Environment variable: `export FRED_API_KEY=your_key`
-- File: `analysis/config/fred_api_key.txt`
-
-Get a free key at <https://fred.stlouisfed.org/docs/api/api_key.html>.
-
----
-
-## Important Notes
-
-| Topic | Detail |
-|---|---|
-| **File size** | The dashboard HTML is ~13 MB because it embeds all historical data as inline JSON. |
-| **Plotly.js** | The template includes a CDN fallback, so the dashboard works even without the local `plotly-2.35.2.min.js`. |
-| **FRED key** | Optional – the pipeline has fallback data sources for most series. |
-| **Update cadence** | COT data updates weekly (Friday release). Daily rebuilds are unnecessary. |
-| **Fear & Greed** | The sub-project `fear-greed-data-main/` fetches CNN Fear & Greed data. It runs automatically during refresh. |
+The research HTML is intentionally large because it embeds historical data. That size is acceptable for research/build use; it is no longer the intended public root document.
