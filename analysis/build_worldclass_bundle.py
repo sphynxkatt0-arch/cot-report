@@ -38,6 +38,7 @@ CONSTANTS = (
     "MACRO_MONITOR",
     "MACRO_LENS",
     "METADATA",
+    "RESEARCH",
 )
 
 COT_SUFFIXES = (
@@ -247,6 +248,7 @@ def build() -> dict[str, Any]:
         "MACRO_MONITOR": compact_timeseries_tree(raw.get("MACRO_MONITOR")),
         "MACRO_LENS": compact_timeseries_tree(raw.get("MACRO_LENS")),
         "METADATA": raw.get("METADATA") or {},
+        "RESEARCH": raw.get("RESEARCH") or {},
         "MODEL_SPEC": model_meta,
     }
     payload["bundle_meta"] = {
@@ -255,6 +257,7 @@ def build() -> dict[str, Any]:
         "recent_daily_price_days": RECENT_DAILY_PRICE_DAYS,
         "older_price_sampling": "weekly-last-observation",
         "full_history_location": "research source + backtest artifacts",
+        "research_context": "instrument-specific 10-year actor findings",
         "model_version": model_meta["model_version"],
         "model_spec_hash": model_meta["model_spec_hash"],
     }
