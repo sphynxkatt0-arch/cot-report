@@ -117,6 +117,7 @@ def main() -> None:
                 tails = metric.get("holdout_tail_spread") or {}
                 irho = finite(independent.get("spearman_rho"))
                 inn = int(independent.get("n") or 0)
+                p_approx = fisher_p_approx(irho, inn)
                 row = {
                     "series": series_key,
                     "predictor": predictor,
@@ -128,7 +129,7 @@ def main() -> None:
                     "holdout_spearman_rho": holdout.get("spearman_rho"),
                     "independent_n": inn,
                     "independent_spearman_rho": independent.get("spearman_rho"),
-                    "independent_spearman_p_approx": None if irho is None else round(fisher_p_approx(irho, inn), 8),
+                    "independent_spearman_p_approx": None if p_approx is None else round(p_approx, 8),
                     "oos_r2": oos.get("oos_r2"),
                     "rmse_improvement_pct": oos.get("rmse_improvement_pct"),
                     "direction_lift_pp": oos.get("direction_lift_pp"),
