@@ -1,0 +1,107 @@
+name: Full COT actor event research CI
+
+on:
+  push:
+    branches:
+      - research/full-actor-cross-instrument-20260810
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "analysis/build_cot_actor_event_research.py"
+      - "analysis/evaluate_analog_robustness.py"
+      - "analysis/build_worldclass_backtest.py"
+      - "analysis/build_worldclass_research_artifacts.py"
+      - "analysis/config/model_spec.json"
+      - ".github/workflows/cot-actor-event-research-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  actor-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Syntax
+        run: python -m py_compile analysis/build_cot_actor_event_research.py
+
+      - name: Run full actor research
+        working-directory: analysis
+        run: python build_cot_actor_event_research.py
+
+      - name: Validate research contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("analysis/worldclass/research/cot-actor-event-research.json")
+          assert path.is_file() and path.stat().st_size > 100_000, path.stat().st_size if path.exists() else None
+          p = json.loads(path.read_text(encoding="utf-8"))
+
+          assert p["information_contract"]["lookahead_safe"] is True
+          assert p["information_contract"]["cot_snapshot"] == "Tuesday"
+          assert p["information_contract"]["public_availability"].startswith("Friday")
+          assert p["governance"]["threshold_grid"] == [60, 65, 70, 75, 80, 85, 90]
+          assert p["governance"]["combination_threshold"] == 75
+          assert p["governance"]["production_changes"] is False
+
+          required_markets = {"sp500", "nq", "vix", "rty", "dow", "gold", "silver"}
+          assert required_markets == set(p["markets"])
+
+          horizons = p["governance"]["horizons"]
+          for h in ("monday","tuesday","wednesday","thursday","friday",
+                    "1w","2w","3w","4w","6w","8w","13w","26w","39w","52w"):
+              assert h in horizons, h
+
+          pairs = set(p["discovered_dataset_market_pairs"])
+          for pair in ("tff:sp500","tff:nq","tff:vix","tff:rty","tff:dow",
+                       "disaggregated:gold","disaggregated:silver"):
+              assert pair in pairs, (pair, sorted(pairs))
+          assert "legacy:nq" in pairs
+
+          individual = p["individual_actor_thresholds"]
+          assert len(individual) >= 25, len(individual)
+          for key in (
+              "tff:nq:asset_mgr",
+              "tff:nq:lev_money",
+              "legacy:nq:noncommercial",
+              "disaggregated:gold:managed_money",
+              "disaggregated:silver:managed_money",
+          ):
+              assert key in individual, key
+              for direction in ("ADD", "CUT"):
+                  row = individual[key][direction]
+                  assert set(row["threshold_grid"]) == {"60","65","70","75","80","85","90"}
+                  for threshold in row["threshold_grid"].values():
+                      for segment in ("discovery_pre_2022","holdout_2022_plus","full_history"):
+                          assert "52w" in threshold[segment]
+                          assert "3w" in threshold[segment]
+
+          assert p["same_actor_cross_instrument"], "same actor cross-instrument study empty"
+          assert p["cross_actor_same_instrument"], "cross-actor study empty"
+          assert p["lead_market_effects"], "lead market study empty"
+          assert p["current_state"], "current-state layer empty"
+          assert p["governance"]["multiple_testing_registry"]["individual_actor_direction_threshold_candidates"] >= 350
+
+          print("Full COT actor event research contract PASS")
+          print("output_bytes", path.stat().st_size)
+          print("dataset_market_pairs", len(p["discovered_dataset_market_pairs"]))
+          print("individual_actor_series", len(individual))
+          print("same_actor_pairs", len(p["same_actor_cross_instrument"]))
+          print("cross_actor_pairs", len(p["cross_actor_same_instrument"]))
+          print("lead_market_keys", len(p["lead_market_effects"]))
+          print("validated_signals", sum(
+              1 for r in p["validated_signal_summary"] if r["classification"] == "OOS_SUPPORTED"
+          ))
+          PY
