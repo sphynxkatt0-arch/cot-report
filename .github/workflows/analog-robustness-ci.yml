@@ -8,7 +8,6 @@ on:
       - "analysis/build_worldclass_research_artifacts.py"
       - "analysis/build_worldclass_metals.py"
       - "analysis/config/model_spec.json"
-      - "analysis/diagnose_nq_daily_release_path.py"
       - ".github/workflows/analog-robustness-ci.yml"
 
 permissions:
@@ -28,9 +27,7 @@ jobs:
           python-version: "3.11"
 
       - name: Source syntax
-        run: |
-          python -m py_compile analysis/evaluate_analog_robustness.py
-          python -m py_compile analysis/diagnose_nq_daily_release_path.py
+        run: python -m py_compile analysis/evaluate_analog_robustness.py
 
       - name: Run full-history analog robustness study
         run: python analysis/evaluate_analog_robustness.py
@@ -90,7 +87,3 @@ jobs:
 
           print('Analog robustness and non-overlapping episode contract passed')
           PY
-
-      - name: Run temporary NQ daily release-path diagnostic
-        working-directory: analysis
-        run: python diagnose_nq_daily_release_path.py
