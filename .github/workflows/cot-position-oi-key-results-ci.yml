@@ -82,4 +82,5 @@ jobs:
             exit 0
           fi
           git commit -m "research: freeze position and OI key-results audit [skip ci]"
+          git pull --rebase origin research/full-actor-cross-instrument-20260810
           git push origin "HEAD:research/full-actor-cross-instrument-20260810"
