@@ -1,0 +1,67 @@
+name: COT actor predictive power final validation
+
+on:
+  push:
+    branches:
+      - research/full-actor-cross-instrument-20260810
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate-predictive-power:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Syntax
+        run: python -m py_compile analysis/finalize_cot_actor_predictive_power.py
+
+      - name: Run overlap and FDR validation
+        working-directory: analysis
+        run: python finalize_cot_actor_predictive_power.py
+
+      - name: Validate final contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("analysis/worldclass/research/cot-actor-predictive-power-validated-summary.json")
+          assert path.is_file() and path.stat().st_size > 100_000
+          p = json.loads(path.read_text(encoding="utf-8"))
+          assert p["source_metric_count"] == 2655
+          assert sum(p["counts"].values()) == 2655
+          assert p["top_1w"] and p["top_4w"] and p["top_13w"] and p["top_26w"]
+          for row in p["all_rows"]:
+              assert "fdr_q_nonoverlap_spearman" in row
+              assert "final_classification" in row
+          print("Predictive power overlap/FDR contract PASS")
+          print("counts", json.dumps(p["counts"], sort_keys=True))
+          PY
+
+      - name: Freeze final validation summary
+        if: github.event_name == 'push' && github.ref == 'refs/heads/research/full-actor-cross-instrument-20260810'
+        env:
+          SNAPSHOT_DIR: analysis/worldclass/research/snapshots/2026-08-10-predictive-power
+        run: |
+          set -euo pipefail
+          target="$SNAPSHOT_DIR/cot-actor-predictive-power-validated-summary.json"
+          if [ -f "$target" ]; then
+            echo "Final validated summary already frozen; leaving it immutable"
+            exit 0
+          fi
+          cp analysis/worldclass/research/cot-actor-predictive-power-validated-summary.json "$target"
+          sha256sum "$target" > "$SNAPSHOT_DIR/VALIDATED_SHA256SUM.txt"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$target" "$SNAPSHOT_DIR/VALIDATED_SHA256SUM.txt"
+          git commit -m "research: freeze overlap-FDR predictive validation [skip ci]"
+          git push origin "HEAD:research/full-actor-cross-instrument-20260810"
