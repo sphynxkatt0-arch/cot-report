@@ -38,17 +38,19 @@
   ],
   "files": {
     "full_json_gzip": {
-      "bytes": 6843698,
-      "sha256": "6e3dc9ccd65cf970544fbbe42e03706ed20cff888ccb1ae921e934bc372bc972"
+      "bytes": 6843703,
+      "sha256_raw_file": "644d2abdab32b90c19e8e5d8f87299f78f26651163e0d7fde490acc3d2508d23"
     },
     "full_json_uncompressed": {
       "bytes": 77305774,
-      "sha256": "2c96be15ac980bfb62ad36f179bd136820c4d24815101f5cd74f80ee99d2f3ee",
+      "sha256_canonical_excluding_generated_at_utc": "b9c2f45b96427995fd78727a3f6f2db3995af31c6ac1c83556dbb28a1c83acb7",
+      "sha256_raw_file": "e7b3b73f6e8b950a707e757634e96bb3da823e8872f255a5aeb257e3d05ba301",
       "stored_as": "cot-actor-event-research.json.gz"
     },
     "summary_json": {
       "bytes": 1290660,
-      "sha256": "67f8dc27e512c98b1b1dd67fc617602ccb239c266e12a544dbde40a516bd3f27",
+      "sha256_canonical_excluding_generated_at_utc": "db53fc9e7d542b4d09a2d54792ce2e4bb5d8e1523cce059337e091b493fb2b36",
+      "sha256_raw_file": "3fb752595a681c3ca45c2921cdae72a8731c7a422542ad9350e0dbf1d2c53d76",
       "stored_as": "cot-actor-event-summary.json"
     }
   },
@@ -114,13 +116,13 @@
     "silver"
   ],
   "production_changes": false,
-  "purpose": "Immutable historical verification baseline for the completed cross-actor/cross-instrument COT backtest.",
+  "purpose": "Frozen historical verification baseline for the completed cross-actor/cross-instrument COT backtest.",
   "research_branch": "research/full-actor-cross-instrument-20260810",
-  "research_head_before_snapshot_commit": "0b5de5253fea3eae5a6496cdd3fe713b49bdc733",
+  "research_head_before_snapshot_commit": "8f10c00e7fc018e4f4cef5116f83245d4c8cfadb",
   "snapshot_id": "cot-actor-event-research-2026-08-10",
   "verification_counts": {
     "cross_actor_same_instrument_keys": 106,
-    "cross_taxonomy_keys": 0,
+    "cross_taxonomy_keys": 100,
     "dataset_market_pairs": 13,
     "formal_primary_candidates": 10,
     "individual_actor_series": 59,
@@ -128,7 +130,7 @@
     "mechanical_oos_supported": 36,
     "same_actor_cross_instrument_keys": 115
   },
-  "verification_rule": "Future verification must compare methodology/governance first, then recompute and compare SHA-256 when source-state SHAs are identical; when sources advance, compare historical rows through the frozen 2026-08-04 COT snapshot boundary rather than expecting a whole-file hash match.",
+  "verification_rule": "Raw SHA-256 values prove stored-file integrity. When source-state SHAs and research code are identical, compare canonical JSON hashes that exclude only generated_at_utc. When source data advances, compare historical rows through the frozen 2026-08-04 COT snapshot boundary and preserve the old snapshot unchanged for audit.",
   "workflow_run_attempt": "1",
-  "workflow_run_id": "31350481397"
+  "workflow_run_id": "31350698170"
 }
