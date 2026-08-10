@@ -46,8 +46,11 @@ jobs:
           from pathlib import Path
 
           path = Path("analysis/worldclass/research/cot-actor-event-research.json")
+          summary_path = Path("analysis/worldclass/research/cot-actor-event-summary.json")
           assert path.is_file() and path.stat().st_size > 100_000, path.stat().st_size if path.exists() else None
+          assert summary_path.is_file() and 25_000 < summary_path.stat().st_size < 10_000_000, summary_path.stat().st_size if summary_path.exists() else None
           p = json.loads(path.read_text(encoding="utf-8"))
+          s = json.loads(summary_path.read_text(encoding="utf-8"))
 
           assert p["information_contract"]["lookahead_safe"] is True
           assert p["information_contract"]["cot_snapshot"] == "Tuesday"
@@ -55,9 +58,11 @@ jobs:
           assert p["governance"]["threshold_grid"] == [60, 65, 70, 75, 80, 85, 90]
           assert p["governance"]["combination_threshold"] == 75
           assert p["governance"]["production_changes"] is False
+          assert s["governance"]["production_changes"] is False
 
           required_markets = {"sp500", "nq", "vix", "rty", "dow", "gold", "silver"}
           assert required_markets == set(p["markets"])
+          assert required_markets == set(s["markets"])
 
           horizons = p["governance"]["horizons"]
           for h in ("monday","tuesday","wednesday","thursday","friday",
@@ -69,6 +74,15 @@ jobs:
                        "disaggregated:gold","disaggregated:silver"):
               assert pair in pairs, (pair, sorted(pairs))
           assert "legacy:nq" in pairs
+
+          roles = p["dataset_actor_roles"]
+          assert roles["tff"]["asset_mgr"] == "PRIMARY_DIRECTIONAL"
+          assert roles["tff"]["lev_money"] == "PRIMARY_DIRECTIONAL"
+          assert roles["tff"]["dealer"] == "INTERMEDIARY_CONTEXT"
+          assert roles["legacy"]["noncommercial"] == "PRIMARY_DIRECTIONAL"
+          assert roles["legacy"]["total_reportable"] == "AGGREGATE_CONTEXT"
+          assert roles["disaggregated"]["managed_money"] == "PRIMARY_DIRECTIONAL"
+          assert roles["disaggregated"]["producer_merchant"] == "HEDGER_CONTEXT"
 
           individual = p["individual_actor_thresholds"]
           assert len(individual) >= 25, len(individual)
@@ -88,6 +102,17 @@ jobs:
                           assert "52w" in threshold[segment]
                           assert "3w" in threshold[segment]
 
+          for row in s["validated_signal_summary"]:
+              if row["promotion_status"] == "FORMAL_RESEARCH_CANDIDATE":
+                  assert row["classification"] == "OOS_SUPPORTED"
+                  assert row["actor_role"] == "PRIMARY_DIRECTIONAL"
+              if row["actor_role"] in {"INTERMEDIARY_CONTEXT", "OPPOSITE_SIDE_CONTEXT", "AGGREGATE_CONTEXT", "HEDGER_CONTEXT"}:
+                  assert row["promotion_status"] != "FORMAL_RESEARCH_CANDIDATE"
+
+          assert s["selected_signal_curves"], "selected-signal compact curves empty"
+          assert s["top_same_actor_cross_instrument_holdout_1w"], "same-actor compact ranking empty"
+          assert s["top_cross_actor_same_instrument_holdout_1w"], "cross-actor compact ranking empty"
+          assert s["top_lead_market_holdout_1w"], "lead-market compact ranking empty"
           assert p["same_actor_cross_instrument"], "same actor cross-instrument study empty"
           assert p["cross_actor_same_instrument"], "cross-actor study empty"
           assert p["lead_market_effects"], "lead market study empty"
@@ -95,13 +120,17 @@ jobs:
           assert p["governance"]["multiple_testing_registry"]["individual_actor_direction_threshold_candidates"] >= 350
 
           print("Full COT actor event research contract PASS")
-          print("output_bytes", path.stat().st_size)
+          print("full_output_bytes", path.stat().st_size)
+          print("summary_output_bytes", summary_path.stat().st_size)
           print("dataset_market_pairs", len(p["discovered_dataset_market_pairs"]))
           print("individual_actor_series", len(individual))
           print("same_actor_pairs", len(p["same_actor_cross_instrument"]))
           print("cross_actor_pairs", len(p["cross_actor_same_instrument"]))
           print("lead_market_keys", len(p["lead_market_effects"]))
-          print("validated_signals", sum(
-              1 for r in p["validated_signal_summary"] if r["classification"] == "OOS_SUPPORTED"
+          print("mechanical_oos_supported", sum(
+              1 for r in s["validated_signal_summary"] if r["classification"] == "OOS_SUPPORTED"
+          ))
+          print("formal_primary_candidates", sum(
+              1 for r in s["validated_signal_summary"] if r["promotion_status"] == "FORMAL_RESEARCH_CANDIDATE"
           ))
           PY
