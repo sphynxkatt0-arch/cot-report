@@ -31,9 +31,16 @@ jobs:
       - name: Run exact weekday COT walk-forward diagnostic
         working-directory: analysis
         run: python diagnose_nq_daily_release_path.py
-      - name: Upload walk-forward audit
-        uses: actions/upload-artifact@v4
-        with:
-          name: daily-release-walkforward-results
-          path: analysis/daily_release_walkforward_results.json
-          if-no-files-found: error
+      - name: Validate walk-forward result contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path('analysis/daily_release_walkforward_results.json')
+          payload = json.loads(path.read_text(encoding='utf-8'))
+          assert payload['information_contract']['targets'].startswith('exact calendar Monday-Friday')
+          assert payload['information_contract']['lookahead_rule'].startswith('each target may use only earlier COT reports')
+          assert payload['markets']['nq']['walk_forward_reports_with_any_realized_weekday'] >= 450
+          assert payload['markets']['nq']['current_report']['snapshot_date_tuesday'] == '2026-08-04'
+          print('Exact-weekday walk-forward contract PASS')
+          PY
