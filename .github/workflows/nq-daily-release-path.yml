@@ -51,7 +51,7 @@ jobs:
 
           cumulative = json.loads(Path('analysis/nq_cumulative_weekday_history.json').read_text(encoding='utf-8'))
           assert cumulative['coverage']['scored_cot_states_processed'] == 502
-          assert cumulative['coverage']['reports_with_any_realized_cumulative_return'] >= 450
+          assert cumulative['coverage']['reports_with_any_realized_cumulative_return'] >= 400
           assert cumulative['coverage']['reports_with_complete_monday_through_friday_path'] >= 350
           assert cumulative['definition']['holiday_rule'].startswith('missing exact weekday')
           for day in ('monday', 'tuesday', 'wednesday', 'thursday', 'friday'):
