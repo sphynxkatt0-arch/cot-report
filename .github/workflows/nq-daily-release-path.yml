@@ -9,6 +9,7 @@ on:
       - main
     paths:
       - "analysis/diagnose_nq_daily_release_path.py"
+      - "analysis/backtest_nq_cumulative_weekday_history.py"
       - ".github/workflows/nq-daily-release-path.yml"
   workflow_dispatch:
 
@@ -27,20 +28,34 @@ jobs:
         with:
           python-version: "3.11"
       - name: Syntax
-        run: python -m py_compile analysis/diagnose_nq_daily_release_path.py
+        run: |
+          python -m py_compile analysis/diagnose_nq_daily_release_path.py
+          python -m py_compile analysis/backtest_nq_cumulative_weekday_history.py
       - name: Run exact weekday COT walk-forward diagnostic
         working-directory: analysis
         run: python diagnose_nq_daily_release_path.py
-      - name: Validate walk-forward result contract
+      - name: Run cumulative NQ weekday history study
+        working-directory: analysis
+        run: python backtest_nq_cumulative_weekday_history.py
+      - name: Validate research contracts
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          path = Path('analysis/daily_release_walkforward_results.json')
-          payload = json.loads(path.read_text(encoding='utf-8'))
-          assert payload['information_contract']['targets'].startswith('exact calendar Monday-Friday')
-          assert payload['information_contract']['lookahead_rule'].startswith('each target may use only earlier COT reports')
-          assert payload['markets']['nq']['walk_forward_reports_with_any_realized_weekday'] >= 450
-          assert payload['markets']['nq']['current_report']['snapshot_date_tuesday'] == '2026-08-04'
-          print('Exact-weekday walk-forward contract PASS')
+
+          walk = json.loads(Path('analysis/daily_release_walkforward_results.json').read_text(encoding='utf-8'))
+          assert walk['information_contract']['targets'].startswith('exact calendar Monday-Friday')
+          assert walk['information_contract']['lookahead_rule'].startswith('each target may use only earlier COT reports')
+          assert walk['markets']['nq']['walk_forward_reports_with_any_realized_weekday'] >= 450
+          assert walk['markets']['nq']['current_report']['snapshot_date_tuesday'] == '2026-08-04'
+
+          cumulative = json.loads(Path('analysis/nq_cumulative_weekday_history.json').read_text(encoding='utf-8'))
+          assert cumulative['coverage']['scored_cot_states_processed'] == 502
+          assert cumulative['coverage']['reports_with_any_realized_cumulative_return'] >= 450
+          assert cumulative['coverage']['reports_with_complete_monday_through_friday_path'] >= 350
+          assert cumulative['definition']['holiday_rule'].startswith('missing exact weekday')
+          for day in ('monday', 'tuesday', 'wednesday', 'thursday', 'friday'):
+              assert cumulative['available_history_per_horizon'][day]['observations'] > 0
+              assert cumulative['same_sample_complete_weeks']['summary'][day]['observations'] == cumulative['coverage']['reports_with_complete_monday_through_friday_path']
+          print('Exact-weekday and cumulative-history contracts PASS')
           PY
