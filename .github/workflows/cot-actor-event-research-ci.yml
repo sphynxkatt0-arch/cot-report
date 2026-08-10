@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   actor-research:
@@ -134,3 +134,111 @@ jobs:
               1 for r in s["validated_signal_summary"] if r["promotion_status"] == "FORMAL_RESEARCH_CANDIDATE"
           ))
           PY
+
+      - name: Freeze full verification snapshot on research branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/research/full-actor-cross-instrument-20260810'
+        env:
+          SNAPSHOT_DIR: analysis/worldclass/research/snapshots/2026-08-10
+        run: |
+          set -euo pipefail
+          mkdir -p "$SNAPSHOT_DIR"
+
+          cp analysis/worldclass/research/cot-actor-event-summary.json \
+             "$SNAPSHOT_DIR/cot-actor-event-summary.json"
+          gzip -9 -c analysis/worldclass/research/cot-actor-event-research.json \
+             > "$SNAPSHOT_DIR/cot-actor-event-research.json.gz"
+
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          snap = Path(os.environ["SNAPSHOT_DIR"])
+          full = Path("analysis/worldclass/research/cot-actor-event-research.json")
+          summary = Path("analysis/worldclass/research/cot-actor-event-summary.json")
+          compressed = snap / "cot-actor-event-research.json.gz"
+
+          def sha256(path: Path) -> str:
+              h = hashlib.sha256()
+              with path.open("rb") as fh:
+                  for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+                      h.update(chunk)
+              return h.hexdigest()
+
+          def git(ref: str) -> str:
+              return subprocess.check_output(["git", "rev-parse", ref], text=True).strip()
+
+          payload = json.loads(full.read_text(encoding="utf-8"))
+          compact = json.loads(summary.read_text(encoding="utf-8"))
+          manifest = {
+              "snapshot_id": "cot-actor-event-research-2026-08-10",
+              "purpose": "Immutable historical verification baseline for the completed cross-actor/cross-instrument COT backtest.",
+              "research_branch": "research/full-actor-cross-instrument-20260810",
+              "research_head_before_snapshot_commit": os.environ.get("GITHUB_SHA"),
+              "main_ref_sha": git("origin/main"),
+              "gh_pages_source_ref_sha": git("origin/gh-pages"),
+              "workflow_run_id": os.environ.get("GITHUB_RUN_ID"),
+              "workflow_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+              "information_contract": payload.get("information_contract"),
+              "governance": payload.get("governance"),
+              "markets": payload.get("markets"),
+              "dataset_actor_roles": payload.get("dataset_actor_roles"),
+              "discovered_dataset_market_pairs": payload.get("discovered_dataset_market_pairs"),
+              "verification_counts": {
+                  "dataset_market_pairs": len(payload.get("discovered_dataset_market_pairs") or []),
+                  "individual_actor_series": len(payload.get("individual_actor_thresholds") or {}),
+                  "same_actor_cross_instrument_keys": len(payload.get("same_actor_cross_instrument") or {}),
+                  "cross_actor_same_instrument_keys": len(payload.get("cross_actor_same_instrument") or {}),
+                  "cross_taxonomy_keys": len(payload.get("cross_taxonomy_same_instrument") or {}),
+                  "lead_market_keys": len(payload.get("lead_market_effects") or {}),
+                  "mechanical_oos_supported": sum(1 for r in compact.get("validated_signal_summary", []) if r.get("classification") == "OOS_SUPPORTED"),
+                  "formal_primary_candidates": sum(1 for r in compact.get("validated_signal_summary", []) if r.get("promotion_status") == "FORMAL_RESEARCH_CANDIDATE"),
+              },
+              "files": {
+                  "full_json_uncompressed": {
+                      "bytes": full.stat().st_size,
+                      "sha256": sha256(full),
+                      "stored_as": "cot-actor-event-research.json.gz",
+                  },
+                  "full_json_gzip": {
+                      "bytes": compressed.stat().st_size,
+                      "sha256": sha256(compressed),
+                  },
+                  "summary_json": {
+                      "bytes": summary.stat().st_size,
+                      "sha256": sha256(summary),
+                      "stored_as": "cot-actor-event-summary.json",
+                  },
+              },
+              "verification_rule": "Future verification must compare methodology/governance first, then recompute and compare SHA-256 when source-state SHAs are identical; when sources advance, compare historical rows through the frozen 2026-08-04 COT snapshot boundary rather than expecting a whole-file hash match.",
+              "production_changes": False,
+          }
+          (snap / "verification-manifest.json").write_text(
+              json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+
+          sums = [
+              f"{sha256(compressed)}  cot-actor-event-research.json.gz",
+              f"{sha256(summary)}  cot-actor-event-summary.json",
+              f"{sha256(snap / 'verification-manifest.json')}  verification-manifest.json",
+          ]
+          (snap / "SHA256SUMS.txt").write_text("\n".join(sums) + "\n", encoding="utf-8")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$SNAPSHOT_DIR/cot-actor-event-research.json.gz" \
+                     "$SNAPSHOT_DIR/cot-actor-event-summary.json" \
+                     "$SNAPSHOT_DIR/verification-manifest.json" \
+                     "$SNAPSHOT_DIR/SHA256SUMS.txt"
+
+          if git diff --cached --quiet; then
+            echo "Verification snapshot already matches generated evidence"
+            exit 0
+          fi
+
+          git commit -m "research: freeze 2026-08-10 actor backtest snapshot [skip ci]"
+          git push origin "HEAD:research/full-actor-cross-instrument-20260810"
