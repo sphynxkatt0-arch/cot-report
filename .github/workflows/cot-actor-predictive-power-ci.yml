@@ -9,6 +9,7 @@ on:
       - main
     paths:
       - "analysis/evaluate_cot_actor_predictive_power.py"
+      - "analysis/finalize_cot_actor_predictive_power.py"
       - "analysis/build_cot_actor_event_research.py"
       - "analysis/evaluate_analog_robustness.py"
       - "analysis/build_worldclass_backtest.py"
@@ -32,7 +33,7 @@ jobs:
           python-version: "3.11"
 
       - name: Syntax
-        run: python -m py_compile analysis/evaluate_cot_actor_predictive_power.py analysis/build_cot_actor_event_research.py
+        run: python -m py_compile analysis/evaluate_cot_actor_predictive_power.py analysis/finalize_cot_actor_predictive_power.py analysis/build_cot_actor_event_research.py
 
       - name: Run predictive power study
         working-directory: analysis
@@ -68,6 +69,25 @@ jobs:
           print("metric_count", p["metric_count"])
           print("oos_predictive_count", s["oos_predictive_count"])
           print("positive_oos_r2_weak_count", s["positive_oos_r2_weak_count"])
+          PY
+
+      - name: Run strict overlap and FDR validation
+        working-directory: analysis
+        run: python finalize_cot_actor_predictive_power.py
+
+      - name: Validate strict predictive contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path("analysis/worldclass/research/cot-actor-predictive-power-validated-summary.json")
+          assert path.is_file() and path.stat().st_size > 100_000
+          p = json.loads(path.read_text(encoding="utf-8"))
+          assert p["source_metric_count"] == 2655
+          assert sum(p["counts"].values()) == 2655
+          assert p["top_1w"] and p["top_4w"] and p["top_13w"] and p["top_26w"]
+          print("COT strict predictive power contract PASS")
+          print("strict_counts", json.dumps(p["counts"], sort_keys=True))
           PY
 
       - name: Freeze predictive-power verification snapshot
