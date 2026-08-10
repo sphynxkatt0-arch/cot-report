@@ -1,4 +1,4 @@
-name: NQ daily release-path diagnostic
+name: Exact weekday COT walk-forward diagnostic
 
 on:
   push:
@@ -28,6 +28,12 @@ jobs:
           python-version: "3.11"
       - name: Syntax
         run: python -m py_compile analysis/diagnose_nq_daily_release_path.py
-      - name: Run NQ daily release-path diagnostic
+      - name: Run exact weekday COT walk-forward diagnostic
         working-directory: analysis
         run: python diagnose_nq_daily_release_path.py
+      - name: Upload walk-forward audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-release-walkforward-results
+          path: analysis/daily_release_walkforward_results.json
+          if-no-files-found: error
