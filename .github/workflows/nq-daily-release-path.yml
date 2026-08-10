@@ -10,6 +10,7 @@ on:
     paths:
       - "analysis/diagnose_nq_daily_release_path.py"
       - "analysis/backtest_nq_cumulative_weekday_history.py"
+      - "analysis/backtest_nq_actor_change_thresholds.py"
       - ".github/workflows/nq-daily-release-path.yml"
   workflow_dispatch:
 
@@ -31,12 +32,16 @@ jobs:
         run: |
           python -m py_compile analysis/diagnose_nq_daily_release_path.py
           python -m py_compile analysis/backtest_nq_cumulative_weekday_history.py
+          python -m py_compile analysis/backtest_nq_actor_change_thresholds.py
       - name: Run exact weekday COT walk-forward diagnostic
         working-directory: analysis
         run: python diagnose_nq_daily_release_path.py
       - name: Run cumulative NQ weekday history study
         working-directory: analysis
         run: python backtest_nq_cumulative_weekday_history.py
+      - name: Run NQ actor change-threshold study
+        working-directory: analysis
+        run: python backtest_nq_actor_change_thresholds.py
       - name: Validate research contracts
         run: |
           python - <<'PY'
@@ -57,5 +62,19 @@ jobs:
           for day in ('monday', 'tuesday', 'wednesday', 'thursday', 'friday'):
               assert cumulative['available_history_per_horizon'][day]['observations'] > 0
               assert cumulative['same_sample_complete_weeks']['summary'][day]['observations'] == cumulative['coverage']['reports_with_complete_monday_through_friday_path']
-          print('Exact-weekday and cumulative-history contracts PASS')
+
+          actors = json.loads(Path('analysis/nq_actor_change_thresholds.json').read_text(encoding='utf-8'))
+          assert actors['coverage']['scored_nq_state_universe'] == 502
+          assert actors['information_contract']['lookahead_safe'] is True
+          assert actors['governance']['threshold_grid'] == [60, 65, 70, 75, 80, 85, 90]
+          assert actors['governance']['production_changes'] is False
+          assert actors['coverage']['asset_manager_records_on_universe'] >= 490
+          assert actors['coverage']['noncommercial_records_on_universe'] >= 490
+          for actor in ('asset_manager', 'noncommercial'):
+              for direction in ('ADD', 'CUT'):
+                  assert set(actors['actors'][actor]['threshold_grid'][direction]) == {'60','65','70','75','80','85','90'}
+                  assert actors['actors'][actor]['selected'][direction]['holdout_validation']['classification'] in {
+                      'OOS_SUPPORTED', 'FAILED_HOLDOUT', 'NO_STABLE_DISCOVERY_THRESHOLD'
+                  }
+          print('Exact-weekday, cumulative-history, and actor-threshold contracts PASS')
           PY
