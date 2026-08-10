@@ -1,0 +1,27 @@
+name: NQ daily release-path diagnostic
+
+on:
+  push:
+    branches:
+      - analysis/nq-daily-release-path-20260810
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Syntax
+        run: python -m py_compile analysis/diagnose_nq_daily_release_path.py
+      - name: Run NQ daily release-path diagnostic
+        working-directory: analysis
+        run: python diagnose_nq_daily_release_path.py
