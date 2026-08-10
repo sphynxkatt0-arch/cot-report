@@ -1,0 +1,127 @@
+name: COT all-actor all-horizon position-OI audit
+
+on:
+  push:
+    branches:
+      - research/full-actor-cross-instrument-20260810
+    paths:
+      - "analysis/extract_position_oi_all_actor_horizons.py"
+      - ".github/workflows/cot-position-oi-all-actor-horizons-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  all-actor-horizons:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Fetch persistent full-history metals source
+        run: git fetch origin gh-pages:refs/remotes/origin/gh-pages || true
+
+      - name: Syntax
+        run: |
+          python -m py_compile \
+            analysis/evaluate_cot_raw_position_oi_predictive_power.py \
+            analysis/extract_position_oi_all_actor_horizons.py
+
+      - name: Regenerate governed raw-position/OI source study
+        working-directory: analysis
+        run: python evaluate_cot_raw_position_oi_predictive_power.py
+
+      - name: Extract complete actor x horizon audit
+        working-directory: analysis
+        run: python extract_position_oi_all_actor_horizons.py
+
+      - name: Validate full matrix
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("analysis/worldclass/research/snapshots/2026-08-11-position-oi-all-actors")
+          p = root / "all-actor-horizon-audit.json"
+          t = root / "all-actor-horizon-matrix.tsv"
+          assert p.is_file() and p.stat().st_size > 250_000
+          assert t.is_file() and t.stat().st_size > 50_000
+          d = json.loads(p.read_text(encoding="utf-8"))
+          assert d["actor_series_count"] == 59
+          assert d["actor_horizon_cell_count"] == 885
+          assert d["market_oi_series_count"] == 7
+          assert d["market_oi_horizon_cell_count"] == 105
+          assert d["source_continuous_metric_count"] == 12915
+          assert set(d["horizons"]) == {"monday","tuesday","wednesday","thursday","friday","1w","2w","3w","4w","6w","8w","13w","26w","39w","52w"}
+          assert len(d["horizon_leaders"]) == 15
+          assert len(d["actor_persistence_1w_to_13w"]) == 59
+          assert len(d["actor_horizon_matrix"]) == 885
+          assert len(d["market_oi_horizon_matrix"]) == 105
+          for cell in d["actor_horizon_matrix"]:
+              assert cell["best_overall"]
+              assert cell["best_raw_flow"]
+              assert cell["best_raw_position_level"]
+              assert cell["best_oi_normalized_flow"]
+              assert cell["best_oi_normalized_position"]
+          print("Complete all-actor/all-horizon audit PASS")
+          print("json_bytes", p.stat().st_size)
+          print("tsv_bytes", t.stat().st_size)
+          PY
+
+      - name: Freeze audit immutably
+        if: github.event_name == 'push' && github.ref == 'refs/heads/research/full-actor-cross-instrument-20260810'
+        run: |
+          set -euo pipefail
+          root="analysis/worldclass/research/snapshots/2026-08-11-position-oi-all-actors"
+          manifest="$root/verification-manifest.json"
+          if [ -f "$manifest" ]; then
+            echo "All-actor/all-horizon audit already frozen; refusing to rewrite it"
+            exit 0
+          fi
+          python - <<'PY'
+          import hashlib, json, os, subprocess
+          from pathlib import Path
+          root = Path("analysis/worldclass/research/snapshots/2026-08-11-position-oi-all-actors")
+          files = [root / "all-actor-horizon-audit.json", root / "all-actor-horizon-matrix.tsv"]
+          def sha(path):
+              h = hashlib.sha256(); h.update(path.read_bytes()); return h.hexdigest()
+          d = json.loads(files[0].read_text(encoding="utf-8"))
+          manifest = {
+              "snapshot_id": "cot-position-oi-all-actors-all-horizons-2026-08-11",
+              "purpose": "Immutable complete 59 actor-series x 15 horizon plus 7 market-OI x 15 horizon audit derived from the governed raw-position/OI study.",
+              "research_branch": "research/full-actor-cross-instrument-20260810",
+              "research_head_before_snapshot_commit": os.environ.get("GITHUB_SHA"),
+              "main_ref_sha": subprocess.check_output(["git","rev-parse","origin/main"], text=True).strip(),
+              "gh_pages_source_ref_sha": subprocess.check_output(["git","rev-parse","origin/gh-pages"], text=True).strip(),
+              "workflow_run_id": os.environ.get("GITHUB_RUN_ID"),
+              "information_contract": d.get("information_contract"),
+              "forecast_contract": d.get("forecast_contract"),
+              "actor_series_count": d.get("actor_series_count"),
+              "actor_horizon_cell_count": d.get("actor_horizon_cell_count"),
+              "market_oi_series_count": d.get("market_oi_series_count"),
+              "market_oi_horizon_cell_count": d.get("market_oi_horizon_cell_count"),
+              "source_continuous_metric_count": d.get("source_continuous_metric_count"),
+              "source_strict_counts": d.get("source_strict_counts"),
+              "files": {p.name: {"bytes": p.stat().st_size, "sha256": sha(p)} for p in files},
+              "production_changes": False,
+              "verification_rule": "This dated audit is immutable. New source data or research logic must use a new snapshot directory; do not rewrite this evidence.",
+          }
+          m = root / "verification-manifest.json"
+          m.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          sums = [f"{sha(p)}  {p.name}" for p in files] + [f"{sha(m)}  {m.name}"]
+          (root / "SHA256SUMS.txt").write_text("\n".join(sums) + "\n", encoding="utf-8")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$root/all-actor-horizon-audit.json" \
+                     "$root/all-actor-horizon-matrix.tsv" \
+                     "$root/verification-manifest.json" \
+                     "$root/SHA256SUMS.txt"
+          git commit -m "research: freeze all-actor all-horizon position-OI audit [skip ci]"
+          git push origin "HEAD:research/full-actor-cross-instrument-20260810"
