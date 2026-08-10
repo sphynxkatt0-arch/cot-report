@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - analysis/nq-daily-release-path-20260810
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "analysis/diagnose_nq_daily_release_path.py"
+      - ".github/workflows/nq-daily-release-path.yml"
   workflow_dispatch:
 
 permissions:
