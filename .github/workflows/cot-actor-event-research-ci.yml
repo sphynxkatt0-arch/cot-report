@@ -115,6 +115,7 @@ jobs:
           assert s["top_lead_market_holdout_1w"], "lead-market compact ranking empty"
           assert p["same_actor_cross_instrument"], "same actor cross-instrument study empty"
           assert p["cross_actor_same_instrument"], "cross-actor study empty"
+          assert p["cross_report_taxonomy"], "cross-taxonomy study empty"
           assert p["lead_market_effects"], "lead market study empty"
           assert p["current_state"], "current-state layer empty"
           assert p["governance"]["multiple_testing_registry"]["individual_actor_direction_threshold_candidates"] >= 350
@@ -126,6 +127,7 @@ jobs:
           print("individual_actor_series", len(individual))
           print("same_actor_pairs", len(p["same_actor_cross_instrument"]))
           print("cross_actor_pairs", len(p["cross_actor_same_instrument"]))
+          print("cross_taxonomy_pairs", len(p["cross_report_taxonomy"]))
           print("lead_market_keys", len(p["lead_market_effects"]))
           print("mechanical_oos_supported", sum(
               1 for r in s["validated_signal_summary"] if r["classification"] == "OOS_SUPPORTED"
@@ -167,6 +169,18 @@ jobs:
                       h.update(chunk)
               return h.hexdigest()
 
+          def canonical_json_sha256(path: Path) -> str:
+              obj = json.loads(path.read_text(encoding="utf-8"))
+              if isinstance(obj, dict):
+                  obj.pop("generated_at_utc", None)
+              canonical = json.dumps(
+                  obj,
+                  sort_keys=True,
+                  separators=(",", ":"),
+                  ensure_ascii=False,
+              ).encode("utf-8")
+              return hashlib.sha256(canonical).hexdigest()
+
           def git(ref: str) -> str:
               return subprocess.check_output(["git", "rev-parse", ref], text=True).strip()
 
@@ -174,7 +188,7 @@ jobs:
           compact = json.loads(summary.read_text(encoding="utf-8"))
           manifest = {
               "snapshot_id": "cot-actor-event-research-2026-08-10",
-              "purpose": "Immutable historical verification baseline for the completed cross-actor/cross-instrument COT backtest.",
+              "purpose": "Frozen historical verification baseline for the completed cross-actor/cross-instrument COT backtest.",
               "research_branch": "research/full-actor-cross-instrument-20260810",
               "research_head_before_snapshot_commit": os.environ.get("GITHUB_SHA"),
               "main_ref_sha": git("origin/main"),
@@ -191,7 +205,7 @@ jobs:
                   "individual_actor_series": len(payload.get("individual_actor_thresholds") or {}),
                   "same_actor_cross_instrument_keys": len(payload.get("same_actor_cross_instrument") or {}),
                   "cross_actor_same_instrument_keys": len(payload.get("cross_actor_same_instrument") or {}),
-                  "cross_taxonomy_keys": len(payload.get("cross_taxonomy_same_instrument") or {}),
+                  "cross_taxonomy_keys": len(payload.get("cross_report_taxonomy") or {}),
                   "lead_market_keys": len(payload.get("lead_market_effects") or {}),
                   "mechanical_oos_supported": sum(1 for r in compact.get("validated_signal_summary", []) if r.get("classification") == "OOS_SUPPORTED"),
                   "formal_primary_candidates": sum(1 for r in compact.get("validated_signal_summary", []) if r.get("promotion_status") == "FORMAL_RESEARCH_CANDIDATE"),
@@ -199,20 +213,22 @@ jobs:
               "files": {
                   "full_json_uncompressed": {
                       "bytes": full.stat().st_size,
-                      "sha256": sha256(full),
+                      "sha256_raw_file": sha256(full),
+                      "sha256_canonical_excluding_generated_at_utc": canonical_json_sha256(full),
                       "stored_as": "cot-actor-event-research.json.gz",
                   },
                   "full_json_gzip": {
                       "bytes": compressed.stat().st_size,
-                      "sha256": sha256(compressed),
+                      "sha256_raw_file": sha256(compressed),
                   },
                   "summary_json": {
                       "bytes": summary.stat().st_size,
-                      "sha256": sha256(summary),
+                      "sha256_raw_file": sha256(summary),
+                      "sha256_canonical_excluding_generated_at_utc": canonical_json_sha256(summary),
                       "stored_as": "cot-actor-event-summary.json",
                   },
               },
-              "verification_rule": "Future verification must compare methodology/governance first, then recompute and compare SHA-256 when source-state SHAs are identical; when sources advance, compare historical rows through the frozen 2026-08-04 COT snapshot boundary rather than expecting a whole-file hash match.",
+              "verification_rule": "Raw SHA-256 values prove stored-file integrity. When source-state SHAs and research code are identical, compare canonical JSON hashes that exclude only generated_at_utc. When source data advances, compare historical rows through the frozen 2026-08-04 COT snapshot boundary and preserve the old snapshot unchanged for audit.",
               "production_changes": False,
           }
           (snap / "verification-manifest.json").write_text(
