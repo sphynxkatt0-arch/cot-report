@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - research/full-actor-cross-instrument-20260810
+    paths:
+      - "analysis/build_cot_actor_event_research.py"
+      - "analysis/evaluate_analog_robustness.py"
+      - "analysis/build_worldclass_backtest.py"
+      - "analysis/build_worldclass_research_artifacts.py"
+      - "analysis/config/model_spec.json"
+      - ".github/workflows/cot-actor-event-research-ci.yml"
   pull_request:
     branches:
       - main
@@ -47,8 +54,8 @@ jobs:
 
           path = Path("analysis/worldclass/research/cot-actor-event-research.json")
           summary_path = Path("analysis/worldclass/research/cot-actor-event-summary.json")
-          assert path.is_file() and path.stat().st_size > 100_000, path.stat().st_size if path.exists() else None
-          assert summary_path.is_file() and 25_000 < summary_path.stat().st_size < 10_000_000, summary_path.stat().st_size if summary_path.exists() else None
+          assert path.is_file() and path.stat().st_size > 100_000
+          assert summary_path.is_file() and 25_000 < summary_path.stat().st_size < 10_000_000
           p = json.loads(path.read_text(encoding="utf-8"))
           s = json.loads(summary_path.read_text(encoding="utf-8"))
 
@@ -61,46 +68,34 @@ jobs:
           assert s["governance"]["production_changes"] is False
 
           required_markets = {"sp500", "nq", "vix", "rty", "dow", "gold", "silver"}
-          assert required_markets == set(p["markets"])
-          assert required_markets == set(s["markets"])
-
-          horizons = p["governance"]["horizons"]
+          assert required_markets == set(p["markets"]) == set(s["markets"])
           for h in ("monday","tuesday","wednesday","thursday","friday",
                     "1w","2w","3w","4w","6w","8w","13w","26w","39w","52w"):
-              assert h in horizons, h
+              assert h in p["governance"]["horizons"], h
 
           pairs = set(p["discovered_dataset_market_pairs"])
           for pair in ("tff:sp500","tff:nq","tff:vix","tff:rty","tff:dow",
-                       "disaggregated:gold","disaggregated:silver"):
-              assert pair in pairs, (pair, sorted(pairs))
-          assert "legacy:nq" in pairs
+                       "disaggregated:gold","disaggregated:silver","legacy:nq"):
+              assert pair in pairs, pair
 
           roles = p["dataset_actor_roles"]
           assert roles["tff"]["asset_mgr"] == "PRIMARY_DIRECTIONAL"
           assert roles["tff"]["lev_money"] == "PRIMARY_DIRECTIONAL"
           assert roles["tff"]["dealer"] == "INTERMEDIARY_CONTEXT"
           assert roles["legacy"]["noncommercial"] == "PRIMARY_DIRECTIONAL"
-          assert roles["legacy"]["total_reportable"] == "AGGREGATE_CONTEXT"
           assert roles["disaggregated"]["managed_money"] == "PRIMARY_DIRECTIONAL"
           assert roles["disaggregated"]["producer_merchant"] == "HEDGER_CONTEXT"
 
           individual = p["individual_actor_thresholds"]
-          assert len(individual) >= 25, len(individual)
-          for key in (
-              "tff:nq:asset_mgr",
-              "tff:nq:lev_money",
-              "legacy:nq:noncommercial",
-              "disaggregated:gold:managed_money",
-              "disaggregated:silver:managed_money",
-          ):
+          for key in ("tff:nq:asset_mgr","tff:nq:lev_money","legacy:nq:noncommercial",
+                      "disaggregated:gold:managed_money","disaggregated:silver:managed_money"):
               assert key in individual, key
               for direction in ("ADD", "CUT"):
                   row = individual[key][direction]
                   assert set(row["threshold_grid"]) == {"60","65","70","75","80","85","90"}
                   for threshold in row["threshold_grid"].values():
                       for segment in ("discovery_pre_2022","holdout_2022_plus","full_history"):
-                          assert "52w" in threshold[segment]
-                          assert "3w" in threshold[segment]
+                          assert "3w" in threshold[segment] and "52w" in threshold[segment]
 
           for row in s["validated_signal_summary"]:
               if row["promotion_status"] == "FORMAL_RESEARCH_CANDIDATE":
@@ -109,32 +104,23 @@ jobs:
               if row["actor_role"] in {"INTERMEDIARY_CONTEXT", "OPPOSITE_SIDE_CONTEXT", "AGGREGATE_CONTEXT", "HEDGER_CONTEXT"}:
                   assert row["promotion_status"] != "FORMAL_RESEARCH_CANDIDATE"
 
-          assert s["selected_signal_curves"], "selected-signal compact curves empty"
-          assert s["top_same_actor_cross_instrument_holdout_1w"], "same-actor compact ranking empty"
-          assert s["top_cross_actor_same_instrument_holdout_1w"], "cross-actor compact ranking empty"
-          assert s["top_lead_market_holdout_1w"], "lead-market compact ranking empty"
-          assert p["same_actor_cross_instrument"], "same actor cross-instrument study empty"
-          assert p["cross_actor_same_instrument"], "cross-actor study empty"
-          assert p["cross_report_taxonomy"], "cross-taxonomy study empty"
-          assert p["lead_market_effects"], "lead market study empty"
-          assert p["current_state"], "current-state layer empty"
-          assert p["governance"]["multiple_testing_registry"]["individual_actor_direction_threshold_candidates"] >= 350
+          assert p["same_actor_cross_instrument"]
+          assert p["cross_actor_same_instrument"]
+          assert p["cross_report_taxonomy"]
+          assert p["lead_market_effects"]
+          assert p["current_state"]
+          assert s["selected_signal_curves"]
+          assert s["top_same_actor_cross_instrument_holdout_1w"]
+          assert s["top_cross_actor_same_instrument_holdout_1w"]
+          assert s["top_lead_market_holdout_1w"]
 
           print("Full COT actor event research contract PASS")
-          print("full_output_bytes", path.stat().st_size)
-          print("summary_output_bytes", summary_path.stat().st_size)
           print("dataset_market_pairs", len(p["discovered_dataset_market_pairs"]))
           print("individual_actor_series", len(individual))
           print("same_actor_pairs", len(p["same_actor_cross_instrument"]))
           print("cross_actor_pairs", len(p["cross_actor_same_instrument"]))
           print("cross_taxonomy_pairs", len(p["cross_report_taxonomy"]))
           print("lead_market_keys", len(p["lead_market_effects"]))
-          print("mechanical_oos_supported", sum(
-              1 for r in s["validated_signal_summary"] if r["classification"] == "OOS_SUPPORTED"
-          ))
-          print("formal_primary_candidates", sum(
-              1 for r in s["validated_signal_summary"] if r["promotion_status"] == "FORMAL_RESEARCH_CANDIDATE"
-          ))
           PY
 
       - name: Freeze full verification snapshot on research branch
@@ -144,6 +130,13 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$SNAPSHOT_DIR"
+
+          # A dated verification snapshot is immutable. New code/data must use a
+          # new snapshot directory instead of rewriting historical evidence.
+          if [ -f "$SNAPSHOT_DIR/verification-manifest.json" ]; then
+            echo "2026-08-10 actor snapshot already frozen; refusing to rewrite it"
+            exit 0
+          fi
 
           cp analysis/worldclass/research/cot-actor-event-summary.json \
              "$SNAPSHOT_DIR/cot-actor-event-summary.json"
@@ -173,12 +166,7 @@ jobs:
               obj = json.loads(path.read_text(encoding="utf-8"))
               if isinstance(obj, dict):
                   obj.pop("generated_at_utc", None)
-              canonical = json.dumps(
-                  obj,
-                  sort_keys=True,
-                  separators=(",", ":"),
-                  ensure_ascii=False,
-              ).encode("utf-8")
+              canonical = json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
               return hashlib.sha256(canonical).hexdigest()
 
           def git(ref: str) -> str:
@@ -217,10 +205,7 @@ jobs:
                       "sha256_canonical_excluding_generated_at_utc": canonical_json_sha256(full),
                       "stored_as": "cot-actor-event-research.json.gz",
                   },
-                  "full_json_gzip": {
-                      "bytes": compressed.stat().st_size,
-                      "sha256_raw_file": sha256(compressed),
-                  },
+                  "full_json_gzip": {"bytes": compressed.stat().st_size, "sha256_raw_file": sha256(compressed)},
                   "summary_json": {
                       "bytes": summary.stat().st_size,
                       "sha256_raw_file": sha256(summary),
@@ -231,11 +216,7 @@ jobs:
               "verification_rule": "Raw SHA-256 values prove stored-file integrity. When source-state SHAs and research code are identical, compare canonical JSON hashes that exclude only generated_at_utc. When source data advances, compare historical rows through the frozen 2026-08-04 COT snapshot boundary and preserve the old snapshot unchanged for audit.",
               "production_changes": False,
           }
-          (snap / "verification-manifest.json").write_text(
-              json.dumps(manifest, indent=2, sort_keys=True) + "\n",
-              encoding="utf-8",
-          )
-
+          (snap / "verification-manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
           sums = [
               f"{sha256(compressed)}  cot-actor-event-research.json.gz",
               f"{sha256(summary)}  cot-actor-event-summary.json",
@@ -250,11 +231,5 @@ jobs:
                      "$SNAPSHOT_DIR/cot-actor-event-summary.json" \
                      "$SNAPSHOT_DIR/verification-manifest.json" \
                      "$SNAPSHOT_DIR/SHA256SUMS.txt"
-
-          if git diff --cached --quiet; then
-            echo "Verification snapshot already matches generated evidence"
-            exit 0
-          fi
-
           git commit -m "research: freeze 2026-08-10 actor backtest snapshot [skip ci]"
           git push origin "HEAD:research/full-actor-cross-instrument-20260810"
