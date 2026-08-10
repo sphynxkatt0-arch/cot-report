@@ -1,0 +1,159 @@
+name: COT actor predictive power CI
+
+on:
+  push:
+    branches:
+      - research/full-actor-cross-instrument-20260810
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "analysis/evaluate_cot_actor_predictive_power.py"
+      - "analysis/build_cot_actor_event_research.py"
+      - "analysis/evaluate_analog_robustness.py"
+      - "analysis/build_worldclass_backtest.py"
+      - ".github/workflows/cot-actor-predictive-power-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  predictive-power:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Syntax
+        run: python -m py_compile analysis/evaluate_cot_actor_predictive_power.py analysis/build_cot_actor_event_research.py
+
+      - name: Run predictive power study
+        working-directory: analysis
+        run: python evaluate_cot_actor_predictive_power.py
+
+      - name: Validate predictive power contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          full_path = Path("analysis/worldclass/research/cot-actor-predictive-power.json")
+          summary_path = Path("analysis/worldclass/research/cot-actor-predictive-power-summary.json")
+          assert full_path.is_file() and full_path.stat().st_size > 100_000
+          assert summary_path.is_file() and summary_path.stat().st_size > 10_000
+          p = json.loads(full_path.read_text(encoding="utf-8"))
+          s = json.loads(summary_path.read_text(encoding="utf-8"))
+
+          assert p["information_contract"]["lookahead_safe"] is True
+          assert p["information_contract"]["cot_snapshot"] == "Tuesday"
+          assert p["information_contract"]["public_availability"].startswith("Friday")
+          assert p["forecast_contract"]["discovery"] == "pre-2022"
+          assert p["forecast_contract"]["holdout"] == "2022+ untouched"
+          assert p["series_count"] == 59, p["series_count"]
+          assert p["metric_count"] == 59 * 3 * 15, p["metric_count"]
+          assert set(p["predictors"]) == {"delta_1w_net_oi_pp", "signed_change_percentile", "position_percentile"}
+          for horizon in ("monday","tuesday","wednesday","thursday","friday","1w","2w","3w","4w","6w","8w","13w","26w","39w","52w"):
+              assert horizon in p["horizons"]
+          assert s["top_1w"] and s["top_4w"] and s["top_13w"] and s["top_26w"]
+          assert all("oos_r2" in row and "holdout_spearman_rho" in row for row in s["top_metrics"])
+          print("COT actor predictive power contract PASS")
+          print("series_count", p["series_count"])
+          print("metric_count", p["metric_count"])
+          print("oos_predictive_count", s["oos_predictive_count"])
+          print("positive_oos_r2_weak_count", s["positive_oos_r2_weak_count"])
+          PY
+
+      - name: Freeze predictive-power verification snapshot
+        if: github.event_name == 'push' && github.ref == 'refs/heads/research/full-actor-cross-instrument-20260810'
+        env:
+          SNAPSHOT_DIR: analysis/worldclass/research/snapshots/2026-08-10-predictive-power
+        run: |
+          set -euo pipefail
+          mkdir -p "$SNAPSHOT_DIR"
+          if [ -f "$SNAPSHOT_DIR/verification-manifest.json" ]; then
+            echo "Predictive-power snapshot already frozen; leaving it immutable"
+            exit 0
+          fi
+
+          cp analysis/worldclass/research/cot-actor-predictive-power-summary.json \
+             "$SNAPSHOT_DIR/cot-actor-predictive-power-summary.json"
+          gzip -9 -c analysis/worldclass/research/cot-actor-predictive-power.json \
+             > "$SNAPSHOT_DIR/cot-actor-predictive-power.json.gz"
+
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          snap = Path(os.environ["SNAPSHOT_DIR"])
+          full = Path("analysis/worldclass/research/cot-actor-predictive-power.json")
+          summary = Path("analysis/worldclass/research/cot-actor-predictive-power-summary.json")
+          compressed = snap / "cot-actor-predictive-power.json.gz"
+
+          def sha256(path: Path) -> str:
+              h = hashlib.sha256()
+              with path.open("rb") as fh:
+                  for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+                      h.update(chunk)
+              return h.hexdigest()
+
+          def canonical_sha(path: Path) -> str:
+              obj = json.loads(path.read_text(encoding="utf-8"))
+              canonical = json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+              return hashlib.sha256(canonical).hexdigest()
+
+          def git(ref: str) -> str:
+              return subprocess.check_output(["git", "rev-parse", ref], text=True).strip()
+
+          payload = json.loads(full.read_text(encoding="utf-8"))
+          compact = json.loads(summary.read_text(encoding="utf-8"))
+          manifest = {
+              "snapshot_id": "cot-actor-predictive-power-2026-08-10",
+              "purpose": "Frozen OOS predictive-power and correlation verification baseline.",
+              "research_branch": "research/full-actor-cross-instrument-20260810",
+              "research_head_before_snapshot_commit": os.environ.get("GITHUB_SHA"),
+              "main_ref_sha": git("origin/main"),
+              "gh_pages_source_ref_sha": git("origin/gh-pages"),
+              "workflow_run_id": os.environ.get("GITHUB_RUN_ID"),
+              "information_contract": payload.get("information_contract"),
+              "forecast_contract": payload.get("forecast_contract"),
+              "predictors": payload.get("predictors"),
+              "horizons": payload.get("horizons"),
+              "series_count": payload.get("series_count"),
+              "metric_count": payload.get("metric_count"),
+              "oos_predictive_count": compact.get("oos_predictive_count"),
+              "positive_oos_r2_weak_count": compact.get("positive_oos_r2_weak_count"),
+              "files": {
+                  "full_json_uncompressed": {"bytes": full.stat().st_size, "sha256": sha256(full), "canonical_sha256": canonical_sha(full)},
+                  "full_json_gzip": {"bytes": compressed.stat().st_size, "sha256": sha256(compressed)},
+                  "summary_json": {"bytes": summary.stat().st_size, "sha256": sha256(summary), "canonical_sha256": canonical_sha(summary)},
+              },
+              "production_changes": False,
+          }
+          manifest_path = snap / "verification-manifest.json"
+          manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          sums = [
+              f"{sha256(compressed)}  cot-actor-predictive-power.json.gz",
+              f"{sha256(summary)}  cot-actor-predictive-power-summary.json",
+              f"{sha256(manifest_path)}  verification-manifest.json",
+          ]
+          (snap / "SHA256SUMS.txt").write_text("\n".join(sums) + "\n", encoding="utf-8")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$SNAPSHOT_DIR/cot-actor-predictive-power.json.gz" \
+                     "$SNAPSHOT_DIR/cot-actor-predictive-power-summary.json" \
+                     "$SNAPSHOT_DIR/verification-manifest.json" \
+                     "$SNAPSHOT_DIR/SHA256SUMS.txt"
+          git commit -m "research: freeze predictive-power snapshot [skip ci]"
+          git push origin "HEAD:research/full-actor-cross-instrument-20260810"
