@@ -26,12 +26,18 @@ import evaluate_analog_robustness as robustness
 
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "worldclass" / "research" / "cot-actor-event-research.json"
+SUMMARY_OUT = ROOT / "worldclass" / "research" / "cot-actor-event-summary.json"
 
 SUPPORTED_MARKETS = ("sp500", "nq", "vix", "rty", "dow", "gold", "silver")
 FINANCIAL_MARKETS = ("sp500", "nq", "rty", "dow", "vix")
 EQUITY_MARKETS = ("sp500", "nq", "rty", "dow")
 METAL_MARKETS = ("gold", "silver")
 DATASETS = ("tff", "legacy", "disaggregated")
+ACTOR_ROLES = {
+    "tff": {"dealer": "INTERMEDIARY_CONTEXT", "asset_mgr": "PRIMARY_DIRECTIONAL", "lev_money": "PRIMARY_DIRECTIONAL", "other_reportable": "SECONDARY_DIRECTIONAL", "non_reportable": "SECONDARY_DIRECTIONAL"},
+    "legacy": {"noncommercial": "PRIMARY_DIRECTIONAL", "commercial": "OPPOSITE_SIDE_CONTEXT", "total_reportable": "AGGREGATE_CONTEXT", "nonreportable": "SECONDARY_DIRECTIONAL"},
+    "disaggregated": {"producer_merchant": "HEDGER_CONTEXT", "swap_dealer": "INTERMEDIARY_CONTEXT", "managed_money": "PRIMARY_DIRECTIONAL", "other_reportable": "SECONDARY_DIRECTIONAL", "non_reportable": "SECONDARY_DIRECTIONAL"},
+}
 ACTORS = {
     "tff": {
         "dealer": "Dealer / Intermediary",
@@ -881,6 +887,8 @@ def current_state(all_events: dict[tuple[str, str, str], list[dict[str, Any]]], 
 def compact_validated_summary(individual: dict[str, Any]) -> list[dict[str, Any]]:
     rows = []
     for key, actor_result in individual.items():
+        dataset, market, actor = key.split(":", 2)
+        role = ACTOR_ROLES.get(dataset, {}).get(actor, "UNCLASSIFIED")
         for direction in ("ADD", "CUT"):
             result = actor_result.get(direction, {})
             verdict = result.get("holdout_validation", {})
@@ -889,19 +897,150 @@ def compact_validated_summary(individual: dict[str, Any]) -> list[dict[str, Any]
                 continue
             grid = result.get("threshold_grid", {})
             hold = (((grid.get(str(threshold)) or {}).get("holdout_2022_plus") or {}).get("1w") or {})
+            classification = verdict.get("classification")
+            if classification == "OOS_SUPPORTED" and role == "PRIMARY_DIRECTIONAL":
+                promotion_status = "FORMAL_RESEARCH_CANDIDATE"
+            elif classification == "OOS_SUPPORTED" and role == "SECONDARY_DIRECTIONAL":
+                promotion_status = "SECONDARY_RESEARCH_ONLY"
+            elif classification == "OOS_SUPPORTED":
+                promotion_status = "CONTEXT_ONLY_NOT_DIRECTIONAL"
+            else:
+                promotion_status = "NOT_SUPPORTED"
             rows.append({
                 "signal": f"{key}:{direction}",
+                "dataset": dataset,
+                "market": market,
+                "actor": actor,
+                "actor_role": role,
                 "threshold": threshold,
-                "classification": verdict.get("classification"),
+                "classification": classification,
+                "promotion_status": promotion_status,
                 "holdout_n_1w": hold.get("n", 0),
                 "holdout_edge_1w_pct": hold.get("edge_vs_unconditional_pct"),
                 "holdout_mean_1w_pct": hold.get("mean_pct"),
             })
     rows.sort(key=lambda r: (
-        0 if r["classification"] == "OOS_SUPPORTED" else 1,
+        0 if r["promotion_status"] == "FORMAL_RESEARCH_CANDIDATE" else
+        1 if r["promotion_status"] == "SECONDARY_RESEARCH_ONLY" else
+        2 if r["classification"] == "OOS_SUPPORTED" else 3,
         -(abs(float(r["holdout_edge_1w_pct"])) if r["holdout_edge_1w_pct"] is not None else 0),
     ))
     return rows
+
+
+def compact_metric(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: row.get(key)
+        for key in (
+            "n", "mean_pct", "median_pct", "positive_rate_pct",
+            "q25_pct", "q75_pct", "unconditional_mean_pct", "edge_vs_unconditional_pct",
+            "avg_drawdown_pct", "worst_drawdown_pct"
+        )
+        if key in row
+    }
+
+
+def compact_curve(block: dict[str, Any]) -> dict[str, Any]:
+    return {h: compact_metric(row) for h, row in block.items()}
+
+
+def flatten_pairwise_for_ranking(pairwise: dict[str, Any], horizon: str = "1w") -> list[dict[str, Any]]:
+    rows = []
+    for key, configs in pairwise.items():
+        for config, payload in configs.items():
+            for target_key, metrics in payload.items():
+                if not target_key.startswith("target_") or not isinstance(metrics, dict):
+                    continue
+                row = ((metrics.get("holdout_2022_plus") or {}).get(horizon) or {})
+                rows.append({
+                    "key": key,
+                    "configuration": config,
+                    "target": target_key.removeprefix("target_"),
+                    "n": row.get("n", 0),
+                    "edge_pct": row.get("edge_vs_unconditional_pct"),
+                    "mean_pct": row.get("mean_pct"),
+                })
+    return rows
+
+
+def flatten_simple_combinations(block: dict[str, Any], horizon: str = "1w") -> list[dict[str, Any]]:
+    rows = []
+    for key, configs in block.items():
+        for config, metrics in configs.items():
+            if not isinstance(metrics, dict):
+                continue
+            row = ((metrics.get("holdout_2022_plus") or {}).get(horizon) or {})
+            rows.append({
+                "key": key,
+                "configuration": config,
+                "n": row.get("n", 0),
+                "edge_pct": row.get("edge_vs_unconditional_pct"),
+                "mean_pct": row.get("mean_pct"),
+            })
+    return rows
+
+
+def flatten_breadth_for_ranking(block: dict[str, Any], horizon: str = "1w") -> list[dict[str, Any]]:
+    rows = []
+    for actor_key, buckets in block.items():
+        for bucket, targets in buckets.items():
+            for target, metrics in targets.items():
+                row = ((metrics.get("holdout_2022_plus") or {}).get(horizon) or {})
+                rows.append({
+                    "key": actor_key,
+                    "configuration": bucket,
+                    "target": target,
+                    "n": row.get("n", 0),
+                    "edge_pct": row.get("edge_vs_unconditional_pct"),
+                    "mean_pct": row.get("mean_pct"),
+                })
+    return rows
+
+
+def flatten_lead_for_ranking(block: dict[str, Any], horizon: str = "1w") -> list[dict[str, Any]]:
+    rows = []
+    for key, metrics in block.items():
+        row = ((metrics.get("holdout_2022_plus") or {}).get(horizon) or {})
+        rows.append({
+            "key": key,
+            "n": row.get("n", 0),
+            "edge_pct": row.get("edge_vs_unconditional_pct"),
+            "mean_pct": row.get("mean_pct"),
+        })
+    return rows
+
+
+def rank_combination_rows(rows: list[dict[str, Any]], min_n: int = MIN_COMBINATION_N, limit: int = 50) -> list[dict[str, Any]]:
+    eligible = [
+        row for row in rows
+        if int(row.get("n") or 0) >= min_n and finite(row.get("edge_pct")) is not None
+    ]
+    eligible.sort(key=lambda row: -abs(float(row["edge_pct"])))
+    return eligible[:limit]
+
+
+def selected_signal_curves(individual: dict[str, Any], summary: list[dict[str, Any]]) -> dict[str, Any]:
+    out = {}
+    for row in summary:
+        if row.get("classification") != "OOS_SUPPORTED":
+            continue
+        signal = row["signal"]
+        base_key, direction = signal.rsplit(":", 1)
+        threshold = row["threshold"]
+        actor_result = individual[base_key][direction]
+        grid_row = actor_result["threshold_grid"][str(threshold)]
+        out[signal] = {
+            "actor_role": row.get("actor_role"),
+            "promotion_status": row.get("promotion_status"),
+            "threshold": threshold,
+            "discovery_pre_2022": compact_curve(grid_row["discovery_pre_2022"]),
+            "holdout_2022_plus": compact_curve(grid_row["holdout_2022_plus"]),
+            "full_history": compact_curve(grid_row["full_history"]),
+            "era_stability": actor_result.get("era_stability_at_selected", {}),
+            "non_overlapping": actor_result.get("non_overlapping_at_selected", {}),
+            "bootstrap_edge_ci": actor_result.get("bootstrap_edge_ci_at_selected", {}),
+        }
+    return out
 
 
 def main() -> None:
@@ -946,6 +1085,12 @@ def main() -> None:
     cross_sectional = cross_sectional_rank_study(all_events)
     summary = compact_validated_summary(individual)
 
+    top_same_actor = rank_combination_rows(flatten_pairwise_for_ranking(pairwise))
+    top_breadth = rank_combination_rows(flatten_breadth_for_ranking(breadth))
+    top_cross_actor = rank_combination_rows(flatten_simple_combinations(cross_actor))
+    top_cross_taxonomy = rank_combination_rows(flatten_simple_combinations(taxonomy))
+    top_lead = rank_combination_rows(flatten_lead_for_ranking(lead))
+
     hypothesis_counts = {
         "individual_actor_direction_threshold_candidates": len(all_events) * 2 * len(THRESHOLDS),
         "same_actor_cross_instrument_pair_keys": len(pairwise),
@@ -980,6 +1125,7 @@ def main() -> None:
         },
         "markets": list(SUPPORTED_MARKETS),
         "dataset_actor_taxonomy": ACTORS,
+        "dataset_actor_roles": ACTOR_ROLES,
         "coverage": coverage,
         "discovered_dataset_market_pairs": discovered_pairs,
         "individual_actor_thresholds": individual,
@@ -1002,6 +1148,29 @@ def main() -> None:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(output, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
+    compact_output = {
+        "schema_version": 1,
+        "generated_at_utc": output["generated_at_utc"],
+        "study": output["study"],
+        "information_contract": output["information_contract"],
+        "governance": output["governance"],
+        "markets": output["markets"],
+        "dataset_actor_taxonomy": ACTORS,
+        "dataset_actor_roles": ACTOR_ROLES,
+        "coverage": output["coverage"],
+        "validated_signal_summary": summary,
+        "selected_signal_curves": selected_signal_curves(individual, summary),
+        "top_same_actor_cross_instrument_holdout_1w": top_same_actor,
+        "top_cross_instrument_breadth_holdout_1w": top_breadth,
+        "top_cross_actor_same_instrument_holdout_1w": top_cross_actor,
+        "top_cross_report_taxonomy_holdout_1w": top_cross_taxonomy,
+        "top_lead_market_holdout_1w": top_lead,
+        "cross_sectional_rank_test": cross_sectional,
+        "current_state": output["current_state"],
+        "evidence_labels": output["evidence_labels"],
+    }
+    SUMMARY_OUT.write_text(json.dumps(compact_output, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
     print("FULL COT ACTOR EVENT RESEARCH BEGIN")
     print(f"dataset_market_pairs={len(discovered_pairs)} actor_market_series={len(all_events)}")
     print(f"threshold_hypotheses={hypothesis_counts['individual_actor_direction_threshold_candidates']}")
@@ -1013,13 +1182,28 @@ def main() -> None:
     print("TOP OOS / DISCOVERY SIGNALS BY ABS HOLDOUT 1W EDGE")
     for row in summary[:40]:
         print(
-            f"{row['classification']:28s} {row['signal']:55s} "
+            f"{row['classification']:28s} {row['promotion_status']:28s} {row['signal']:55s} "
             f"P{row['threshold']:02d} N={int(row['holdout_n_1w'] or 0):3d} "
             f"edge={float(row['holdout_edge_1w_pct'] or 0):+7.3f}% "
             f"mean={float(row['holdout_mean_1w_pct'] or 0):+7.3f}%"
         )
+    def print_combo(title, rows):
+        print(title)
+        for row in rows[:15]:
+            target = f" target={row.get('target')}" if row.get("target") else ""
+            config = f" config={row.get('configuration')}" if row.get("configuration") else ""
+            print(
+                f"  {row['key']}{config}{target} N={int(row.get('n') or 0):3d} "
+                f"edge={float(row.get('edge_pct') or 0):+7.3f}% mean={float(row.get('mean_pct') or 0):+7.3f}%"
+            )
+    print_combo("TOP SAME-ACTOR CROSS-INSTRUMENT HOLDOUT 1W", top_same_actor)
+    print_combo("TOP RISK-BREADTH HOLDOUT 1W", top_breadth)
+    print_combo("TOP CROSS-ACTOR SAME-INSTRUMENT HOLDOUT 1W", top_cross_actor)
+    print_combo("TOP CROSS-TAXONOMY HOLDOUT 1W", top_cross_taxonomy)
+    print_combo("TOP LEAD-MARKET HOLDOUT 1W", top_lead)
     print("FULL COT ACTOR EVENT RESEARCH END")
     print(f"Wrote {OUT}")
+    print(f"Wrote {SUMMARY_OUT}")
 
 
 if __name__ == "__main__":
