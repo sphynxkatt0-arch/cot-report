@@ -12,7 +12,7 @@ on:
       - "analysis/config/cot_edge_promotion_policy.json"
       - "analysis/worldclass/cot-intelligence.js"
       - "analysis/worldclass/cot-intelligence.css"
-      - "analysis/e2e/cot-intelligence.spec.mjs"
+      - "analysis/e2e/worldclass-cot-intelligence.spec.mjs"
       - "analysis/test_cot_intelligence_dashboard.py"
       - "analysis/worldclass/research/snapshots/**"
       - ".github/workflows/cot-intelligence-dashboard-ci.yml"
@@ -46,8 +46,7 @@ jobs:
           cd ../2026-08-10 && sha256sum -c SHA256SUMS.txt
       - name: Restore full-history metals source if available
         shell: bash
-        run: |
-          git fetch origin gh-pages --depth=1 || true
+        run: git fetch origin gh-pages --depth=1 || true
       - name: Build governed research and compact COT Intelligence runtime
         run: |
           python analysis/build_worldclass_bundle.py
@@ -79,4 +78,4 @@ jobs:
           cat /tmp/cot-intel-http.log; exit 1
       - name: COT Intelligence Chromium + WCAG + mobile
         working-directory: analysis/e2e
-        run: npx playwright test cot-intelligence.spec.mjs --config=playwright.config.mjs
+        run: npx playwright test worldclass-cot-intelligence.spec.mjs --config=playwright.config.mjs
