@@ -56,9 +56,18 @@ jobs:
       - name: Build release-corrected raw position and OI predictive power
         working-directory: analysis
         run: python evaluate_cot_raw_position_oi_predictive_power_v2.py
-      - name: Rebuild current state with superseded-edge quarantine
+      - name: Rebuild current actor state
         working-directory: analysis
         run: python build_cot_current_state.py
+      - name: Build authoritative v2 evidence registry
+        working-directory: analysis
+        run: python build_cot_edge_registry_v2.py
+      - name: Select current release-corrected edges
+        working-directory: analysis
+        run: python build_cot_active_edges_v2.py
+      - name: Build old-vs-new correctness report
+        working-directory: analysis
+        run: python build_backtest_correctness_report.py
       - name: Post-build correctness validation
         working-directory: analysis
         run: python validate_cot_research_correctness.py
@@ -73,6 +82,10 @@ jobs:
           cp analysis/worldclass/research/analog-robustness.json "$SNAP/analog-robustness.json"
           cp analysis/worldclass/financial-weight-study.json "$SNAP/financial-weight-study.json"
           cp analysis/worldclass/metal-weight-study.json "$SNAP/metal-weight-study.json"
+          cp analysis/worldclass/cot-current-state.json "$SNAP/cot-current-state.json"
+          cp analysis/worldclass/cot-edge-registry-v2.json "$SNAP/cot-edge-registry-v2.json"
+          cp analysis/worldclass/cot-active-edges-v2.json "$SNAP/cot-active-edges-v2.json"
+          cp analysis/worldclass/research/BACKTEST_CORRECTNESS_REPORT.md "$SNAP/BACKTEST_CORRECTNESS_REPORT.md"
           cp analysis/worldclass/research/cot-actor-event-summary.json "$SNAP/cot-actor-event-summary.json"
           gzip -9 -c analysis/worldclass/research/cot-actor-event-research.json > "$SNAP/cot-actor-event-research.json.gz"
           cp analysis/worldclass/research/cot-threshold-inference-v2-summary.json "$SNAP/cot-threshold-inference-v2-summary.json"
@@ -89,7 +102,7 @@ jobs:
           for p in sorted(snap.iterdir()):
               if p.is_file(): files[p.name]={'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
           calendar=Path('analysis/reference/cftc_release_calendar.json')
-          manifest={'schema_version':1,'snapshot_id':'2026-08-11-release-corrected-v2','research_generation':'release-corrected-v2','information_contract_version':'cftc-public-availability-v2','release_calendar_sha256':hashlib.sha256(calendar.read_bytes()).hexdigest(),'supersedes_for_predictive_use':['2026-08-10','2026-08-10-predictive-power','2026-08-11-position-oi','2026-08-11-position-oi-all-actors'],'old_snapshots_modified':False,'files':files,'promotion_eligible':False,'note':'Candidate snapshot. Promotion remains disabled until timing, dependence/FDR, and old-vs-new comparison gates pass.'}
+          manifest={'schema_version':1,'snapshot_id':'2026-08-11-release-corrected-v2','research_generation':'release-corrected-v2','information_contract_version':'cftc-public-availability-v2','release_calendar_sha256':hashlib.sha256(calendar.read_bytes()).hexdigest(),'supersedes_for_predictive_use':['2026-08-10','2026-08-10-predictive-power','2026-08-11-position-oi','2026-08-11-position-oi-all-actors'],'old_snapshots_modified':False,'files':files,'promotion_eligible':False,'note':'Candidate snapshot. Promotion remains disabled until timing, dependence/FDR, old-vs-new comparison and prospective-live gates pass.'}
           (snap/'verification-manifest.json').write_text(json.dumps(manifest,indent=2,sort_keys=True)+'\n')
           PY
       - uses: actions/upload-artifact@v4
