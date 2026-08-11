@@ -1,0 +1,82 @@
+name: COT Intelligence dashboard CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "analysis/build_cot_current_state.py"
+      - "analysis/build_cot_edge_registry.py"
+      - "analysis/build_cot_active_edges.py"
+      - "analysis/build_worldclass_research_artifacts.py"
+      - "analysis/install_cot_intelligence_shell.py"
+      - "analysis/config/cot_edge_promotion_policy.json"
+      - "analysis/worldclass/cot-intelligence.js"
+      - "analysis/worldclass/cot-intelligence.css"
+      - "analysis/e2e/cot-intelligence.spec.mjs"
+      - "analysis/test_cot_intelligence_dashboard.py"
+      - "analysis/worldclass/research/snapshots/**"
+      - ".github/workflows/cot-intelligence-dashboard-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  intelligence-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: analysis/requirements.txt
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r analysis/requirements.txt
+      - name: Syntax and immutable snapshot verification
+        run: |
+          python -m py_compile analysis/build_cot_current_state.py analysis/build_cot_edge_registry.py analysis/build_cot_active_edges.py analysis/install_cot_intelligence_shell.py analysis/test_cot_intelligence_dashboard.py analysis/build_worldclass_research_artifacts.py
+          node --check analysis/worldclass/cot-intelligence.js
+          cd analysis/worldclass/research/snapshots/2026-08-11-position-oi-all-actors && sha256sum -c SHA256SUMS.txt
+          cd ../2026-08-10 && sha256sum -c SHA256SUMS.txt
+      - name: Restore full-history metals source if available
+        shell: bash
+        run: |
+          git fetch origin gh-pages --depth=1 || true
+      - name: Build governed research and compact COT Intelligence runtime
+        run: |
+          python analysis/build_worldclass_bundle.py
+          python analysis/build_worldclass_research_artifacts.py
+          test ! -e analysis/worldclass/.research-base.tmp.json
+      - name: Validate COT Intelligence data/UI contract
+        run: |
+          python analysis/test_cot_intelligence_dashboard.py
+          git diff --exit-code -- analysis/config/model_spec.json
+          test -s analysis/worldclass/cot-current-state.json
+          test -s analysis/worldclass/cot-edge-registry.json
+          test -s analysis/worldclass/cot-active-edges.json
+          for m in sp500 nq vix rty dow gold silver; do test -s "analysis/worldclass/cot-edge-details/${m}.json"; done
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+      - name: Install pinned browser test dependencies
+        working-directory: analysis/e2e
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        working-directory: analysis/e2e
+        run: npx playwright install --with-deps chromium
+      - name: Serve production tree
+        shell: bash
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 --directory analysis >/tmp/cot-intel-http.log 2>&1 &
+          echo $! >/tmp/cot-intel-http.pid
+          for _ in {1..30}; do curl -fsS http://127.0.0.1:4173/worldclass_dashboard.html >/dev/null && exit 0; sleep 1; done
+          cat /tmp/cot-intel-http.log; exit 1
+      - name: COT Intelligence Chromium + WCAG + mobile
+        working-directory: analysis/e2e
+        run: npx playwright test cot-intelligence.spec.mjs --config=playwright.config.mjs
