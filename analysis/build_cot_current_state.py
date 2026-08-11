@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import build_cot_actor_event_research as actor_research
+import build_cot_actor_event_research_release_corrected as actor_research
 import evaluate_analog_robustness as robustness
 from cftc_release_calendar import calendar_hash, release_record
 
@@ -77,7 +77,7 @@ def main() -> None:
                 }
     output={
         "schema_version":2,"research_generation":"release-corrected-runtime-v2","generated_at_utc":datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00","Z"),
-        "information_contract":{"cot_snapshot":"Tuesday","public_availability":"canonical CFTC release calendar at 15:30 America/New_York","release_anchor":"first market close on/after canonical public availability","release_calendar_hash":calendar_hash(),"current_percentiles":"expanding full-history only; no future report","lookahead_safe":True},
+        "information_contract":{"cot_snapshot":"CFTC as-of report date","public_availability":"canonical CFTC release calendar at 15:30 America/New_York","release_anchor":"first market close on/after canonical public availability","release_calendar_hash":calendar_hash(),"strict_release_alignment":True,"current_percentiles":"expanding full-history only; no future report","lookahead_safe":True},
         "research_threshold_snapshot":{"path":str(THRESHOLD_SNAPSHOT.relative_to(ROOT)).replace("\\","/"),"sha256":sha256(THRESHOLD_SNAPSHOT),"manifest_sha256":sha256(THRESHOLD_MANIFEST),"frozen":True,**threshold_status},
         "market_sources":market_meta,"actor_states":dict(sorted(states.items())),"production_model_changed":False,
     }
