@@ -11,6 +11,7 @@ from datetime import date
 from pathlib import Path
 
 import build_worldclass_backtest as backtest
+import cot_release_alignment_v2 as alignment
 from cftc_release_calendar import DEFAULT_CALENDAR, availability_at, release_date, release_record
 
 ROOT = Path(__file__).resolve().parent
@@ -35,7 +36,36 @@ def validate_known_release_fixtures() -> None:
         "2026-08-04": "2026-08-07",
     }
     for report, expected_release in fixtures.items():
+        record=release_record(report)
+        if record.get("research_eligible") is not True:
+            raise AssertionError(f"official release fixture unexpectedly ineligible: {report}")
         assert_equal(release_date(report).isoformat(), expected_release, f"release fixture {report}")
+
+
+def validate_unresolved_historical_policy() -> None:
+    # Thanksgiving 2024 is outside the CFTC's available rolling release archive
+    # and is not explicitly documented in our canonical exception table. We do
+    # not guess whether that report was Friday/Monday/etc; v2 must drop it.
+    thanksgiving = release_record("2024-11-26")
+    assert_equal(thanksgiving["availability_source_type"], "UNRESOLVED_HOLIDAY_SCHEDULE", "Thanksgiving unresolved source")
+    assert_equal(thanksgiving["research_eligible"], False, "Thanksgiving research eligibility")
+    assert_equal(thanksgiving["actual_release_date"], None, "Thanksgiving guessed release forbidden")
+    if not thanksgiving.get("report_week_holidays"):
+        raise AssertionError("holiday-week provenance missing")
+
+    # A non-Tuesday as-of date is also unsafe absent an explicit archived CFTC
+    # release record because the normal Tuesday->Friday schedule cannot be assumed.
+    shifted = release_record("2024-11-25")
+    assert_equal(shifted["availability_source_type"], "UNRESOLVED_NON_TUESDAY_REPORT_DATE", "non-Tuesday unresolved source")
+    assert_equal(shifted["research_eligible"], False, "non-Tuesday research eligibility")
+
+    prices=[
+        {"date":date(2024,11,29),"date_str":"2024-11-29","price":100.0},
+        {"date":date(2024,12,2),"date_str":"2024-12-02","price":101.0},
+    ]
+    # Legacy call shape = report + 3 days. No price may be selected at all.
+    if alignment.first_price_index_on_or_after(prices,date(2024,11,29)) is not None:
+        raise AssertionError("unresolved holiday week was assigned a guessed tradable price")
 
 
 def validate_timezone_fixtures() -> None:
@@ -61,12 +91,7 @@ def validate_calendar_schema() -> None:
 
 
 def validate_compatibility_price_alignment() -> None:
-    """Prove dependent legacy-call-shape modules inherit corrected availability.
-
-    Existing newer research modules historically called the shared helper with
-    a nominal `report + 3 days` target. The compatibility bridge must convert
-    that nominal target to the canonical release before selecting any price.
-    """
+    """Prove dependent legacy-call-shape modules inherit corrected availability."""
     prices = [
         {"date": date(2025, 10, 3), "date_str": "2025-10-03", "price": 100.0},
         {"date": date(2025, 11, 18), "date_str": "2025-11-18", "price": 105.0},
@@ -77,6 +102,8 @@ def validate_compatibility_price_alignment() -> None:
     # CFTC publication was 2025-11-19. A lookahead implementation would return 0.
     index = backtest.first_price_index_on_or_after(prices, date(2025, 10, 3))
     assert_equal(index, 2, "shutdown compatibility price anchor")
+    strict_index=alignment.first_price_index_on_or_after(prices,date(2025,10,3))
+    assert_equal(strict_index,2,"strict shutdown compatibility price anchor")
     if index is None or prices[index]["date"] < release_date("2025-09-30"):
         raise AssertionError("shared compatibility bridge selected a pre-release price")
 
@@ -84,7 +111,7 @@ def validate_compatibility_price_alignment() -> None:
         {"date": date(2026, 8, 7), "date_str": "2026-08-07", "price": 200.0},
         {"date": date(2026, 8, 10), "date_str": "2026-08-10", "price": 201.0},
     ]
-    normal_index = backtest.first_price_index_on_or_after(normal_prices, date(2026, 8, 7))
+    normal_index = alignment.first_price_index_on_or_after(normal_prices, date(2026, 8, 7))
     assert_equal(normal_index, 0, "normal Friday compatibility price anchor")
 
 
@@ -93,7 +120,6 @@ def validate_release_corrected_backtest_if_present() -> None:
         return
     payload = json.loads(BACKTEST.read_text(encoding="utf-8"))
     if payload.get("research_generation") != "release-corrected-v2":
-        # Old frozen/runtime artifacts are intentionally preserved until rebuilt.
         return
     if payload.get("information_contract_version") != "cftc-public-availability-v2":
         raise AssertionError("release-corrected backtest missing information contract version")
@@ -112,6 +138,7 @@ def validate_release_corrected_backtest_if_present() -> None:
 def main() -> None:
     validate_calendar_schema()
     validate_known_release_fixtures()
+    validate_unresolved_historical_policy()
     validate_timezone_fixtures()
     validate_compatibility_price_alignment()
     validate_release_corrected_backtest_if_present()
