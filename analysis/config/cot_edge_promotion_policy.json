@@ -7,43 +7,45 @@
   },
   "eligible_actor_roles": ["PRIMARY_DIRECTIONAL"],
   "minimum_independent_n": {
-    "13w": 15,
-    "1w": 60,
-    "26w": 15,
-    "2w": 45,
-    "39w": 15,
-    "3w": 40,
-    "4w": 30,
-    "52w": 15,
-    "6w": 25,
-    "8w": 20,
-    "friday": 60,
-    "monday": 60,
-    "thursday": 60,
-    "tuesday": 60,
-    "wednesday": 60
+    "monday": 60, "tuesday": 60, "wednesday": 60, "thursday": 60, "friday": 60,
+    "1w": 60, "2w": 45, "3w": 40, "4w": 30, "6w": 25, "8w": 20,
+    "13w": 15, "26w": 15, "39w": 15, "52w": 15
   },
   "notes": [
     "A correlation coefficient is not causal proof.",
     "A percentage-point edge is not a predicted absolute return.",
     "Long-horizon results with independent N < 15 are never promotion eligible.",
+    "A threshold event and a continuous predictor have different historical qualification rules.",
     "Cross-market and cross-actor combination discoveries require a separately preregistered confirmation study before eligibility."
   ],
   "policy_id": "cot-edge-promotion-v1",
   "purpose": "Define eligibility for human governance review. This policy never changes production weights automatically.",
   "required_historical_checks": {
-    "lookahead_safe_friday_release_anchor": true,
-    "no_context_actor_promotion": true,
-    "non_overlapping_direction_confirmation": true,
-    "positive_oos_r2": true,
-    "pre_specified_predictor_family": true,
-    "threshold_neighbors_consistent_when_threshold_based": true
+    "common": {
+      "lookahead_safe_friday_release_anchor": true,
+      "no_context_actor_promotion": true,
+      "non_overlapping_direction_confirmation": true
+    },
+    "continuous": {
+      "positive_oos_r2": true,
+      "pre_specified_predictor_family": true,
+      "multiple_testing_survival": true
+    },
+    "threshold": {
+      "fixed_candidate_percentile_grid": true,
+      "chronological_holdout_confirmation": true,
+      "threshold_neighbors_consistent": true,
+      "no_same_sample_threshold_optimization": true
+    }
   },
   "required_live_checks": {
-    "13w": {"matured_signals": 12, "same_direction_as_historical": true},
     "1w": {"matured_signals": 30, "same_direction_as_historical": true},
-    "4w": {"matured_signals": 20, "same_direction_as_historical": true}
+    "4w": {"matured_signals": 20, "same_direction_as_historical": true},
+    "13w": {"matured_signals": 12, "same_direction_as_historical": true}
   },
-  "required_research_status": ["GLOBAL_FDR", "FAMILY_FDR"],
-  "schema_version": 1
+  "required_research_status": {
+    "continuous": ["GLOBAL_FDR", "FAMILY_FDR"],
+    "threshold": ["OOS_SUPPORTED"]
+  },
+  "schema_version": 2
 }
