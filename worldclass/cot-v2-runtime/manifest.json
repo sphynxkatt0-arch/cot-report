@@ -1,0 +1,22 @@
+{
+  "schema_version": 2,
+  "research_generation": "release-corrected-v2",
+  "certification": "independent_replay_certified",
+  "source_main_commit": "4dbb565ba87e3b45e60166de46d56b7b5e57f78e",
+  "snapshot_id": "2026-08-11-release-corrected-v2",
+  "snapshot_base_url": "https://cot-v2-final-certification.vercel.app/snapshot/",
+  "runtime_policy": "cross-origin certified snapshot; SHA-256 verified; fail closed; no stale COT evidence fallback",
+  "files": {
+    "cot-active-edges-build-time-v2.json": {"bytes":77741,"sha256":"e205bd07ac6e35c8abc120264e013b73656e60ba6d8d5918b6ab1e1480e923d2"},
+    "cot-edge-registry-v2.json": {"bytes":492041,"sha256":"73d82c7d1ec0fb40a90346fd01c5e7f3ed06edf79689a6e4bb19a1441e39e67c"},
+    "cot-edge-details-v2/sp500.json": {"bytes":2865540,"sha256":"991cfefcea5863745aa000a1b23aed69885767d19880448eb1c46fa4b1e8f8ce"},
+    "cot-edge-details-v2/nq.json": {"bytes":2814076,"sha256":"bb526a2daf12f441e7dda032915a82c1b1e68157b20be63c1033f0702e851bc2"},
+    "cot-edge-details-v2/vix.json": {"bytes":2817335,"sha256":"3f0a381dd2587d954b6ae5825c27795eac434c0f06615d346e8edecf6ddf6308"},
+    "cot-edge-details-v2/rty.json": {"bytes":2173055,"sha256":"4d7507e396e36f9f78bd2fcfe5fd9d6ff5601d8cb765f1377d2f12cdb8837263"},
+    "cot-edge-details-v2/dow.json": {"bytes":2837046,"sha256":"35a6a980e1bb1c01e1b98b9644d4a96d7e36f3cc57e908e24f60cf7a46011ff7"},
+    "cot-edge-details-v2/gold.json": {"bytes":2847750,"sha256":"ab7e134cae9a54ec962b79a029c02f4d337aa01e423ccd1dcc5319325b317453"},
+    "cot-edge-details-v2/silver.json": {"bytes":1616837,"sha256":"921d523af015254a3cf5d6cb91b90807b47e6fd6a89f12fbd8120fc4b703e424"}
+  },
+  "production_model_changed": false,
+  "automatic_promotion_allowed": false
+}
