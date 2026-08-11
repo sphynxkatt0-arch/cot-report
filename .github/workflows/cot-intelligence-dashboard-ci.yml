@@ -12,6 +12,7 @@ on:
       - 'analysis/worldclass/cot-intelligence*'
       - 'analysis/worldclass/current-edge-*'
       - 'analysis/worldclass/mobile-ux.css'
+      - 'analysis/worldclass/mobile-ux-runtime.js'
       - 'analysis/e2e/worldclass-cot-intelligence.spec.mjs'
       - 'analysis/test_cot_intelligence_dashboard.py'
       - 'analysis/worldclass/research/snapshots/**'
@@ -38,6 +39,7 @@ jobs:
           node --check analysis/worldclass/cot-intelligence.js
           node --check analysis/worldclass/current-edge-model.js
           node --check analysis/worldclass/current-edge-command.js
+          node --check analysis/worldclass/mobile-ux-runtime.js
           for snap in 2026-08-11-position-oi-all-actors 2026-08-10; do (cd "analysis/worldclass/research/snapshots/$snap" && sha256sum -c SHA256SUMS.txt); done
           V2=analysis/worldclass/research/snapshots/2026-08-11-release-corrected-v2
           if [ -f "$V2/SHA256SUMS.txt" ]; then (cd "$V2" && sha256sum -c SHA256SUMS.txt); fi
