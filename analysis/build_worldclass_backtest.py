@@ -1,27 +1,22 @@
 #!/usr/bin/env python3
-"""Build walk-forward COT backtests and current forward expectancy for v2.
+"""Build release-corrected walk-forward COT backtests and forward expectancy.
 
-The dashboard's transparent 0-100 COT score is defined by the canonical
-`analysis/config/model_spec.json`. Historical scores are expanding-window
-percentile scores (no future data is used) and returns are anchored to the
-first market close on/after the Friday COT release target (Tuesday report date
-+ 3 calendar days).
-
-Output:
-  analysis/worldclass/backtest.json
+Historical scores use expanding-window percentiles. Outcomes are anchored to
+CFTC public availability through the canonical release calendar; no study may
+assume report_date + 3 calendar days is universally valid.
 """
-
 from __future__ import annotations
 
 import json
 import math
 import statistics
-from bisect import bisect_left
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import model_spec as model_cfg
+from cftc_release_calendar import calendar_hash, release_record
+from cot_research_core import finite, horizon_result as core_horizon_result, parse_date, percentile_rank, price_records, release_aligned_entry
 
 ROOT = Path(__file__).resolve().parent
 WORLDCLASS = ROOT / "worldclass"
@@ -40,39 +35,9 @@ HORIZONS = model_cfg.horizons(MODEL_SPEC)
 SCORE_WEIGHTS = model_cfg.score_weights(MODEL_SPEC)
 
 MARKET_LABELS = {
-    "sp500": "S&P 500",
-    "nq": "Nasdaq-100",
-    "vix": "VIX Futures",
-    "rty": "Russell 2000",
-    "dow": "Dow Jones",
-    "gold": "Gold",
-    "silver": "Silver",
+    "sp500": "S&P 500", "nq": "Nasdaq-100", "vix": "VIX Futures",
+    "rty": "Russell 2000", "dow": "Dow Jones", "gold": "Gold", "silver": "Silver",
 }
-
-
-def finite(value: Any) -> float | None:
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return None
-    return number if math.isfinite(number) else None
-
-
-def parse_date(value: Any) -> date | None:
-    text = str(value or "")[:10]
-    try:
-        return date.fromisoformat(text)
-    except ValueError:
-        return None
-
-
-def percentile_rank(values: list[float], current: float) -> float | None:
-    clean = sorted(value for value in values if math.isfinite(value))
-    if not clean:
-        return None
-    less = bisect_left(clean, current)
-    equal = sum(1 for value in clean if value == current)
-    return (less + max(equal, 1) / 2.0) / len(clean) * 100.0
 
 
 def score_at(rows: list[dict[str, Any]], index: int, dataset: str, categories: list[str]) -> float | None:
@@ -88,8 +53,7 @@ def score_at(rows: list[dict[str, Any]], index: int, dataset: str, categories: l
         if current is None:
             continue
         history = [finite(row.get(field)) for row in rows[: index + 1]]
-        clean = [value for value in history if value is not None]
-        rank = percentile_rank(clean, current)
+        rank = percentile_rank([v for v in history if v is not None], current)
         if rank is None:
             continue
         centered = (rank - 50.0) / 50.0
@@ -100,43 +64,16 @@ def score_at(rows: list[dict[str, Any]], index: int, dataset: str, categories: l
     return max(0.0, min(100.0, 50.0 + 50.0 * numerator / denominator))
 
 
-def price_records(payload: Any) -> list[dict[str, Any]]:
-    if isinstance(payload, dict):
-        rows = payload.get("records") or []
-    elif isinstance(payload, list):
-        rows = payload
-    else:
-        rows = []
-    normalized = []
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        d = parse_date(row.get("date"))
-        p = finite(row.get("price"))
-        if d is not None and p is not None:
-            normalized.append({"date": d, "date_str": d.isoformat(), "price": p})
-    normalized.sort(key=lambda row: row["date"])
-    return normalized
-
-
-def first_price_index_on_or_after(prices: list[dict[str, Any]], target: date) -> int | None:
-    dates = [row["date"] for row in prices]
-    index = bisect_left(dates, target)
-    return index if index < len(prices) else None
-
-
 def horizon_result(prices: list[dict[str, Any]], start_index: int, steps: int) -> dict[str, float] | None:
-    end_index = start_index + steps
-    if end_index >= len(prices):
+    result = core_horizon_result(prices, start_index, steps)
+    if result is None:
         return None
-    start = prices[start_index]["price"]
-    end = prices[end_index]["price"]
-    if start == 0:
-        return None
-    window = [row["price"] for row in prices[start_index : end_index + 1]]
     return {
-        "return_pct": (end / start - 1.0) * 100.0,
-        "drawdown_pct": (min(window) / start - 1.0) * 100.0,
+        "return_pct": float(result["return_pct"]),
+        "drawdown_pct": float(result["max_adverse_excursion_pct"]),
+        "max_favorable_excursion_pct": float(result["max_favorable_excursion_pct"]),
+        "exit_date": str(result["exit_date"]),
+        "exit_price": float(result["exit_price"]),
     }
 
 
@@ -159,9 +96,7 @@ def weighted_mean(values: list[float], weights: list[float]) -> float | None:
     if not values or not weights or len(values) != len(weights):
         return None
     total_weight = sum(weights)
-    if total_weight <= 0:
-        return None
-    return sum(value * weight for value, weight in zip(values, weights)) / total_weight
+    return None if total_weight <= 0 else sum(v * w for v, w in zip(values, weights)) / total_weight
 
 
 def confidence_label(n: int, avg_distance: float | None, dispersion: float | None) -> str:
@@ -176,12 +111,18 @@ def confidence_label(n: int, avg_distance: float | None, dispersion: float | Non
     return "Low"
 
 
-def build_dataset_backtest(
-    market: str,
-    dataset: str,
-    payload: dict[str, Any],
-    prices_payload: Any,
-) -> dict[str, Any] | None:
+def independent_count(rows: list[dict[str, Any]], horizon_steps: int) -> int:
+    selected = 0
+    last_end = -1
+    for row in sorted(rows, key=lambda r: int(r["signal_index"])):
+        start = int(row["signal_index"])
+        if start > last_end:
+            selected += 1
+            last_end = start + horizon_steps
+    return selected
+
+
+def build_dataset_backtest(market: str, dataset: str, payload: dict[str, Any], prices_payload: Any) -> dict[str, Any] | None:
     rows = [row for row in (payload.get("records") or []) if isinstance(row, dict) and parse_date(row.get("date"))]
     rows.sort(key=lambda row: str(row.get("date")))
     categories = list((payload.get("categories") or {}).keys())
@@ -199,10 +140,10 @@ def build_dataset_backtest(
         report_date = parse_date(rows[index].get("date"))
         if score is None or report_date is None:
             continue
-        release_target = report_date + timedelta(days=3)
-        signal_index = first_price_index_on_or_after(prices, release_target)
-        if signal_index is None:
+        entry = release_aligned_entry(prices, report_date)
+        if entry is None:
             continue
+        signal_index = int(entry["index"])
         prior_index = max(MIN_LOOKBACK_WEEKS - 1, index - 4)
         prior_score = scores[prior_index]
         score_delta_4w = score - prior_score if prior_score is not None and prior_index != index else 0.0
@@ -213,9 +154,15 @@ def build_dataset_backtest(
                 horizons[label] = result
         score_rows.append({
             "report_date": report_date.isoformat(),
-            "release_target_date": release_target.isoformat(),
-            "signal_date": prices[signal_index]["date_str"],
-            "signal_price": prices[signal_index]["price"],
+            "availability_at": entry["availability_at"],
+            "availability_source": entry["availability_source"],
+            "availability_confidence": entry["availability_confidence"],
+            "release_calendar_version": entry["release_calendar_version"],
+            "release_calendar_hash": entry["release_calendar_hash"],
+            "release_target_date": release_record(report_date)["actual_release_date"],
+            "signal_date": entry["entry_date"],
+            "signal_price": entry["entry_price"],
+            "signal_index": signal_index,
             "score": score,
             "score_delta_4w": score_delta_4w,
             "horizons": horizons,
@@ -234,10 +181,10 @@ def build_dataset_backtest(
     current_report_date = parse_date(rows[current_index].get("date"))
 
     summaries: dict[str, Any] = {}
-    for horizon in HORIZONS:
+    for horizon, steps in HORIZONS.items():
         realized = [row for row in score_rows if horizon in row["horizons"] and row["report_date"] != rows[current_index].get("date")]
         unconditional_returns = [row["horizons"][horizon]["return_pct"] for row in realized]
-        ranked = []
+        ranked: list[tuple[float, dict[str, Any]]] = []
         for row in realized:
             distance = abs(row["score"] - current_score) + ANALOG_MOMENTUM_WEIGHT * abs(row["score_delta_4w"] - current_delta)
             ranked.append((distance, row))
@@ -265,31 +212,26 @@ def build_dataset_backtest(
             "unconditional_return_pct": round(unconditional, 4) if unconditional is not None else None,
             "edge_vs_unconditional_pct": round(expected - unconditional, 4) if expected is not None and unconditional is not None else None,
             "observations": len(returns),
+            "independent_observations": independent_count([row for _, row in analogs], steps),
             "avg_analog_distance": round(avg_distance, 3) if avg_distance is not None else None,
             "confidence": confidence_label(len(returns), avg_distance, dispersion),
         }
 
-    complete_analogs = []
+    complete_analogs: list[tuple[float, dict[str, Any]]] = []
     for row in score_rows:
         if row["report_date"] == rows[current_index].get("date"):
             continue
         distance = abs(row["score"] - current_score) + ANALOG_MOMENTUM_WEIGHT * abs(row["score_delta_4w"] - current_delta)
         complete_analogs.append((distance, row))
     complete_analogs.sort(key=lambda item: (item[0], item[1]["report_date"]))
-    analog_display = []
-    for distance, row in complete_analogs[:ANALOG_DISPLAY_COUNT]:
-        analog_display.append({
-            "report_date": row["report_date"],
-            "signal_date": row["signal_date"],
-            "score": round(row["score"], 2),
-            "score_delta_4w": round(row["score_delta_4w"], 2),
-            "distance": round(distance, 3),
-            "returns": {
-                horizon: round(result["return_pct"], 3)
-                for horizon, result in row["horizons"].items()
-            },
-        })
+    analog_display = [{
+        "report_date": row["report_date"], "availability_at": row["availability_at"],
+        "signal_date": row["signal_date"], "score": round(row["score"], 2),
+        "score_delta_4w": round(row["score_delta_4w"], 2), "distance": round(distance, 3),
+        "returns": {h: round(result["return_pct"], 3) for h, result in row["horizons"].items()},
+    } for distance, row in complete_analogs[:ANALOG_DISPLAY_COUNT]]
 
+    current_release = release_record(current_report_date) if current_report_date else None
     return {
         "market": market,
         "market_label": MARKET_LABELS.get(market, market),
@@ -300,14 +242,18 @@ def build_dataset_backtest(
         "model_spec_hash": MODEL_SPEC_HASH,
         "methodology": {
             "minimum_lookback_weeks": MIN_LOOKBACK_WEEKS,
-            "release_anchor": "First available close on/after report date + 3 calendar days",
+            "release_anchor": "First available daily close on/after canonical CFTC public availability",
+            "release_calendar_aware": True,
+            "release_calendar_hash": calendar_hash(),
             "analog_count": ANALOG_COUNT,
             "analog_distance": f"abs(score-current) + {ANALOG_MOMENTUM_WEIGHT:g}*abs(4w score momentum-current)",
             "lookahead_safe": True,
         },
         "current": {
             "report_date": current_report_date.isoformat() if current_report_date else str(rows[current_index].get("date") or ""),
-            "release_target_date": (current_report_date + timedelta(days=3)).isoformat() if current_report_date else None,
+            "release_target_date": current_release["actual_release_date"] if current_release else None,
+            "availability_at": current_release["availability_at_utc"] if current_release else None,
+            "availability_source": current_release["availability_source_type"] if current_release else None,
             "score": round(current_score, 3),
             "score_delta_4w": round(current_delta, 3),
         },
@@ -323,14 +269,16 @@ def build() -> dict[str, Any]:
     base = json.loads(BASE.read_text(encoding="utf-8"))
     cot_data = base.get("COT_DATA") or {}
     prices = base.get("PRICE_DATA") or {}
-
     if METALS.exists():
         metals = json.loads(METALS.read_text(encoding="utf-8"))
         cot_data.setdefault("disaggregated", {}).update(metals.get("markets") or {})
         prices.update(metals.get("prices") or {})
 
     result: dict[str, Any] = {
-        "schema_version": 2,
+        "schema_version": 3,
+        "research_generation": "release-corrected-v2",
+        "information_contract_version": "cftc-public-availability-v2",
+        "release_calendar_hash": calendar_hash(),
         "generated_at_utc": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "model_version": MODEL_VERSION,
         "model_spec_hash": MODEL_SPEC_HASH,
@@ -347,8 +295,7 @@ def build() -> dict[str, Any]:
                 continue
             result["markets"].setdefault(market, {"label": MARKET_LABELS.get(market, market), "datasets": {}})
             result["markets"][market]["datasets"][dataset] = built
-            print(f"Backtest {market}/{dataset}: {built['historical_signal_count']} walk-forward signals")
-
+            print(f"Backtest {market}/{dataset}: {built['historical_signal_count']} release-corrected signals")
     if not result["markets"]:
         raise RuntimeError("No worldclass backtests could be built")
     return result
