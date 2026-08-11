@@ -31,6 +31,7 @@ jobs:
             worldclass/cot-cross-market.json \
             worldclass/cot-intelligence.js \
             worldclass/cot-intelligence.css \
+            worldclass/cot-intelligence-light.css \
             worldclass/cot-edge-details/sp500.json \
             worldclass/cot-edge-details/nq.json \
             worldclass/cot-edge-details/vix.json \
@@ -59,7 +60,8 @@ jobs:
               && curl -fsS --max-time 15 "${base}/worldclass/cot-edge-registry.json?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/registry.json \
               && curl -fsS --max-time 15 "${base}/worldclass/cot-active-edges.json?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/active.json \
               && curl -fsS --max-time 15 "${base}/worldclass/cot-cross-market.json?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/cross.json \
-              && curl -fsS --max-time 15 "${base}/worldclass/cot-intelligence.js?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/intelligence.js; then
+              && curl -fsS --max-time 15 "${base}/worldclass/cot-intelligence.js?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/intelligence.js \
+              && curl -fsS --max-time 15 "${base}/worldclass/cot-intelligence-light.css?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/intelligence-light.css; then
               if python - <<'PY'
           import json
           from pathlib import Path
@@ -70,8 +72,14 @@ jobs:
           active=json.loads((root/'active.json').read_text())
           cross=json.loads((root/'cross.json').read_text())
           js=(root/'intelligence.js').read_text()
+          light=(root/'intelligence-light.css').read_text()
           assert 'data-cot-intelligence-asset="css"' in html
+          assert 'data-cot-intelligence-asset="light-css"' in html
           assert 'data-cot-intelligence-asset="js"' in html
+          assert 'cot-intelligence-light.css' in html
+          assert 'html[data-theme="light"] .cot-intel' in light
+          assert 'html[data-theme="light"] .cot-now-card' in light
+          assert 'background: #ffffff' in light
           assert len(current.get('actor_states') or {}) == 59
           assert registry.get('research_counts',{}).get('actor_horizon_cells') == 885
           assert registry.get('research_counts',{}).get('market_oi_horizon_cells') == 105
