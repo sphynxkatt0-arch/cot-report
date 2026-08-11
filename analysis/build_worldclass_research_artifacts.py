@@ -76,7 +76,7 @@ def main()->None:
     finally:
         cot_backtest.BASE=original_cot_base;cot_backtest.METALS=original_cot_metals;regime_backtest.BASE=original_regime_base;regime_backtest.METALS=original_regime_metals;TEMP_RESEARCH_BASE.unlink(missing_ok=True)
     atomic_write(RUNTIME_METALS,metals_builder.runtime_from_research(full_metals))
-    v2_runtime.main();cot_shell.main();validate_cot_intelligence_outputs()
+    v2_runtime.main();cot_shell.main();v2_runtime.install_copy_asset();validate_cot_intelligence_outputs()
     print(f'Saved current release-corrected COT backtest: {cot_backtest.OUT} ({cot_backtest.OUT.stat().st_size:,} bytes)')
     print(f'Saved current release-corrected regime backtest: {regime_backtest.OUT} ({regime_backtest.OUT.stat().st_size:,} bytes)')
     print('COT Intelligence frozen-v2 runtime contract PASS')
