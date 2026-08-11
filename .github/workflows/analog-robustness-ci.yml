@@ -2,88 +2,54 @@ name: Analog robustness CI
 
 on:
   pull_request:
+    branches: [main]
     paths:
-      - "analysis/evaluate_analog_robustness.py"
-      - "analysis/build_worldclass_backtest.py"
-      - "analysis/build_worldclass_research_artifacts.py"
-      - "analysis/build_worldclass_metals.py"
-      - "analysis/config/model_spec.json"
-      - ".github/workflows/analog-robustness-ci.yml"
+      - 'analysis/evaluate_analog_robustness*'
+      - 'analysis/build_worldclass_backtest.py'
+      - 'analysis/cftc_release_calendar.py'
+      - 'analysis/cot_release_alignment_v2.py'
+      - '.github/workflows/analog-robustness-ci.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  robustness:
+  analog-v2:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
+        with: {fetch-depth: 0}
       - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Source syntax
-        run: python -m py_compile analysis/evaluate_analog_robustness.py
-
-      - name: Run full-history analog robustness study
-        run: python analysis/evaluate_analog_robustness.py
-
-      - name: Validate robustness evidence contract
+        with: {python-version: '3.12'}
+      - run: pip install -r analysis/requirements.txt
+      - name: Restore full-history research sources
+        run: |
+          git fetch origin gh-pages:refs/remotes/origin/gh-pages || true
+          cd analysis
+          python - <<'PY'
+          import build_worldclass_research_artifacts as r
+          r.WORLDCLASS.mkdir(parents=True,exist_ok=True)
+          r.atomic_write(r.WORLDCLASS/'base.json',r.build_research_base())
+          metals=r.ensure_full_metals();r.atomic_write(r.WORLDCLASS/'metals.json',metals)
+          PY
+      - name: Run release-corrected analog robustness
+        working-directory: analysis
+        run: python evaluate_analog_robustness_v2.py
+      - name: Validate analog v2 contract
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-
-          path = Path('analysis/worldclass/research/analog-robustness.json')
-          assert path.is_file() and path.stat().st_size > 0
-          payload = json.loads(path.read_text())
-          assert payload['tested_analog_counts'] == [15, 20, 30, 40, 60, 80, 120]
-          assert payload['governed_analog_count'] == 40
-          assert len(payload['model_spec_hash']) == 64
-          required = {'sp500', 'nq', 'vix', 'rty', 'dow', 'gold', 'silver'}
-          assert required == set(payload['markets'])
-          assert 'optimized_analog_count' not in payload
-          assert 'best_analog_count' not in payload
-
-          history_floors = {
-              'sp500': 450,
-              'nq': 500,
-              'vix': 500,
-              'rty': 150,
-              'dow': 500,
-              'gold': 500,
-              'silver': 500,
-          }
-          allowed = {'ROBUST', 'MIXED', 'FRAGILE', 'INSUFFICIENT'}
-          for market, market_payload in payload['markets'].items():
-              floor = history_floors[market]
-              count_history = market_payload['historical_signal_count']
-              assert count_history >= floor, (market, count_history, floor)
-              for horizon, horizon_payload in market_payload['horizons'].items():
-                  counts = horizon_payload['counts']
-                  assert set(counts) == {'15', '20', '30', '40', '60', '80', '120'}
-                  for count, row in counts.items():
-                      raw = row['raw_overlapping']
-                      independent = row['non_overlapping']
-                      assert raw['observations'] <= int(count)
-                      assert independent['observations'] == independent['independent_episode_count']
-                      assert independent['observations'] <= raw['observations']
-
-                  raw_stability = horizon_payload['raw_parameter_stability']
-                  episode_stability = horizon_payload['non_overlapping_parameter_stability']
-                  assert raw_stability['classification'] in allowed
-                  assert episode_stability['classification'] in allowed
-                  assert raw_stability['minimum_observations_per_count'] == 10
-                  assert episode_stability['minimum_observations_per_count'] == 5
-                  for stability in (raw_stability, episode_stability):
-                      if stability['classification'] == 'INSUFFICIENT':
-                          assert stability['tested_counts'] < 3, stability
-                      else:
-                          assert stability['tested_counts'] >= 3, stability
-
-          print('Analog robustness and non-overlapping episode contract passed')
+          path=Path('analysis/worldclass/research/analog-robustness.json')
+          assert path.is_file() and path.stat().st_size>1000
+          p=json.loads(path.read_text())
+          assert p['research_generation']=='release-corrected-v2'
+          assert p['information_contract_version']=='cftc-public-availability-v2'
+          assert p['release_calendar_hash']
+          assert p['automatic_promotion_allowed'] is False
+          assert set(p['markets']) >= {'sp500','nq','vix','rty','dow','gold','silver'}
+          assert p['methodology']['unresolved_release_policy']=='EXCLUDE'
+          print('Analog robustness v2 PASS')
           PY

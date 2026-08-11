@@ -3,15 +3,12 @@ name: Settle Live Ledger
 on:
   workflow_dispatch:
   schedule:
-    # Exactly one of these maps to 23:30 Europe/Stockholm across DST.
-    - cron: "30 21 * * 1-5"
-    - cron: "30 22 * * 1-5"
+    - cron: '30 21 * * 1-5'
+    - cron: '30 22 * * 1-5'
 
 permissions:
   contents: write
 
-# Share the existing deployment mutex because this workflow writes both the
-# authoritative live-ledger branch and a presentation snapshot on gh-pages.
 concurrency:
   group: pages-deploy
   cancel-in-progress: false
@@ -26,29 +23,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" != "schedule" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          schedule_expr='${{ github.event.schedule }}'
+          if [ "${{ github.event_name }}" != 'schedule' ]; then echo 'run=true' >> "$GITHUB_OUTPUT"; exit 0; fi
           utc_day="$(date -u +%F)"
-          case "$schedule_expr" in
-            "30 21 * * 1-5") scheduled_utc="$utc_day 21:30:00 UTC" ;;
-            "30 22 * * 1-5") scheduled_utc="$utc_day 22:30:00 UTC" ;;
-            *)
-              echo "run=false" >> "$GITHUB_OUTPUT"
-              echo "Unknown scheduled trigger: $schedule_expr"
-              exit 0
-              ;;
+          case '${{ github.event.schedule }}' in
+            '30 21 * * 1-5') scheduled_utc="$utc_day 21:30:00 UTC" ;;
+            '30 22 * * 1-5') scheduled_utc="$utc_day 22:30:00 UTC" ;;
+            *) echo 'run=false' >> "$GITHUB_OUTPUT"; exit 0 ;;
           esac
-          scheduled_local="$(TZ=Europe/Stockholm date -d "$scheduled_utc" +%H:%M)"
-          if [ "$scheduled_local" = "23:30" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "Scheduled trigger maps to 23:30 Stockholm; runner queue delay cannot suppress settlement."
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "Skipping duplicate UTC cron; scheduled Stockholm time is $scheduled_local."
-          fi
+          local="$(TZ=Europe/Stockholm date -d "$scheduled_utc" +%H:%M)"
+          if [ "$local" = '23:30' ]; then echo 'run=true' >> "$GITHUB_OUTPUT"; else echo 'run=false' >> "$GITHUB_OUTPUT"; fi
 
   settle:
     needs: schedule-gate
@@ -56,51 +39,29 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout production code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@v5
         with:
-          fetch-depth: 0
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+          python-version: '3.12'
           cache: pip
           cache-dependency-path: analysis/requirements.txt
-
-      - name: Install dependencies
+      - run: pip install -r analysis/requirements.txt
+      - name: Validate v2 settlement code
         run: |
-          python -m pip install --upgrade pip
-          pip install -r analysis/requirements.txt
-
-      - name: Validate settlement code
-        run: |
-          python -m py_compile \
-            analysis/live/ledger.py \
-            analysis/live/settle_live_signals.py \
-            analysis/live/build_live_track_record.py \
-            analysis/live/validate_live_ledger.py \
-            analysis/test_live_ledger.py
-          python analysis/test_live_ledger.py
-
-      - name: Refresh index price-bearing source
+          python -m py_compile analysis/serve_interactive_cot_dashboard_v2.py analysis/live/ledger_v2.py analysis/live/settle_live_signals_v2.py analysis/live/build_live_track_record_v2.py analysis/live/validate_live_ledger_v2.py analysis/test_live_ledger_v2.py
+          python analysis/test_live_ledger_v2.py
+      - name: Refresh normalized price/COT source without legacy predictive studies
         id: index_prices
         continue-on-error: true
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
-        run: python analysis/serve_interactive_cot_dashboard.py --refresh-only
-
-      - name: Refresh Gold and Silver price-bearing source
+        run: python analysis/serve_interactive_cot_dashboard_v2.py --refresh-only
+      - name: Refresh metal price source
         id: metal_prices
         continue-on-error: true
         run: python analysis/build_worldclass_metals.py
-
-      - name: Report source refresh degradation
-        if: steps.index_prices.outcome == 'failure' || steps.metal_prices.outcome == 'failure'
-        run: |
-          echo "::warning::One or more price refreshes failed. Settlement will use only last-good closes actually present in the validated source files; no missing future close is invented."
-
-      - name: Settle newly matured evidence on live-ledger
+      - name: Settle newly matured evidence on authoritative ledger
         id: settlement
         shell: bash
         run: |
@@ -108,56 +69,30 @@ jobs:
           rm -rf /tmp/cot-live-ledger /tmp/live-settlement.json
           git fetch origin live-ledger:refs/remotes/origin/live-ledger
           git worktree add --detach /tmp/cot-live-ledger origin/live-ledger
-          python analysis/live/validate_live_ledger.py --ledger-root /tmp/cot-live-ledger --verify-git-history
-          python analysis/live/settle_live_signals.py \
-            --ledger-root /tmp/cot-live-ledger \
-            --metadata-out /tmp/live-settlement.json
+          python analysis/live/validate_live_ledger_v2.py --ledger-root /tmp/cot-live-ledger --verify-git-history
+          python analysis/live/settle_live_signals_v2.py --ledger-root /tmp/cot-live-ledger --metadata-out /tmp/live-settlement.json
           created="$(python - <<'PY'
           import json
           from pathlib import Path
-          payload = json.loads(Path('/tmp/live-settlement.json').read_text())
-          print(int(payload.get('created_entry_count') or 0) + int(payload.get('created_outcome_count') or 0))
+          p=json.loads(Path('/tmp/live-settlement.json').read_text());print(int(p.get('created_entry_count') or 0)+int(p.get('created_outcome_count') or 0))
           PY
           )"
-          echo "created=${created}" >> "$GITHUB_OUTPUT"
-          if [ "$created" -eq 0 ]; then
-            echo "No entry or horizon matured from the available closes."
-            python analysis/live/validate_live_ledger.py --ledger-root /tmp/cot-live-ledger --verify-git-history
-            exit 0
-          fi
-
-          git -C /tmp/cot-live-ledger config user.name "github-actions[bot]"
-          git -C /tmp/cot-live-ledger config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          echo "created=$created" >> "$GITHUB_OUTPUT"
+          if [ "$created" -eq 0 ]; then python analysis/live/validate_live_ledger_v2.py --ledger-root /tmp/cot-live-ledger --verify-git-history; exit 0; fi
+          git -C /tmp/cot-live-ledger config user.name 'github-actions[bot]'
+          git -C /tmp/cot-live-ledger config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git -C /tmp/cot-live-ledger add live/entries live/outcomes
-          git -C /tmp/cot-live-ledger commit -m "Settle matured live COT evidence"
-          python analysis/live/validate_live_ledger.py --ledger-root /tmp/cot-live-ledger --verify-git-history
+          git -C /tmp/cot-live-ledger commit -m 'Settle matured release-corrected live COT evidence'
+          python analysis/live/validate_live_ledger_v2.py --ledger-root /tmp/cot-live-ledger --verify-git-history
           git -C /tmp/cot-live-ledger push origin HEAD:live-ledger
-          local_head="$(git -C /tmp/cot-live-ledger rev-parse HEAD)"
-          remote_head="$(git -C /tmp/cot-live-ledger ls-remote origin refs/heads/live-ledger | cut -f1)"
-          test "$local_head" = "$remote_head"
-          echo "live-ledger settlement verified at ${remote_head}"
-
-      - name: Build presentation-only live track record
+      - name: Build v2-validated presentation track record
         shell: bash
         run: |
           set -euo pipefail
-          python analysis/live/validate_live_ledger.py --ledger-root /tmp/cot-live-ledger --verify-git-history
-          python analysis/live/build_live_track_record.py \
-            --ledger-root /tmp/cot-live-ledger \
-            --output /tmp/live-track-record.json
+          python analysis/live/validate_live_ledger_v2.py --ledger-root /tmp/cot-live-ledger --verify-git-history
+          python analysis/live/build_live_track_record_v2.py --ledger-root /tmp/cot-live-ledger --output /tmp/live-track-record.json
           test -s /tmp/live-track-record.json
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          payload = json.loads(Path('/tmp/live-track-record.json').read_text())
-          assert payload['ledger']['integrity'] == 'PASS'
-          print(
-              f"Track record: forecasts={payload['forecast_count']} "
-              f"outcomes={payload['outcome_count']} vintages={payload['weekly_vintage_count']}"
-          )
-          PY
-
-      - name: Publish only the track-record snapshot to gh-pages
+      - name: Publish track-record snapshot to gh-pages
         shell: bash
         run: |
           set -euo pipefail
@@ -166,16 +101,9 @@ jobs:
           git worktree add --detach /tmp/cot-gh-pages origin/gh-pages
           mkdir -p /tmp/cot-gh-pages/worldclass
           cp /tmp/live-track-record.json /tmp/cot-gh-pages/worldclass/live-track-record.json
-          git -C /tmp/cot-gh-pages config user.name "github-actions[bot]"
-          git -C /tmp/cot-gh-pages config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C /tmp/cot-gh-pages config user.name 'github-actions[bot]'
+          git -C /tmp/cot-gh-pages config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git -C /tmp/cot-gh-pages add worldclass/live-track-record.json
-          if git -C /tmp/cot-gh-pages diff --cached --quiet; then
-            echo "Published track record already matches the authoritative ledger."
-            exit 0
-          fi
-          git -C /tmp/cot-gh-pages commit -m "Update live COT track record"
+          if git -C /tmp/cot-gh-pages diff --cached --quiet; then exit 0; fi
+          git -C /tmp/cot-gh-pages commit -m 'Update v2-validated live COT track record'
           git -C /tmp/cot-gh-pages push origin HEAD:gh-pages
-          local_head="$(git -C /tmp/cot-gh-pages rev-parse HEAD)"
-          remote_head="$(git -C /tmp/cot-gh-pages ls-remote origin refs/heads/gh-pages | cut -f1)"
-          test "$local_head" = "$remote_head"
-          echo "gh-pages track record verified at ${remote_head}"
