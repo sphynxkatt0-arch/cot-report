@@ -71,10 +71,12 @@ test('cross view shows current same-actor markets but keeps combinations discove
   await open(page); const panel=page.locator('#cotIntelligence'); await panel.getByRole('button',{name:'CROSS'}).click(); await expect(panel).toContainText('Same actor across markets'); await expect(panel).toContainText('DISCOVERY ONLY'); await expect(panel).toContainText('SAME ACTOR · CROSS INSTRUMENT'); await expect(panel).toContainText('RISK BREADTH');
 });
 
-test('mobile decision surfaces use full width, compact health tiles and visible market tabs', async ({ page }) => {
+test('mobile decision surfaces use full width, compact health tiles and authoritative final cascade', async ({ page }) => {
   await page.setViewportSize({width:390,height:844});
   await open(page);
   await expect(page.locator('link[data-cot-intelligence-asset="mobile-ux-css"]')).toHaveCount(1);
+  await expect(page.locator('script[data-cot-intelligence-asset="mobile-ux-runtime"]')).toHaveCount(1);
+  await page.waitForFunction(() => document.documentElement.dataset.mobileUxReady === 'true');
   const layout = await page.evaluate(() => {
     const viewport = document.documentElement.clientWidth;
     const rect = sel => document.querySelector(sel)?.getBoundingClientRect();
@@ -84,8 +86,10 @@ test('mobile decision surfaces use full width, compact health tiles and visible 
     const health = [...document.querySelectorAll('.wc-v3-integrity-item')].map(el => el.getBoundingClientRect());
     const marketCards = [...document.querySelectorAll('.wc-v3-market')].map(el => el.getBoundingClientRect());
     const liveCards = [...document.querySelectorAll('.current-edge-live-grid article')].map(el => el.getBoundingClientRect());
-    return {viewport,command,edge,tabs,health,marketCards,liveCards,scroll:document.documentElement.scrollWidth};
+    const mobileLink = document.querySelector('link[data-cot-intelligence-asset="mobile-ux-css"]');
+    return {viewport,command,edge,tabs,health,marketCards,liveCards,scroll:document.documentElement.scrollWidth,mobileIsLast:document.head.lastElementChild===mobileLink};
   });
+  expect(layout.mobileIsLast).toBe(true);
   expect(layout.scroll).toBeLessThanOrEqual(layout.viewport+2);
   expect(layout.command.width).toBeGreaterThan(layout.viewport-30);
   expect(layout.edge.width).toBeGreaterThan(layout.viewport-30);
