@@ -13,6 +13,7 @@ on:
       - "analysis/config/cot_edge_promotion_policy.json"
       - "analysis/worldclass/cot-intelligence.js"
       - "analysis/worldclass/cot-intelligence.css"
+      - "analysis/worldclass/cot-intelligence-light.css"
       - "analysis/e2e/worldclass-cot-intelligence.spec.mjs"
       - "analysis/test_cot_intelligence_dashboard.py"
       - "analysis/worldclass/research/snapshots/**"
@@ -61,6 +62,7 @@ jobs:
           test -s analysis/worldclass/cot-edge-registry.json
           test -s analysis/worldclass/cot-active-edges.json
           test -s analysis/worldclass/cot-cross-market.json
+          test -s analysis/worldclass/cot-intelligence-light.css
           for m in sp500 nq vix rty dow gold silver; do test -s "analysis/worldclass/cot-edge-details/${m}.json"; done
       - uses: actions/setup-node@v6
         with:
