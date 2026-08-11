@@ -1,0 +1,30 @@
+name: Reconcile release-corrected v2 with current main
+
+on:
+  push:
+    branches: [fix/cot-release-correctness-v2-rebase]
+    paths:
+      - '.github/workflows/reconcile-release-v2-helper.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/cot-release-correctness-v2-rebase
+          fetch-depth: 0
+      - name: Merge v2 history onto current main lineage
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin main fix/cot-release-correctness-v2
+          git merge --no-ff -X theirs origin/fix/cot-release-correctness-v2 -m 'Merge release-corrected v2 onto current main'
+          git rm .github/workflows/reconcile-release-v2-helper.yml
+          git commit -m 'chore: remove one-shot v2 reconciliation helper'
+          git push origin HEAD:fix/cot-release-correctness-v2 --force-with-lease=refs/heads/fix/cot-release-correctness-v2:c7ba0d4678dafe901249e5b6410e67393498d3a0
