@@ -18,6 +18,7 @@ on:
       - "analysis/worldclass/current-edge-command.js"
       - "analysis/worldclass/current-edge-command.css"
       - "analysis/worldclass/mobile-ux.css"
+      - "analysis/worldclass/mobile-ux-runtime.js"
       - "analysis/e2e/worldclass-cot-intelligence.spec.mjs"
       - "analysis/test_cot_intelligence_dashboard.py"
       - "analysis/worldclass/research/snapshots/**"
@@ -50,6 +51,7 @@ jobs:
           node --check analysis/worldclass/cot-intelligence.js
           node --check analysis/worldclass/current-edge-model.js
           node --check analysis/worldclass/current-edge-command.js
+          node --check analysis/worldclass/mobile-ux-runtime.js
           cd analysis/worldclass/research/snapshots/2026-08-11-position-oi-all-actors && sha256sum -c SHA256SUMS.txt
           cd ../2026-08-10 && sha256sum -c SHA256SUMS.txt
       - name: Restore full-history metals source if available
@@ -73,6 +75,7 @@ jobs:
           test -s analysis/worldclass/current-edge-command.js
           test -s analysis/worldclass/current-edge-command.css
           test -s analysis/worldclass/mobile-ux.css
+          test -s analysis/worldclass/mobile-ux-runtime.js
           for m in sp500 nq vix rty dow gold silver; do test -s "analysis/worldclass/cot-edge-details/${m}.json"; done
       - uses: actions/setup-node@v6
         with:
