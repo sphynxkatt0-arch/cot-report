@@ -10,7 +10,10 @@ from datetime import UTC,date,datetime,timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-import ledger as legacy
+try:
+    from . import ledger as legacy
+except ImportError:  # direct script/module execution from analysis/live
+    import ledger as legacy
 
 # analysis/live -> analysis
 import sys
