@@ -44,6 +44,9 @@ jobs:
       - name: Full issuance append idempotency settlement and promotion simulation
         run: python analysis/test_actor_edge_live_ledger.py
       - name: Guard production ledger schema
+        shell: bash
         run: |
-          git diff --exit-code origin/main...HEAD -- analysis/live/ledger.py analysis/live/generate_live_forecasts.py analysis/live/apply_live_forecasts.py analysis/live/append_ledger_manifest.py analysis/live/settle_live_signals.py analysis/live/build_live_track_record.py
-          git diff --exit-code origin/main...HEAD -- analysis/config/model_spec.json
+          set -euo pipefail
+          git fetch origin main --depth=1
+          git diff --exit-code FETCH_HEAD HEAD -- analysis/live/ledger.py analysis/live/generate_live_forecasts.py analysis/live/apply_live_forecasts.py analysis/live/append_ledger_manifest.py analysis/live/settle_live_signals.py analysis/live/build_live_track_record.py
+          git diff --exit-code FETCH_HEAD HEAD -- analysis/config/model_spec.json
