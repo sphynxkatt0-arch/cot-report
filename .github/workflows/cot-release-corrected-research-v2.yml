@@ -14,12 +14,12 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   rebuild:
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
@@ -29,106 +29,50 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f analysis/requirements.txt ]; then pip install -r analysis/requirements.txt; fi
-      - name: Fetch persistent full-history research sources
+          pip install -r analysis/requirements.txt
+      - name: Fetch persistent research sources
         run: git fetch origin gh-pages:refs/remotes/origin/gh-pages || true
-      - name: Materialize canonical full-history research inputs
-        working-directory: analysis
-        run: |
-          python - <<'PY'
-          import build_worldclass_research_artifacts as research
-          research.WORLDCLASS.mkdir(parents=True,exist_ok=True)
-          base=research.build_research_base(); metals=research.ensure_full_metals()
-          research.atomic_write(research.WORLDCLASS/'base.json',base)
-          research.atomic_write(research.WORLDCLASS/'metals.json',metals)
-          assert (research.WORLDCLASS/'base.json').stat().st_size>100_000
-          assert research.metals_history_is_full(metals)
-          print('Full-history research inputs materialized')
-          PY
-      - name: Compile strict v2 research and live-ledger modules
+      - name: Compile v2 orchestration and live-ledger cutover
         working-directory: analysis
         run: |
           python -m py_compile \
-            cftc_release_calendar.py cot_release_alignment_v2.py cot_research_core.py \
-            build_worldclass_backtest.py build_worldclass_regime_backtest.py \
-            build_cot_actor_event_research_release_corrected.py evaluate_cot_threshold_inference_v2.py \
-            evaluate_cot_actor_predictive_power_v2.py evaluate_cot_raw_position_oi_predictive_power_v2.py \
-            evaluate_analog_robustness_v2.py evaluate_financial_actor_weights_v2.py evaluate_disaggregated_weights_v2.py \
-            build_cot_current_state.py build_cot_edge_details_v2.py build_cot_edge_registry_v2.py build_cot_active_edges_v2.py \
-            build_backtest_correctness_report.py live/ledger_v2.py live/generate_live_forecasts_v2.py \
-            live/validate_live_ledger_v2.py live/settle_live_signals_v2.py
-      - name: Anti-lookahead preflight
+            build_release_corrected_research_v2.py cftc_release_calendar.py cot_release_alignment_v2.py cot_research_core.py \
+            build_worldclass_backtest.py build_worldclass_regime_backtest.py build_cot_actor_event_research_release_corrected.py \
+            evaluate_cot_threshold_inference_v2.py evaluate_cot_actor_predictive_power_v2.py evaluate_cot_raw_position_oi_predictive_power_v2.py \
+            evaluate_analog_robustness_v2.py evaluate_financial_actor_weights_v2.py evaluate_disaggregated_weights_v2.py evaluate_actor_weights_walkforward_v2.py \
+            validate_directional_cot_v2.py build_cot_current_state.py build_cot_edge_details_v2.py build_cot_edge_registry_v2.py build_cot_active_edges_v2.py \
+            build_cot_cross_market_runtime_v2.py build_backtest_correctness_report.py validate_cot_research_correctness.py \
+            live/ledger_v2.py live/generate_live_forecasts_v2.py live/apply_live_forecasts_v2.py live/append_ledger_manifest_v2.py live/validate_live_ledger_v2.py live/settle_live_signals_v2.py
+      - name: Build and validate entire release-corrected research generation
         working-directory: analysis
-        run: python validate_cot_research_correctness.py
-      - name: Build release-corrected worldclass backtest
-        working-directory: analysis
-        run: python build_worldclass_backtest.py
-      - name: Build release-corrected regime research
-        working-directory: analysis
-        run: python build_worldclass_regime_backtest.py
-      - name: Build release-corrected analog robustness
-        working-directory: analysis
-        run: python evaluate_analog_robustness_v2.py
-      - name: Build financial weight model-selection research
-        working-directory: analysis
-        run: python evaluate_financial_actor_weights_v2.py
-      - name: Build metals weight model-selection research
-        working-directory: analysis
-        run: python evaluate_disaggregated_weights_v2.py
-      - name: Build strict release-corrected actor-event research
-        working-directory: analysis
-        run: python build_cot_actor_event_research_release_corrected.py
-      - name: Build dependence-aware threshold inference
-        working-directory: analysis
-        run: python evaluate_cot_threshold_inference_v2.py
-      - name: Build release-corrected actor predictive power
-        working-directory: analysis
-        run: python evaluate_cot_actor_predictive_power_v2.py
-      - name: Build release-corrected raw position and OI predictive power
-        working-directory: analysis
-        run: python evaluate_cot_raw_position_oi_predictive_power_v2.py
-      - name: Rebuild current actor state
-        working-directory: analysis
-        run: python build_cot_current_state.py
-      - name: Build corrected 990-cell continuous detail layer
-        working-directory: analysis
-        run: python build_cot_edge_details_v2.py
-      - name: Build authoritative compact v2 evidence registry
-        working-directory: analysis
-        run: python build_cot_edge_registry_v2.py
-      - name: Select current release-corrected edges
-        working-directory: analysis
-        run: python build_cot_active_edges_v2.py
-      - name: Build old-vs-new correctness report
-        working-directory: analysis
-        run: python build_backtest_correctness_report.py
-      - name: Post-build correctness validation
-        working-directory: analysis
-        run: python validate_cot_research_correctness.py
-      - name: Validate generated v2 contract
+        run: python build_release_corrected_research_v2.py
+      - name: Validate final research contract
         working-directory: analysis
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
-          required=[
-            Path('worldclass/backtest.json'),Path('worldclass/regime_backtest.json'),Path('worldclass/research/cot-actor-event-research.json'),
-            Path('worldclass/research/cot-threshold-inference-v2.json'),Path('worldclass/research/cot-actor-predictive-power.json'),
-            Path('worldclass/research/cot-raw-position-oi-predictive-power.json'),Path('worldclass/research/cot-position-oi-audit-v2.json'),
-            Path('worldclass/cot-edge-registry-v2.json'),Path('worldclass/cot-active-edges-v2.json'),Path('worldclass/research/BACKTEST_CORRECTNESS_REPORT.md')]
-          for path in required: assert path.is_file() and path.stat().st_size>0,path
-          for path in required[:-1]:
-            payload=json.loads(path.read_text());generation=payload.get('research_generation')
-            if path.name not in {'cot-active-edges-v2.json'}: assert generation=='release-corrected-v2',(path,generation)
-          threshold=json.loads(Path('worldclass/research/cot-threshold-inference-v2.json').read_text());assert threshold['strict_release_alignment'] is True;assert threshold['automatic_promotion_allowed'] is False;assert threshold['methodology']['bootstrap_type'].startswith('circular moving-block')
-          registry=json.loads(Path('worldclass/cot-edge-registry-v2.json').read_text());assert registry['automatic_promotion_allowed'] is False;assert len(registry['actors'])==59;assert registry['research_counts']['actor_horizon_cells']==885;assert registry['research_counts']['market_oi_horizon_cells']==105
-          details=0
-          for market in ('sp500','nq','vix','rty','dow','gold','silver'):
-            p=json.loads((Path('worldclass/cot-edge-details-v2')/f'{market}.json').read_text());assert p['research_generation']=='release-corrected-v2';details+=len(p['actors'])
-          assert details==885,details
-          print('Strict v2 generated contract PASS')
+          manifest=json.loads(Path('worldclass/research/release-corrected-v2-build-manifest.json').read_text())
+          assert manifest['status']=='VALIDATED_BUILD'
+          assert manifest['research_generation']=='release-corrected-v2'
+          threshold=json.loads(Path('worldclass/research/cot-threshold-inference-v2.json').read_text())
+          assert threshold['methodology']['bootstrap_type'].startswith('circular moving-block')
+          registry=json.loads(Path('worldclass/cot-edge-registry-v2.json').read_text())
+          assert len(registry['actors'])==59
+          assert registry['research_counts']['actor_horizon_cells']==885
+          assert registry['research_counts']['market_oi_horizon_cells']==105
+          assert registry['automatic_promotion_allowed'] is False
+          active=json.loads(Path('worldclass/cot-active-edges-v2.json').read_text())
+          assert active['automatic_promotion_allowed'] is False
+          directional=json.loads(Path('worldclass/research/directional-validation-v2.json').read_text())
+          assert len(directional['metrics'])==8
+          weights=json.loads(Path('worldclass/research/actor-weight-walkforward-v2.json').read_text())
+          assert set(weights['families'])=={'financial_tff','financial_legacy','metals_disaggregated'}
+          cross=json.loads(Path('worldclass/cot-cross-market-v2.json').read_text())
+          assert cross['governance']['status']=='DISCOVERY_ONLY'
+          print('Complete release-corrected v2 contract PASS')
           PY
-      - name: Package immutable candidate snapshot
+      - name: Package candidate snapshot
         shell: bash
         run: |
           set -euo pipefail
@@ -139,12 +83,16 @@ jobs:
           cp analysis/worldclass/research/analog-robustness.json "$SNAP/analog-robustness.json"
           cp analysis/worldclass/financial-weight-study.json "$SNAP/financial-weight-study.json"
           cp analysis/worldclass/metal-weight-study.json "$SNAP/metal-weight-study.json"
-          cp analysis/worldclass/cot-current-state.json "$SNAP/cot-current-state.json"
+          cp analysis/worldclass/research/actor-weight-walkforward-v2.json "$SNAP/actor-weight-walkforward-v2.json"
+          cp analysis/worldclass/research/directional-validation-v2.json "$SNAP/directional-validation-v2.json"
+          cp analysis/worldclass/cot-current-state.json "$SNAP/cot-current-state-build-time.json"
           cp analysis/worldclass/cot-edge-registry-v2.json "$SNAP/cot-edge-registry-v2.json"
-          cp analysis/worldclass/cot-active-edges-v2.json "$SNAP/cot-active-edges-v2.json"
+          cp analysis/worldclass/cot-active-edges-v2.json "$SNAP/cot-active-edges-build-time-v2.json"
+          cp analysis/worldclass/cot-cross-market-v2.json "$SNAP/cot-cross-market-v2.json"
           cp analysis/worldclass/research/cot-position-oi-audit-v2.json "$SNAP/cot-position-oi-audit-v2.json"
           cp analysis/worldclass/cot-edge-details-v2/*.json "$SNAP/cot-edge-details-v2/"
           cp analysis/worldclass/research/BACKTEST_CORRECTNESS_REPORT.md "$SNAP/BACKTEST_CORRECTNESS_REPORT.md"
+          cp analysis/worldclass/research/release-corrected-v2-build-manifest.json "$SNAP/build-manifest.json"
           cp analysis/worldclass/research/cot-actor-event-summary.json "$SNAP/cot-actor-event-summary.json"
           gzip -9 -c analysis/worldclass/research/cot-actor-event-research.json > "$SNAP/cot-actor-event-research.json.gz"
           cp analysis/worldclass/research/cot-threshold-inference-v2-summary.json "$SNAP/cot-threshold-inference-v2-summary.json"
@@ -158,11 +106,34 @@ jobs:
           from pathlib import Path
           snap=Path('analysis/worldclass/research/candidate-snapshots/2026-08-11-release-corrected-v2');files={}
           for p in sorted(snap.rglob('*')):
-            if p.is_file(): files[str(p.relative_to(snap))]={'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
+              if p.is_file(): files[str(p.relative_to(snap))]={'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
           calendar=Path('analysis/reference/cftc_release_calendar.json')
-          manifest={'schema_version':2,'snapshot_id':'2026-08-11-release-corrected-v2','research_generation':'release-corrected-v2','information_contract_version':'cftc-public-availability-v2','release_calendar_sha256':hashlib.sha256(calendar.read_bytes()).hexdigest(),'supersedes_for_predictive_use':['2026-08-10','2026-08-10-predictive-power','2026-08-11-position-oi','2026-08-11-position-oi-all-actors'],'old_snapshots_modified':False,'files':files,'promotion_eligible':False,'note':'Validated candidate snapshot. Automatic production-weight promotion remains disabled; prospective live evidence is separate.'}
+          manifest={'schema_version':3,'snapshot_id':'2026-08-11-release-corrected-v2','research_generation':'release-corrected-v2','information_contract_version':'cftc-public-availability-v2','release_calendar_sha256':hashlib.sha256(calendar.read_bytes()).hexdigest(),'supersedes_for_predictive_use':['2026-08-10','2026-08-10-predictive-power','2026-08-11-position-oi','2026-08-11-position-oi-all-actors'],'old_snapshots_modified':False,'files':files,'promotion_eligible':False,'production_weight_changes':False,'note':'Immutable historical research generation. Prospective live evidence remains separate.'}
           (snap/'verification-manifest.json').write_text(json.dumps(manifest,indent=2,sort_keys=True)+'\n')
+          sums=[]
+          for p in sorted(snap.rglob('*')):
+              if p.is_file() and p.name not in {'SHA256SUMS.txt'}:sums.append(f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.relative_to(snap)}")
+          (snap/'SHA256SUMS.txt').write_text('\n'.join(sums)+'\n')
           PY
+      - name: Freeze immutable snapshot on research branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/fix/cot-release-correctness-v2'
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC=analysis/worldclass/research/candidate-snapshots/2026-08-11-release-corrected-v2
+          DEST=analysis/worldclass/research/snapshots/2026-08-11-release-corrected-v2
+          if [ -e "$DEST/verification-manifest.json" ]; then
+            echo 'v2 snapshot already frozen; verifying immutable checksum set'
+            (cd "$DEST" && sha256sum -c SHA256SUMS.txt)
+            exit 0
+          fi
+          mkdir -p "$(dirname "$DEST")"
+          cp -R "$SRC" "$DEST"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- "$DEST"
+          git commit -m 'research: freeze release-corrected v2 snapshot [skip ci]'
+          git push origin HEAD:fix/cot-release-correctness-v2
       - uses: actions/upload-artifact@v4
         with:
           name: cot-release-corrected-v2
