@@ -7,6 +7,7 @@ on:
       - 'analysis/build_cot_*v2.py'
       - 'analysis/build_cot_current_state.py'
       - 'analysis/build_worldclass_research_artifacts.py'
+      - 'analysis/fetch_release_corrected_snapshot_v2.py'
       - 'analysis/install_release_corrected_runtime_v2.py'
       - 'analysis/worldclass/cot-intelligence-v2-copy.js'
       - 'analysis/worldclass/current-edge-*'
@@ -14,10 +15,8 @@ on:
       - 'analysis/worldclass/research/snapshots/**'
       - '.github/workflows/cot-intelligence-dashboard-v2-ci.yml'
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   intelligence-v2:
     runs-on: ubuntu-latest
@@ -29,25 +28,23 @@ jobs:
         with: {python-version: '3.12'}
       - name: Install Python dependencies
         run: pip install -r analysis/requirements.txt
-      - name: Syntax and immutable snapshot verification
+      - name: Syntax and legacy immutable snapshot verification
         run: |
-          python -m py_compile analysis/build_cot_current_state.py analysis/build_cot_edge_registry_v2.py analysis/build_cot_edge_details_v2.py analysis/build_cot_active_edges_v2.py analysis/build_cot_cross_market_runtime_v2.py analysis/install_release_corrected_runtime_v2.py analysis/test_cot_intelligence_dashboard_v2.py analysis/build_worldclass_research_artifacts.py
+          python -m py_compile analysis/fetch_release_corrected_snapshot_v2.py analysis/build_cot_current_state.py analysis/build_cot_edge_registry_v2.py analysis/build_cot_edge_details_v2.py analysis/build_cot_active_edges_v2.py analysis/build_cot_cross_market_runtime_v2.py analysis/install_release_corrected_runtime_v2.py analysis/test_cot_intelligence_dashboard_v2.py analysis/build_worldclass_research_artifacts.py
           node --check analysis/worldclass/cot-intelligence.js
           node --check analysis/worldclass/cot-intelligence-v2-copy.js
           node --check analysis/worldclass/current-edge-model.js
           node --check analysis/worldclass/current-edge-command.js
           node --check analysis/worldclass/mobile-ux-runtime.js
           for snap in 2026-08-11-position-oi-all-actors 2026-08-10; do (cd "analysis/worldclass/research/snapshots/$snap" && sha256sum -c SHA256SUMS.txt); done
-          V2=analysis/worldclass/research/snapshots/2026-08-11-release-corrected-v2
-          if [ -f "$V2/SHA256SUMS.txt" ]; then (cd "$V2" && sha256sum -c SHA256SUMS.txt); fi
-      - name: Build governed production runtime when frozen v2 exists
-        shell: bash
+      - name: Materialize exact independently certified v2 snapshot
         run: |
+          python analysis/fetch_release_corrected_snapshot_v2.py
           V2=analysis/worldclass/research/snapshots/2026-08-11-release-corrected-v2
-          if [ ! -f "$V2/verification-manifest.json" ]; then
-            echo 'Frozen v2 snapshot pending the full release-corrected research gate; UI data build is intentionally blocked until then.'
-            exit 0
-          fi
+          test -s "$V2/verification-manifest.json"
+          (cd "$V2" && sha256sum -c SHA256SUMS.txt)
+      - name: Build governed production runtime
+        run: |
           git fetch origin gh-pages:refs/remotes/origin/gh-pages || true
           python analysis/build_worldclass_bundle.py
           python analysis/build_worldclass_research_artifacts.py
@@ -55,12 +52,9 @@ jobs:
           test ! -e analysis/worldclass/.research-base.tmp.json
       - uses: actions/setup-node@v5
         with: {node-version: '22'}
-      - name: Browser tests when frozen v2 exists
-        shell: bash
+      - name: Browser tests on certified v2 runtime
+        working-directory: analysis/e2e
         run: |
-          V2=../worldclass/research/snapshots/2026-08-11-release-corrected-v2
-          cd analysis/e2e
-          if [ ! -f "$V2/verification-manifest.json" ]; then exit 0; fi
           npm install --no-audit --no-fund
           npx playwright install --with-deps chromium
           python3 -m http.server 4173 --bind 127.0.0.1 --directory .. >/tmp/cot-intel-http.log 2>&1 &
