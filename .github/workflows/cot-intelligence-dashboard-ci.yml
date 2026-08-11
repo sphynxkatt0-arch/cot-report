@@ -7,6 +7,7 @@ on:
       - "analysis/build_cot_current_state.py"
       - "analysis/build_cot_edge_registry.py"
       - "analysis/build_cot_active_edges.py"
+      - "analysis/build_cot_cross_market_runtime.py"
       - "analysis/build_worldclass_research_artifacts.py"
       - "analysis/install_cot_intelligence_shell.py"
       - "analysis/config/cot_edge_promotion_policy.json"
@@ -40,7 +41,7 @@ jobs:
           pip install -r analysis/requirements.txt
       - name: Syntax and immutable snapshot verification
         run: |
-          python -m py_compile analysis/build_cot_current_state.py analysis/build_cot_edge_registry.py analysis/build_cot_active_edges.py analysis/install_cot_intelligence_shell.py analysis/test_cot_intelligence_dashboard.py analysis/build_worldclass_research_artifacts.py
+          python -m py_compile analysis/build_cot_current_state.py analysis/build_cot_edge_registry.py analysis/build_cot_active_edges.py analysis/build_cot_cross_market_runtime.py analysis/install_cot_intelligence_shell.py analysis/test_cot_intelligence_dashboard.py analysis/build_worldclass_research_artifacts.py
           node --check analysis/worldclass/cot-intelligence.js
           cd analysis/worldclass/research/snapshots/2026-08-11-position-oi-all-actors && sha256sum -c SHA256SUMS.txt
           cd ../2026-08-10 && sha256sum -c SHA256SUMS.txt
@@ -59,6 +60,7 @@ jobs:
           test -s analysis/worldclass/cot-current-state.json
           test -s analysis/worldclass/cot-edge-registry.json
           test -s analysis/worldclass/cot-active-edges.json
+          test -s analysis/worldclass/cot-cross-market.json
           for m in sp500 nq vix rty dow gold silver; do test -s "analysis/worldclass/cot-edge-details/${m}.json"; done
       - uses: actions/setup-node@v6
         with:
