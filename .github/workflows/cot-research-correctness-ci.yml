@@ -31,8 +31,13 @@ jobs:
             cot_research_core.py \
             cftc_release_tracker.py \
             build_worldclass_backtest.py \
+            build_worldclass_regime_backtest.py \
+            build_cot_actor_event_research_v2.py \
+            evaluate_cot_actor_predictive_power_v2.py \
+            evaluate_cot_raw_position_oi_predictive_power_v2.py \
             build_cot_current_state.py \
             live/actor_edge_ledger.py \
+            live/generate_actor_edge_live_forecasts.py \
             validate_cot_research_correctness.py
       - name: Prove canonical CFTC availability and price alignment
         working-directory: analysis
