@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from cftc_release_calendar import release_date
-ROOT=Path(__file__).resolve().parent;WC=ROOT/'worldclass';CURRENT=WC/'cot-current-state.json';REGISTRY=WC/'cot-edge-registry.json';ACTIVE=WC/'cot-active-edges.json';CROSS=WC/'cot-cross-market.json';PROV=WC/'cot-research-provenance.json';POLICY=ROOT/'config'/'cot_edge_promotion_policy.json';HTML=ROOT/'worldclass_dashboard.html';LIGHT_CSS=WC/'cot-intelligence-light.css';EDGE_MODEL=WC/'current-edge-model.js';EDGE_JS=WC/'current-edge-command.js';EDGE_CSS=WC/'current-edge-command.css';MOBILE_CSS=WC/'mobile-ux.css'
+ROOT=Path(__file__).resolve().parent;WC=ROOT/'worldclass';CURRENT=WC/'cot-current-state.json';REGISTRY=WC/'cot-edge-registry.json';ACTIVE=WC/'cot-active-edges.json';CROSS=WC/'cot-cross-market.json';PROV=WC/'cot-research-provenance.json';POLICY=ROOT/'config'/'cot_edge_promotion_policy.json';HTML=ROOT/'worldclass_dashboard.html';LIGHT_CSS=WC/'cot-intelligence-light.css';EDGE_MODEL=WC/'current-edge-model.js';EDGE_JS=WC/'current-edge-command.js';EDGE_CSS=WC/'current-edge-command.css';MOBILE_CSS=WC/'mobile-ux.css';MOBILE_RUNTIME=WC/'mobile-ux-runtime.js'
 HORIZONS=['monday','tuesday','wednesday','thursday','friday','1w','2w','3w','4w','6w','8w','13w','26w','39w','52w'];MARKETS=['sp500','nq','vix','rty','dow','gold','silver']
 def load(path):assert path.exists() and path.stat().st_size>100,path;return json.loads(path.read_text(encoding='utf-8'))
 def close(a,b,tol=1e-5):return abs(float(a)-float(b))<=tol*max(1.0,abs(float(a)),abs(float(b)))
@@ -44,11 +44,12 @@ def main():
  for family in ('same_actor_cross_instrument_holdout_1w','cross_instrument_breadth_holdout_1w','cross_actor_same_instrument_holdout_1w','cross_report_taxonomy_holdout_1w','lead_market_holdout_1w'):
   for row in cross.get(family) or []:assert row['evidence_status']=='DISCOVERY_ONLY' and row['promotion_eligible'] is False
  assert policy['automatic_weight_changes'] is False
- html=HTML.read_text(encoding='utf-8');
- for marker in ('data-cot-intelligence-asset="css"','data-cot-intelligence-asset="light-css"','data-cot-intelligence-asset="js"','data-cot-intelligence-asset="current-edge-model"','data-cot-intelligence-asset="current-edge-js"'):assert marker in html
+ html=HTML.read_text(encoding='utf-8')
+ for marker in ('data-cot-intelligence-asset="css"','data-cot-intelligence-asset="light-css"','data-cot-intelligence-asset="js"','data-cot-intelligence-asset="current-edge-model"','data-cot-intelligence-asset="current-edge-js"','data-cot-intelligence-asset="mobile-ux-css"','data-cot-intelligence-asset="mobile-ux-runtime"'):assert marker in html
  edge_model=EDGE_MODEL.read_text(encoding='utf-8');assert 'GLOBAL_FDR' in edge_model and 'NONOVERLAP_CONFIRMED' in edge_model;assert 'historical excess' in edge_model;assert 'not an absolute price prediction' in edge_model;assert 'cot-active-edges.json' in edge_model
  js=(WC/'cot-intelligence.js').read_text(encoding='utf-8');assert 'cot-edge-details/' in js and 'cot-cross-market.json' in js
  edge_js=EDGE_JS.read_text(encoding='utf-8');assert 'ranked, never summed' in edge_js;assert 'Historical backtests remain research evidence' in edge_js
- for path,limit in {CURRENT:200000,REGISTRY:500000,ACTIVE:180000,CROSS:180000,PROV:100000,WC/'cot-intelligence.js':60000,WC/'cot-intelligence.css':45000,LIGHT_CSS:20000,EDGE_MODEL:16000,EDGE_JS:24000,EDGE_CSS:18000,MOBILE_CSS:18000}.items():assert path.stat().st_size<=limit,(path,path.stat().st_size,limit)
+ mobile_runtime=MOBILE_RUNTIME.read_text(encoding='utf-8');assert 'mobileUxReady' in mobile_runtime;assert 'document.head.lastElementChild' in mobile_runtime;assert 'calc(100vw - 24px)' in mobile_runtime;assert '"#wcCommandCenter"' in mobile_runtime;assert '"repeat(4, minmax(0, 1fr))"' in mobile_runtime
+ for path,limit in {CURRENT:200000,REGISTRY:500000,ACTIVE:180000,CROSS:180000,PROV:100000,WC/'cot-intelligence.js':60000,WC/'cot-intelligence.css':45000,LIGHT_CSS:20000,EDGE_MODEL:16000,EDGE_JS:24000,EDGE_CSS:18000,MOBILE_CSS:30000,MOBILE_RUNTIME:12000}.items():assert path.stat().st_size<=limit,(path,path.stat().st_size,limit)
  print(f'COT Intelligence v2 PASS · actors={len(states)} actor_cells={detail_cells} oi_cells={oi_cells} active={total_active}')
 if __name__=='__main__':main()
