@@ -1,16 +1,9 @@
 #!/usr/bin/env python3
 """Build full-history research without bloating browser runtime data.
 
-Index research is extracted from the canonical interactive dashboard. Metals
-research uses a separately persisted full-history source with daily prices. The
-orchestrator can bootstrap that source from a pre-split deployed metals cache,
-restore it from gh-pages, or reconstruct it from official CFTC/Yahoo inputs on
-the first split-aware deployment. Browser presentation is always rewritten to
-its bounded runtime form only after full-history research completes.
-
-After canonical research is complete, this also builds the compact COT
-Intelligence presentation layer. Those builders consume immutable research
-snapshots and never modify governed model weights.
+After canonical backtest/regime research is complete, build the compact COT
+Intelligence presentation layer from immutable evidence snapshots. Research
+artifacts remain separate from browser payloads and production model weights.
 """
 from __future__ import annotations
 import json
@@ -25,8 +18,7 @@ import build_cot_current_state as current_state
 import build_cot_active_edges as active_edges
 import install_cot_intelligence_shell as cot_shell
 
-ROOT=Path(__file__).resolve().parent
-SOURCE=ROOT/"interactive_cot_dashboard.html"; WORLDCLASS=ROOT/"worldclass"; TEMP_RESEARCH_BASE=WORLDCLASS/".research-base.tmp.json"; FULL_METALS=metals_builder.RESEARCH_OUT; RUNTIME_METALS=metals_builder.OUT
+ROOT=Path(__file__).resolve().parent; SOURCE=ROOT/"interactive_cot_dashboard.html"; WORLDCLASS=ROOT/"worldclass"; TEMP_RESEARCH_BASE=WORLDCLASS/".research-base.tmp.json"; FULL_METALS=metals_builder.RESEARCH_OUT; RUNTIME_METALS=metals_builder.OUT
 RESEARCH_CONSTANTS=("COT_DATA","PRICE_DATA","MACRO_MONITOR")
 
 def atomic_write(path:Path,payload:dict)->None:
@@ -60,20 +52,20 @@ def rebuild_full_metals_from_official()->dict:
     try: runtime,research=metals_builder.build_payloads()
     except Exception as exc: raise FileNotFoundError("Full-history metals research is unavailable and official reconstruction failed; refusing to shorten Gold/Silver research.") from exc
     if not metals_history_is_full(research): raise RuntimeError("Official metals reconstruction did not meet full-history research floors")
-    atomic_write(FULL_METALS,research); atomic_write(RUNTIME_METALS,runtime); print(f"Reconstructed persistent full-history metals source at {FULL_METALS}"); return research
+    atomic_write(FULL_METALS,research); atomic_write(RUNTIME_METALS,runtime); return research
 
 def ensure_full_metals()->dict:
     if FULL_METALS.exists():
         payload=read_json(FULL_METALS)
         if metals_history_is_full(payload): return payload
     if RUNTIME_METALS.exists():
-        runtime_payload=read_json(RUNTIME_METALS)
-        if metals_history_is_full(runtime_payload): atomic_write(FULL_METALS,runtime_payload); print("Bootstrapped persistent full-history metals source from pre-split runtime cache"); return runtime_payload
+        payload=read_json(RUNTIME_METALS)
+        if metals_history_is_full(payload): atomic_write(FULL_METALS,payload); return payload
     if restore_full_metals_from_gh_pages(): return read_json(FULL_METALS)
     return rebuild_full_metals_from_official()
 
 def validate_cot_intelligence_outputs()->None:
-    required={WORLDCLASS/"cot-current-state.json":200000,WORLDCLASS/"cot-edge-registry.json":900000,WORLDCLASS/"cot-active-edges.json":350000,WORLDCLASS/"cot-intelligence.js":80000,WORLDCLASS/"cot-intelligence.css":40000}
+    required={WORLDCLASS/"cot-current-state.json":200000,WORLDCLASS/"cot-edge-registry.json":500000,WORLDCLASS/"cot-active-edges.json":180000,WORLDCLASS/"cot-intelligence.js":50000,WORLDCLASS/"cot-intelligence.css":40000}
     for path,maximum in required.items():
         if not path.exists() or path.stat().st_size<=100: raise RuntimeError(f"COT Intelligence output missing/empty: {path}")
         if path.stat().st_size>maximum: raise RuntimeError(f"COT Intelligence performance budget exceeded: {path} = {path.stat().st_size:,} > {maximum:,}")
@@ -93,8 +85,5 @@ def main()->None:
         cot_backtest.BASE=original_cot_base; cot_backtest.METALS=original_cot_metals; regime_backtest.BASE=original_regime_base; regime_backtest.METALS=original_regime_metals; TEMP_RESEARCH_BASE.unlink(missing_ok=True)
     atomic_write(RUNTIME_METALS,metals_builder.runtime_from_research(full_metals))
     edge_registry.main(); current_state.main(); active_edges.main(); cot_shell.main(); validate_cot_intelligence_outputs()
-    print(f"Saved full-history COT backtest: {cot_backtest.OUT} ({cot_backtest.OUT.stat().st_size:,} bytes)")
-    print(f"Saved full-history regime backtest: {regime_backtest.OUT} ({regime_backtest.OUT.stat().st_size:,} bytes)")
-    print(f"Preserved full-history metals research: {FULL_METALS}"); print(f"Compacted browser metals runtime: {RUNTIME_METALS}"); print("COT Intelligence runtime contract PASS")
-
+    print(f"Saved full-history COT backtest: {cot_backtest.OUT} ({cot_backtest.OUT.stat().st_size:,} bytes)"); print(f"Saved full-history regime backtest: {regime_backtest.OUT} ({regime_backtest.OUT.stat().st_size:,} bytes)"); print("COT Intelligence runtime contract PASS")
 if __name__=="__main__":main()
