@@ -32,6 +32,9 @@ jobs:
             worldclass/cot-intelligence.js \
             worldclass/cot-intelligence.css \
             worldclass/cot-intelligence-light.css \
+            worldclass/current-edge-model.js \
+            worldclass/current-edge-command.js \
+            worldclass/current-edge-command.css \
             worldclass/cot-edge-details/sp500.json \
             worldclass/cot-edge-details/nq.json \
             worldclass/cot-edge-details/vix.json \
@@ -61,7 +64,10 @@ jobs:
               && curl -fsS --max-time 15 "${base}/worldclass/cot-active-edges.json?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/active.json \
               && curl -fsS --max-time 15 "${base}/worldclass/cot-cross-market.json?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/cross.json \
               && curl -fsS --max-time 15 "${base}/worldclass/cot-intelligence.js?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/intelligence.js \
-              && curl -fsS --max-time 15 "${base}/worldclass/cot-intelligence-light.css?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/intelligence-light.css; then
+              && curl -fsS --max-time 15 "${base}/worldclass/cot-intelligence-light.css?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/intelligence-light.css \
+              && curl -fsS --max-time 15 "${base}/worldclass/current-edge-model.js?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/current-edge-model.js \
+              && curl -fsS --max-time 15 "${base}/worldclass/current-edge-command.js?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/current-edge-command.js \
+              && curl -fsS --max-time 15 "${base}/worldclass/current-edge-command.css?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/current-edge-command.css; then
               if python - <<'PY'
           import json
           from pathlib import Path
@@ -73,10 +79,19 @@ jobs:
           cross=json.loads((root/'cross.json').read_text())
           js=(root/'intelligence.js').read_text()
           light=(root/'intelligence-light.css').read_text()
+          edge_model=(root/'current-edge-model.js').read_text()
+          edge_js=(root/'current-edge-command.js').read_text()
+          edge_css=(root/'current-edge-command.css').read_text()
           assert 'data-cot-intelligence-asset="css"' in html
           assert 'data-cot-intelligence-asset="light-css"' in html
           assert 'data-cot-intelligence-asset="js"' in html
+          assert 'data-cot-intelligence-asset="current-edge-css"' in html
+          assert 'data-cot-intelligence-asset="current-edge-model"' in html
+          assert 'data-cot-intelligence-asset="current-edge-js"' in html
           assert 'cot-intelligence-light.css' in html
+          assert 'current-edge-command.css' in html
+          assert 'current-edge-model.js' in html
+          assert 'current-edge-command.js' in html
           assert 'html[data-theme="light"] .cot-intel' in light
           assert 'html[data-theme="light"] .cot-now-card' in light
           assert 'background: #ffffff' in light
@@ -87,6 +102,14 @@ jobs:
           assert active.get('governance',{}).get('pp_definition') == 'percentage points'
           assert cross.get('governance',{}).get('status') == 'DISCOVERY_ONLY'
           assert 'cot-cross-market.json' in js and 'cot-edge-details/' in js
+          assert 'cot-active-edges.json' in edge_model and 'rankedEdges' in edge_model
+          assert 'live-track-record.json' in edge_model
+          assert 'ranked, never summed' in edge_js
+          assert 'MON–FRI' in edge_js
+          assert 'Returns are cumulative to each weekday' in edge_js
+          assert 'Historical backtests remain research evidence' in edge_js
+          assert 'html[data-theme="light"] .current-edge-hero' in edge_css
+          assert 'background:#fff' in edge_css
           PY
               then ok=true; break; fi
             fi
