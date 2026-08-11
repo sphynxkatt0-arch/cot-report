@@ -4,68 +4,95 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'analysis/build_cot_*v2.py'
-      - 'analysis/build_cot_current_state.py'
-      - 'analysis/build_worldclass_research_artifacts.py'
-      - 'analysis/install_release_corrected_runtime_v2.py'
-      - 'analysis/install_cot_intelligence_shell.py'
-      - 'analysis/worldclass/cot-intelligence*'
-      - 'analysis/worldclass/current-edge-*'
-      - 'analysis/worldclass/mobile-ux.css'
-      - 'analysis/worldclass/mobile-ux-runtime.js'
-      - 'analysis/e2e/worldclass-cot-intelligence.spec.mjs'
-      - 'analysis/test_cot_intelligence_dashboard.py'
-      - 'analysis/worldclass/research/snapshots/**'
-      - '.github/workflows/cot-intelligence-dashboard-ci.yml'
+      - "analysis/build_cot_current_state.py"
+      - "analysis/build_cot_edge_registry.py"
+      - "analysis/build_cot_active_edges.py"
+      - "analysis/build_cot_cross_market_runtime.py"
+      - "analysis/build_worldclass_research_artifacts.py"
+      - "analysis/install_cot_intelligence_shell.py"
+      - "analysis/config/cot_edge_promotion_policy.json"
+      - "analysis/worldclass/cot-intelligence.js"
+      - "analysis/worldclass/cot-intelligence.css"
+      - "analysis/worldclass/cot-intelligence-light.css"
+      - "analysis/worldclass/current-edge-model.js"
+      - "analysis/worldclass/current-edge-command.js"
+      - "analysis/worldclass/current-edge-command.css"
+      - "analysis/worldclass/mobile-ux.css"
+      - "analysis/worldclass/mobile-ux-runtime.js"
+      - "analysis/e2e/worldclass-cot-intelligence.spec.mjs"
+      - "analysis/test_cot_intelligence_dashboard.py"
+      - "analysis/worldclass/research/snapshots/**"
+      - ".github/workflows/cot-intelligence-dashboard-ci.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  intelligence-v2:
+  intelligence-contract:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 35
     steps:
-      - uses: actions/checkout@v4
-        with: {fetch-depth: 0}
-      - uses: actions/setup-python@v5
-        with: {python-version: '3.12'}
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: analysis/requirements.txt
       - name: Install Python dependencies
-        run: pip install -r analysis/requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r analysis/requirements.txt
       - name: Syntax and immutable snapshot verification
         run: |
-          python -m py_compile analysis/build_cot_current_state.py analysis/build_cot_edge_registry_v2.py analysis/build_cot_edge_details_v2.py analysis/build_cot_active_edges_v2.py analysis/build_cot_cross_market_runtime_v2.py analysis/install_release_corrected_runtime_v2.py analysis/install_cot_intelligence_shell.py analysis/test_cot_intelligence_dashboard.py analysis/build_worldclass_research_artifacts.py
+          python -m py_compile analysis/build_cot_current_state.py analysis/build_cot_edge_registry.py analysis/build_cot_active_edges.py analysis/build_cot_cross_market_runtime.py analysis/install_cot_intelligence_shell.py analysis/test_cot_intelligence_dashboard.py analysis/build_worldclass_research_artifacts.py
           node --check analysis/worldclass/cot-intelligence.js
           node --check analysis/worldclass/current-edge-model.js
           node --check analysis/worldclass/current-edge-command.js
           node --check analysis/worldclass/mobile-ux-runtime.js
-          for snap in 2026-08-11-position-oi-all-actors 2026-08-10; do (cd "analysis/worldclass/research/snapshots/$snap" && sha256sum -c SHA256SUMS.txt); done
-          V2=analysis/worldclass/research/snapshots/2026-08-11-release-corrected-v2
-          if [ -f "$V2/SHA256SUMS.txt" ]; then (cd "$V2" && sha256sum -c SHA256SUMS.txt); fi
-      - name: Build governed production runtime when frozen v2 exists
+          cd analysis/worldclass/research/snapshots/2026-08-11-position-oi-all-actors && sha256sum -c SHA256SUMS.txt
+          cd ../2026-08-10 && sha256sum -c SHA256SUMS.txt
+      - name: Restore full-history metals source if available
         shell: bash
+        run: git fetch origin gh-pages --depth=1 || true
+      - name: Build governed research and compact COT Intelligence runtime
         run: |
-          V2=analysis/worldclass/research/snapshots/2026-08-11-release-corrected-v2
-          if [ ! -f "$V2/verification-manifest.json" ]; then
-            echo 'Frozen v2 snapshot pending the full release-corrected research gate; UI data build is intentionally blocked until then.'
-            exit 0
-          fi
-          git fetch origin gh-pages:refs/remotes/origin/gh-pages || true
           python analysis/build_worldclass_bundle.py
           python analysis/build_worldclass_research_artifacts.py
-          python analysis/test_cot_intelligence_dashboard.py
           test ! -e analysis/worldclass/.research-base.tmp.json
-      - uses: actions/setup-node@v5
-        with: {node-version: '22'}
-      - name: Browser tests when frozen v2 exists
+      - name: Validate COT Intelligence data/UI contract
+        run: |
+          python analysis/test_cot_intelligence_dashboard.py
+          git diff --exit-code -- analysis/config/model_spec.json
+          test -s analysis/worldclass/cot-current-state.json
+          test -s analysis/worldclass/cot-edge-registry.json
+          test -s analysis/worldclass/cot-active-edges.json
+          test -s analysis/worldclass/cot-cross-market.json
+          test -s analysis/worldclass/cot-intelligence-light.css
+          test -s analysis/worldclass/current-edge-model.js
+          test -s analysis/worldclass/current-edge-command.js
+          test -s analysis/worldclass/current-edge-command.css
+          test -s analysis/worldclass/mobile-ux.css
+          test -s analysis/worldclass/mobile-ux-runtime.js
+          for m in sp500 nq vix rty dow gold silver; do test -s "analysis/worldclass/cot-edge-details/${m}.json"; done
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+      - name: Install pinned browser test dependencies
+        working-directory: analysis/e2e
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        working-directory: analysis/e2e
+        run: npx playwright install --with-deps chromium
+      - name: Serve production tree
         shell: bash
         run: |
-          V2=../worldclass/research/snapshots/2026-08-11-release-corrected-v2
-          cd analysis/e2e
-          if [ ! -f "$V2/verification-manifest.json" ]; then exit 0; fi
-          npm install --no-audit --no-fund
-          npx playwright install --with-deps chromium
-          python3 -m http.server 4173 --bind 127.0.0.1 --directory .. >/tmp/cot-intel-http.log 2>&1 &
-          for _ in {1..30}; do curl -fsS http://127.0.0.1:4173/worldclass_dashboard.html >/dev/null && break; sleep 1; done
-          npx playwright test worldclass-cot-intelligence.spec.mjs --config=playwright.config.mjs
+          python3 -m http.server 4173 --bind 127.0.0.1 --directory analysis >/tmp/cot-intel-http.log 2>&1 &
+          echo $! >/tmp/cot-intel-http.pid
+          for _ in {1..30}; do curl -fsS http://127.0.0.1:4173/worldclass_dashboard.html >/dev/null && exit 0; sleep 1; done
+          cat /tmp/cot-intel-http.log; exit 1
+      - name: COT Intelligence Chromium + WCAG + mobile
+        working-directory: analysis/e2e
+        run: npx playwright test worldclass-cot-intelligence.spec.mjs --config=playwright.config.mjs
