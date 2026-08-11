@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from datetime import date,timedelta
 from pathlib import Path
-ROOT=Path(__file__).resolve().parent; WC=ROOT/"worldclass"; CURRENT=WC/"cot-current-state.json"; REGISTRY=WC/"cot-edge-registry.json"; ACTIVE=WC/"cot-active-edges.json"; CROSS=WC/"cot-cross-market.json"; POLICY=ROOT/"config"/"cot_edge_promotion_policy.json"; HTML=ROOT/"worldclass_dashboard.html"
+ROOT=Path(__file__).resolve().parent; WC=ROOT/"worldclass"; CURRENT=WC/"cot-current-state.json"; REGISTRY=WC/"cot-edge-registry.json"; ACTIVE=WC/"cot-active-edges.json"; CROSS=WC/"cot-cross-market.json"; POLICY=ROOT/"config"/"cot_edge_promotion_policy.json"; HTML=ROOT/"worldclass_dashboard.html"; LIGHT_CSS=WC/"cot-intelligence-light.css"
 HORIZONS=["monday","tuesday","wednesday","thursday","friday","1w","2w","3w","4w","6w","8w","13w","26w","39w","52w"]; MARKETS=["sp500","nq","vix","rty","dow","gold","silver"]
 def load(path): assert path.exists() and path.stat().st_size>100,path; return json.loads(path.read_text(encoding="utf-8"))
 def close(a,b,tol=1e-5): return abs(float(a)-float(b))<=tol*max(1.0,abs(float(a)),abs(float(b)))
@@ -38,8 +38,9 @@ def main():
  for family in ("same_actor_cross_instrument_holdout_1w","cross_instrument_breadth_holdout_1w","cross_actor_same_instrument_holdout_1w","cross_report_taxonomy_holdout_1w","lead_market_holdout_1w"):
   for row in cross.get(family) or []: assert row["evidence_status"]=="DISCOVERY_ONLY" and row["promotion_eligible"] is False
  assert policy["automatic_weight_changes"] is False; assert policy["eligible_actor_roles"]==["PRIMARY_DIRECTIONAL"]; assert policy["decision_states"]["ELIGIBLE_FOR_GOVERNANCE_REVIEW"]
- html=HTML.read_text(encoding="utf-8"); assert 'data-cot-intelligence-asset="css"' in html; assert 'data-cot-intelligence-asset="js"' in html
+ html=HTML.read_text(encoding="utf-8"); assert 'data-cot-intelligence-asset="css"' in html; assert 'data-cot-intelligence-asset="light-css"' in html; assert 'data-cot-intelligence-asset="js"' in html
+ light_css=LIGHT_CSS.read_text(encoding="utf-8"); assert 'html[data-theme="light"] .cot-intel' in light_css; assert 'html[data-theme="light"] .cot-now-card' in light_css; assert 'background: #ffffff' in light_css
  js=(WC/"cot-intelligence.js").read_text(encoding="utf-8"); assert "pp = <b>percentage points</b>" in js; assert "Data / decision quality" in js; assert "cot-edge-details/" in js; assert "cot-cross-market.json" in js; assert '"cross"' in js
- for path,limit in {CURRENT:200000,REGISTRY:500000,ACTIVE:180000,CROSS:180000,WC/"cot-intelligence.js":60000,WC/"cot-intelligence.css":45000}.items(): assert path.stat().st_size<=limit,(path,path.stat().st_size,limit)
+ for path,limit in {CURRENT:200000,REGISTRY:500000,ACTIVE:180000,CROSS:180000,WC/"cot-intelligence.js":60000,WC/"cot-intelligence.css":45000,LIGHT_CSS:20000}.items(): assert path.stat().st_size<=limit,(path,path.stat().st_size,limit)
  print("COT Intelligence contract PASS"); print(f"actor_states={len(states)} actor_horizon_cells={detail_cells} active_thresholds={total_active} registry_bytes={REGISTRY.stat().st_size} active_bytes={ACTIVE.stat().st_size} cross_bytes={CROSS.stat().st_size}")
 if __name__=="__main__":main()
