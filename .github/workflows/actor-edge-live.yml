@@ -1,0 +1,112 @@
+name: Actor Edge Prospective Ledger
+
+on:
+  workflow_run:
+    workflows: ["Refresh and Deploy"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: false
+
+jobs:
+  issue-and-publish:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'schedule')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout production code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: analysis/requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r analysis/requirements.txt
+      - name: Validate isolated actor-edge lifecycle
+        run: |
+          python -m py_compile analysis/live/actor_edge_ledger.py analysis/live/generate_actor_edge_live_forecasts.py analysis/live/apply_actor_edge_live_forecasts.py analysis/live/settle_actor_edge_live_signals.py analysis/live/build_actor_edge_track_record.py analysis/live/merge_actor_edge_track_record.py analysis/live/validate_actor_edge_ledger.py analysis/test_actor_edge_live_ledger.py
+          python analysis/test_actor_edge_live_ledger.py
+      - name: Restore exact validated runtime from deployed gh-pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin gh-pages:refs/remotes/origin/gh-pages
+          for path in worldclass/cot-current-state.json worldclass/cot-edge-registry.json worldclass/cot-active-edges.json; do
+            mkdir -p "analysis/$(dirname "$path")"
+            git show "origin/gh-pages:${path}" > "analysis/${path}"
+            test -s "analysis/${path}"
+          done
+      - name: Stage prospective actor-edge conditions
+        id: stage
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf analysis/.actor-edge-staging
+          python analysis/live/generate_actor_edge_live_forecasts.py --output-root analysis/.actor-edge-staging
+          count="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          print(int(json.loads(Path('analysis/.actor-edge-staging/plan.json').read_text()).get('forecast_count') or 0))
+          PY
+          )"
+          echo "count=${count}" >> "$GITHUB_OUTPUT"
+          echo "Eligible prospective actor-edge forecasts: ${count}"
+      - name: Append immutable actor-edge forecasts and build track record
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/cot-live-ledger /tmp/actor-edge-append.json
+          git fetch origin live-ledger:refs/remotes/origin/live-ledger
+          git worktree add --detach /tmp/cot-live-ledger origin/live-ledger
+          python analysis/live/validate_live_ledger.py --ledger-root /tmp/cot-live-ledger --verify-git-history
+          python analysis/live/validate_actor_edge_ledger.py --ledger-root /tmp/cot-live-ledger
+          python analysis/live/apply_actor_edge_live_forecasts.py --staging analysis/.actor-edge-staging --ledger-root /tmp/cot-live-ledger --metadata-out /tmp/actor-edge-append.json
+          new_count="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          print(int(json.loads(Path('/tmp/actor-edge-append.json').read_text()).get('new_count') or 0))
+          PY
+          )"
+          if [ "$new_count" -gt 0 ]; then
+            git -C /tmp/cot-live-ledger config user.name "github-actions[bot]"
+            git -C /tmp/cot-live-ledger config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git -C /tmp/cot-live-ledger add live/actor_edge/forecasts live/actor_edge/manifests
+            git -C /tmp/cot-live-ledger commit -m "Append prospective COT actor-edge forecasts"
+            python analysis/live/validate_actor_edge_ledger.py --ledger-root /tmp/cot-live-ledger
+            git -C /tmp/cot-live-ledger push origin HEAD:live-ledger
+          else
+            echo "No new actor-edge vintage. Existing prospective history remains unchanged."
+          fi
+          python analysis/live/build_actor_edge_track_record.py --ledger-root /tmp/cot-live-ledger --output /tmp/actor-edge-live-track-record.json
+          test -s /tmp/actor-edge-live-track-record.json
+      - name: Merge actor-edge evidence into presentation-only live record
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/cot-gh-pages
+          git fetch origin gh-pages:refs/remotes/origin/gh-pages
+          git worktree add --detach /tmp/cot-gh-pages origin/gh-pages
+          test -s /tmp/cot-gh-pages/worldclass/live-track-record.json
+          python analysis/live/merge_actor_edge_track_record.py --core /tmp/cot-gh-pages/worldclass/live-track-record.json --edge /tmp/actor-edge-live-track-record.json --output /tmp/cot-gh-pages/worldclass/live-track-record.json
+          git -C /tmp/cot-gh-pages config user.name "github-actions[bot]"
+          git -C /tmp/cot-gh-pages config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C /tmp/cot-gh-pages add worldclass/live-track-record.json
+          if git -C /tmp/cot-gh-pages diff --cached --quiet; then
+            echo "Actor-edge presentation evidence already current."
+            exit 0
+          fi
+          git -C /tmp/cot-gh-pages commit -m "Update prospective actor-edge track record"
+          git -C /tmp/cot-gh-pages push origin HEAD:gh-pages

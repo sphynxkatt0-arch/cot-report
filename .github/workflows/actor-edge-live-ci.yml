@@ -1,0 +1,52 @@
+name: Actor Edge Live Ledger CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "analysis/live/actor_edge_ledger.py"
+      - "analysis/live/generate_actor_edge_live_forecasts.py"
+      - "analysis/live/apply_actor_edge_live_forecasts.py"
+      - "analysis/live/settle_actor_edge_live_signals.py"
+      - "analysis/live/build_actor_edge_track_record.py"
+      - "analysis/live/merge_actor_edge_track_record.py"
+      - "analysis/live/validate_actor_edge_ledger.py"
+      - "analysis/test_actor_edge_live_ledger.py"
+      - "analysis/config/cot_edge_promotion_policy.json"
+      - ".github/workflows/actor-edge-live.yml"
+      - ".github/workflows/settle-actor-edge-ledger.yml"
+      - ".github/workflows/actor-edge-live-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  actor-edge-ledger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile prospective ledger code
+        run: |
+          python -m py_compile \
+            analysis/live/actor_edge_ledger.py \
+            analysis/live/generate_actor_edge_live_forecasts.py \
+            analysis/live/apply_actor_edge_live_forecasts.py \
+            analysis/live/settle_actor_edge_live_signals.py \
+            analysis/live/build_actor_edge_track_record.py \
+            analysis/live/merge_actor_edge_track_record.py \
+            analysis/live/validate_actor_edge_ledger.py \
+            analysis/test_actor_edge_live_ledger.py
+      - name: Full issuance append idempotency settlement and promotion simulation
+        run: python analysis/test_actor_edge_live_ledger.py
+      - name: Guard production ledger schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          git diff --exit-code FETCH_HEAD HEAD -- analysis/live/ledger.py analysis/live/generate_live_forecasts.py analysis/live/apply_live_forecasts.py analysis/live/append_ledger_manifest.py analysis/live/settle_live_signals.py analysis/live/build_live_track_record.py
+          git diff --exit-code FETCH_HEAD HEAD -- analysis/config/model_spec.json

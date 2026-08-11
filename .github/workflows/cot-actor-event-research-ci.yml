@@ -1,0 +1,235 @@
+name: Full COT actor event research CI
+
+on:
+  push:
+    branches:
+      - research/full-actor-cross-instrument-20260810
+    paths:
+      - "analysis/build_cot_actor_event_research.py"
+      - "analysis/evaluate_analog_robustness.py"
+      - "analysis/build_worldclass_backtest.py"
+      - "analysis/build_worldclass_research_artifacts.py"
+      - "analysis/config/model_spec.json"
+      - ".github/workflows/cot-actor-event-research-ci.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "analysis/build_cot_actor_event_research.py"
+      - "analysis/evaluate_analog_robustness.py"
+      - "analysis/build_worldclass_backtest.py"
+      - "analysis/build_worldclass_research_artifacts.py"
+      - "analysis/config/model_spec.json"
+      - ".github/workflows/cot-actor-event-research-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  actor-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Syntax
+        run: python -m py_compile analysis/build_cot_actor_event_research.py
+
+      - name: Run full actor research
+        working-directory: analysis
+        run: python build_cot_actor_event_research.py
+
+      - name: Validate research contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("analysis/worldclass/research/cot-actor-event-research.json")
+          summary_path = Path("analysis/worldclass/research/cot-actor-event-summary.json")
+          assert path.is_file() and path.stat().st_size > 100_000
+          assert summary_path.is_file() and 25_000 < summary_path.stat().st_size < 10_000_000
+          p = json.loads(path.read_text(encoding="utf-8"))
+          s = json.loads(summary_path.read_text(encoding="utf-8"))
+
+          assert p["information_contract"]["lookahead_safe"] is True
+          assert p["information_contract"]["cot_snapshot"] == "Tuesday"
+          assert p["information_contract"]["public_availability"].startswith("Friday")
+          assert p["governance"]["threshold_grid"] == [60, 65, 70, 75, 80, 85, 90]
+          assert p["governance"]["combination_threshold"] == 75
+          assert p["governance"]["production_changes"] is False
+          assert s["governance"]["production_changes"] is False
+
+          required_markets = {"sp500", "nq", "vix", "rty", "dow", "gold", "silver"}
+          assert required_markets == set(p["markets"]) == set(s["markets"])
+          for h in ("monday","tuesday","wednesday","thursday","friday",
+                    "1w","2w","3w","4w","6w","8w","13w","26w","39w","52w"):
+              assert h in p["governance"]["horizons"], h
+
+          pairs = set(p["discovered_dataset_market_pairs"])
+          for pair in ("tff:sp500","tff:nq","tff:vix","tff:rty","tff:dow",
+                       "disaggregated:gold","disaggregated:silver","legacy:nq"):
+              assert pair in pairs, pair
+
+          roles = p["dataset_actor_roles"]
+          assert roles["tff"]["asset_mgr"] == "PRIMARY_DIRECTIONAL"
+          assert roles["tff"]["lev_money"] == "PRIMARY_DIRECTIONAL"
+          assert roles["tff"]["dealer"] == "INTERMEDIARY_CONTEXT"
+          assert roles["legacy"]["noncommercial"] == "PRIMARY_DIRECTIONAL"
+          assert roles["disaggregated"]["managed_money"] == "PRIMARY_DIRECTIONAL"
+          assert roles["disaggregated"]["producer_merchant"] == "HEDGER_CONTEXT"
+
+          individual = p["individual_actor_thresholds"]
+          for key in ("tff:nq:asset_mgr","tff:nq:lev_money","legacy:nq:noncommercial",
+                      "disaggregated:gold:managed_money","disaggregated:silver:managed_money"):
+              assert key in individual, key
+              for direction in ("ADD", "CUT"):
+                  row = individual[key][direction]
+                  assert set(row["threshold_grid"]) == {"60","65","70","75","80","85","90"}
+                  for threshold in row["threshold_grid"].values():
+                      for segment in ("discovery_pre_2022","holdout_2022_plus","full_history"):
+                          assert "3w" in threshold[segment] and "52w" in threshold[segment]
+
+          for row in s["validated_signal_summary"]:
+              if row["promotion_status"] == "FORMAL_RESEARCH_CANDIDATE":
+                  assert row["classification"] == "OOS_SUPPORTED"
+                  assert row["actor_role"] == "PRIMARY_DIRECTIONAL"
+              if row["actor_role"] in {"INTERMEDIARY_CONTEXT", "OPPOSITE_SIDE_CONTEXT", "AGGREGATE_CONTEXT", "HEDGER_CONTEXT"}:
+                  assert row["promotion_status"] != "FORMAL_RESEARCH_CANDIDATE"
+
+          assert p["same_actor_cross_instrument"]
+          assert p["cross_actor_same_instrument"]
+          assert p["cross_report_taxonomy"]
+          assert p["lead_market_effects"]
+          assert p["current_state"]
+          assert s["selected_signal_curves"]
+          assert s["top_same_actor_cross_instrument_holdout_1w"]
+          assert s["top_cross_actor_same_instrument_holdout_1w"]
+          assert s["top_lead_market_holdout_1w"]
+
+          print("Full COT actor event research contract PASS")
+          print("dataset_market_pairs", len(p["discovered_dataset_market_pairs"]))
+          print("individual_actor_series", len(individual))
+          print("same_actor_pairs", len(p["same_actor_cross_instrument"]))
+          print("cross_actor_pairs", len(p["cross_actor_same_instrument"]))
+          print("cross_taxonomy_pairs", len(p["cross_report_taxonomy"]))
+          print("lead_market_keys", len(p["lead_market_effects"]))
+          PY
+
+      - name: Freeze full verification snapshot on research branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/research/full-actor-cross-instrument-20260810'
+        env:
+          SNAPSHOT_DIR: analysis/worldclass/research/snapshots/2026-08-10
+        run: |
+          set -euo pipefail
+          mkdir -p "$SNAPSHOT_DIR"
+
+          # A dated verification snapshot is immutable. New code/data must use a
+          # new snapshot directory instead of rewriting historical evidence.
+          if [ -f "$SNAPSHOT_DIR/verification-manifest.json" ]; then
+            echo "2026-08-10 actor snapshot already frozen; refusing to rewrite it"
+            exit 0
+          fi
+
+          cp analysis/worldclass/research/cot-actor-event-summary.json \
+             "$SNAPSHOT_DIR/cot-actor-event-summary.json"
+          gzip -9 -c analysis/worldclass/research/cot-actor-event-research.json \
+             > "$SNAPSHOT_DIR/cot-actor-event-research.json.gz"
+
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          snap = Path(os.environ["SNAPSHOT_DIR"])
+          full = Path("analysis/worldclass/research/cot-actor-event-research.json")
+          summary = Path("analysis/worldclass/research/cot-actor-event-summary.json")
+          compressed = snap / "cot-actor-event-research.json.gz"
+
+          def sha256(path: Path) -> str:
+              h = hashlib.sha256()
+              with path.open("rb") as fh:
+                  for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+                      h.update(chunk)
+              return h.hexdigest()
+
+          def canonical_json_sha256(path: Path) -> str:
+              obj = json.loads(path.read_text(encoding="utf-8"))
+              if isinstance(obj, dict):
+                  obj.pop("generated_at_utc", None)
+              canonical = json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+              return hashlib.sha256(canonical).hexdigest()
+
+          def git(ref: str) -> str:
+              return subprocess.check_output(["git", "rev-parse", ref], text=True).strip()
+
+          payload = json.loads(full.read_text(encoding="utf-8"))
+          compact = json.loads(summary.read_text(encoding="utf-8"))
+          manifest = {
+              "snapshot_id": "cot-actor-event-research-2026-08-10",
+              "purpose": "Frozen historical verification baseline for the completed cross-actor/cross-instrument COT backtest.",
+              "research_branch": "research/full-actor-cross-instrument-20260810",
+              "research_head_before_snapshot_commit": os.environ.get("GITHUB_SHA"),
+              "main_ref_sha": git("origin/main"),
+              "gh_pages_source_ref_sha": git("origin/gh-pages"),
+              "workflow_run_id": os.environ.get("GITHUB_RUN_ID"),
+              "workflow_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+              "information_contract": payload.get("information_contract"),
+              "governance": payload.get("governance"),
+              "markets": payload.get("markets"),
+              "dataset_actor_roles": payload.get("dataset_actor_roles"),
+              "discovered_dataset_market_pairs": payload.get("discovered_dataset_market_pairs"),
+              "verification_counts": {
+                  "dataset_market_pairs": len(payload.get("discovered_dataset_market_pairs") or []),
+                  "individual_actor_series": len(payload.get("individual_actor_thresholds") or {}),
+                  "same_actor_cross_instrument_keys": len(payload.get("same_actor_cross_instrument") or {}),
+                  "cross_actor_same_instrument_keys": len(payload.get("cross_actor_same_instrument") or {}),
+                  "cross_taxonomy_keys": len(payload.get("cross_report_taxonomy") or {}),
+                  "lead_market_keys": len(payload.get("lead_market_effects") or {}),
+                  "mechanical_oos_supported": sum(1 for r in compact.get("validated_signal_summary", []) if r.get("classification") == "OOS_SUPPORTED"),
+                  "formal_primary_candidates": sum(1 for r in compact.get("validated_signal_summary", []) if r.get("promotion_status") == "FORMAL_RESEARCH_CANDIDATE"),
+              },
+              "files": {
+                  "full_json_uncompressed": {
+                      "bytes": full.stat().st_size,
+                      "sha256_raw_file": sha256(full),
+                      "sha256_canonical_excluding_generated_at_utc": canonical_json_sha256(full),
+                      "stored_as": "cot-actor-event-research.json.gz",
+                  },
+                  "full_json_gzip": {"bytes": compressed.stat().st_size, "sha256_raw_file": sha256(compressed)},
+                  "summary_json": {
+                      "bytes": summary.stat().st_size,
+                      "sha256_raw_file": sha256(summary),
+                      "sha256_canonical_excluding_generated_at_utc": canonical_json_sha256(summary),
+                      "stored_as": "cot-actor-event-summary.json",
+                  },
+              },
+              "verification_rule": "Raw SHA-256 values prove stored-file integrity. When source-state SHAs and research code are identical, compare canonical JSON hashes that exclude only generated_at_utc. When source data advances, compare historical rows through the frozen 2026-08-04 COT snapshot boundary and preserve the old snapshot unchanged for audit.",
+              "production_changes": False,
+          }
+          (snap / "verification-manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          sums = [
+              f"{sha256(compressed)}  cot-actor-event-research.json.gz",
+              f"{sha256(summary)}  cot-actor-event-summary.json",
+              f"{sha256(snap / 'verification-manifest.json')}  verification-manifest.json",
+          ]
+          (snap / "SHA256SUMS.txt").write_text("\n".join(sums) + "\n", encoding="utf-8")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$SNAPSHOT_DIR/cot-actor-event-research.json.gz" \
+                     "$SNAPSHOT_DIR/cot-actor-event-summary.json" \
+                     "$SNAPSHOT_DIR/verification-manifest.json" \
+                     "$SNAPSHOT_DIR/SHA256SUMS.txt"
+          git commit -m "research: freeze 2026-08-10 actor backtest snapshot [skip ci]"
+          git push origin "HEAD:research/full-actor-cross-instrument-20260810"
