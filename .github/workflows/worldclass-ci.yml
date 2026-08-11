@@ -8,8 +8,8 @@ on:
       - 'analysis/build_worldclass_*.py'
       - 'analysis/build_cot_*.py'
       - 'analysis/install_release_corrected_runtime_v2.py'
+      - 'analysis/validate_worldclass_release_v2.py'
       - 'analysis/test_live_ledger_v2.py'
-      - 'analysis/validate_worldclass_release.py'
       - '.github/workflows/**'
   workflow_dispatch:
 
@@ -31,7 +31,8 @@ jobs:
         run: |
           python -m py_compile \
             analysis/build_worldclass_bundle.py analysis/build_worldclass_backtest.py analysis/build_worldclass_regime_backtest.py \
-            analysis/build_worldclass_research_artifacts.py analysis/install_release_corrected_runtime_v2.py analysis/validate_worldclass_release.py \
+            analysis/build_worldclass_research_artifacts.py analysis/install_release_corrected_runtime_v2.py analysis/validate_worldclass_release_v2.py \
+            analysis/build_interactive_cot_dashboard_v2.py analysis/serve_interactive_cot_dashboard_v2.py \
             analysis/live/ledger_v2.py analysis/live/generate_live_forecasts_v2.py analysis/live/apply_live_forecasts_v2.py \
             analysis/live/append_ledger_manifest_v2.py analysis/live/settle_live_signals_v2.py analysis/live/validate_live_ledger_v2.py analysis/test_live_ledger_v2.py
           node --check analysis/worldclass/app.js
@@ -77,7 +78,7 @@ jobs:
           git fetch origin gh-pages:refs/remotes/origin/gh-pages || true
           python analysis/build_worldclass_bundle.py
           python analysis/build_worldclass_research_artifacts.py
-          python analysis/validate_worldclass_release.py
+          python analysis/validate_worldclass_release_v2.py
           test ! -e analysis/worldclass/.research-base.tmp.json
           python - <<'PY'
           import json
