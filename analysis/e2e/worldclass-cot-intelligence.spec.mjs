@@ -71,6 +71,33 @@ test('cross view shows current same-actor markets but keeps combinations discove
   await open(page); const panel=page.locator('#cotIntelligence'); await panel.getByRole('button',{name:'CROSS'}).click(); await expect(panel).toContainText('Same actor across markets'); await expect(panel).toContainText('DISCOVERY ONLY'); await expect(panel).toContainText('SAME ACTOR · CROSS INSTRUMENT'); await expect(panel).toContainText('RISK BREADTH');
 });
 
+test('mobile decision surfaces use full width, compact health tiles and visible market tabs', async ({ page }) => {
+  await page.setViewportSize({width:390,height:844});
+  await open(page);
+  await expect(page.locator('link[data-cot-intelligence-asset="mobile-ux-css"]')).toHaveCount(1);
+  const layout = await page.evaluate(() => {
+    const viewport = document.documentElement.clientWidth;
+    const rect = sel => document.querySelector(sel)?.getBoundingClientRect();
+    const command = rect('#wcCommandCenter');
+    const edge = rect('#currentEdgeCommand');
+    const tabs = [...document.querySelectorAll('#instrumentTabs [data-market]')].map(el => el.getBoundingClientRect());
+    const health = [...document.querySelectorAll('.wc-v3-integrity-item')].map(el => el.getBoundingClientRect());
+    const marketCards = [...document.querySelectorAll('.wc-v3-market')].map(el => el.getBoundingClientRect());
+    const liveCards = [...document.querySelectorAll('.current-edge-live-grid article')].map(el => el.getBoundingClientRect());
+    return {viewport,command,edge,tabs,health,marketCards,liveCards,scroll:document.documentElement.scrollWidth};
+  });
+  expect(layout.scroll).toBeLessThanOrEqual(layout.viewport+2);
+  expect(layout.command.width).toBeGreaterThan(layout.viewport-30);
+  expect(layout.edge.width).toBeGreaterThan(layout.viewport-30);
+  expect(layout.tabs).toHaveLength(7);
+  expect(Math.max(...layout.tabs.map(r=>r.right))).toBeLessThanOrEqual(layout.viewport+1);
+  expect(layout.health.length).toBeGreaterThanOrEqual(5);
+  expect(new Set(layout.health.map(r=>Math.round(r.top))).size).toBeLessThan(layout.health.length);
+  expect(layout.marketCards).toHaveLength(7);
+  expect(new Set(layout.marketCards.map(r=>Math.round(r.top))).size).toBeLessThanOrEqual(2);
+  if(layout.liveCards.length>=2) expect(Math.round(layout.liveCards[0].top)).toBe(Math.round(layout.liveCards[1].top));
+});
+
 test('COT Intelligence and Current Edge pass WCAG A/AA and do not cause mobile page overflow', async ({ page }) => {
   await page.setViewportSize({width:390,height:844}); await open(page); const panel=page.locator('#cotIntelligence'); const edge=page.locator('#currentEdgeCommand'); await expect(panel.locator('.cot-now-cards')).toBeVisible(); await expect(edge).toBeVisible(); const widths=await page.evaluate(()=>({client:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth})); expect(widths.scroll).toBeLessThanOrEqual(widths.client+2); const cotResults=await new AxeBuilder({page}).include('#cotIntelligence').withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa']).analyze(); expect(cotResults.violations).toEqual([]); const edgeResults=await new AxeBuilder({page}).include('#currentEdgeCommand').withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa']).analyze(); expect(edgeResults.violations).toEqual([]);
 });
@@ -82,6 +109,7 @@ test('mobile day mode loads light decision surfaces without dark overlays', asyn
   await expect(page.locator('html')).toHaveAttribute('data-theme','light');
   await expect(page.locator('link[data-cot-intelligence-asset="light-css"]')).toHaveCount(1);
   await expect(page.locator('link[data-cot-intelligence-asset="current-edge-css"]')).toHaveCount(1);
+  await expect(page.locator('link[data-cot-intelligence-asset="mobile-ux-css"]')).toHaveCount(1);
   const panel=page.locator('#cotIntelligence');
   const edge=page.locator('#currentEdgeCommand');
   await expect(panel.locator('.cot-now-cards')).toBeVisible();
