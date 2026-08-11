@@ -10,6 +10,7 @@ import json
 from datetime import date
 from pathlib import Path
 
+import build_worldclass_backtest as backtest
 from cftc_release_calendar import DEFAULT_CALENDAR, availability_at, release_date, release_record
 
 ROOT = Path(__file__).resolve().parent
@@ -59,6 +60,34 @@ def validate_calendar_schema() -> None:
             raise AssertionError(f"invalid source_type for {report}")
 
 
+def validate_compatibility_price_alignment() -> None:
+    """Prove dependent legacy-call-shape modules inherit corrected availability.
+
+    Existing newer research modules historically called the shared helper with
+    a nominal `report + 3 days` target. The compatibility bridge must convert
+    that nominal target to the canonical release before selecting any price.
+    """
+    prices = [
+        {"date": date(2025, 10, 3), "date_str": "2025-10-03", "price": 100.0},
+        {"date": date(2025, 11, 18), "date_str": "2025-11-18", "price": 105.0},
+        {"date": date(2025, 11, 19), "date_str": "2025-11-19", "price": 106.0},
+        {"date": date(2025, 11, 20), "date_str": "2025-11-20", "price": 107.0},
+    ]
+    # Nominal target 2025-10-03 corresponds to Tuesday 2025-09-30, whose actual
+    # CFTC publication was 2025-11-19. A lookahead implementation would return 0.
+    index = backtest.first_price_index_on_or_after(prices, date(2025, 10, 3))
+    assert_equal(index, 2, "shutdown compatibility price anchor")
+    if index is None or prices[index]["date"] < release_date("2025-09-30"):
+        raise AssertionError("shared compatibility bridge selected a pre-release price")
+
+    normal_prices = [
+        {"date": date(2026, 8, 7), "date_str": "2026-08-07", "price": 200.0},
+        {"date": date(2026, 8, 10), "date_str": "2026-08-10", "price": 201.0},
+    ]
+    normal_index = backtest.first_price_index_on_or_after(normal_prices, date(2026, 8, 7))
+    assert_equal(normal_index, 0, "normal Friday compatibility price anchor")
+
+
 def validate_release_corrected_backtest_if_present() -> None:
     if not BACKTEST.exists():
         return
@@ -84,8 +113,8 @@ def main() -> None:
     validate_calendar_schema()
     validate_known_release_fixtures()
     validate_timezone_fixtures()
+    validate_compatibility_price_alignment()
     validate_release_corrected_backtest_if_present()
-    # Hard proof that the 2025 shutdown fixture is weeks later than the naive +3 rule.
     if availability_at("2025-09-30").date() <= date(2025, 10, 3):
         raise AssertionError("shutdown anti-lookahead fixture failed")
     print("COT research correctness: PASS")
