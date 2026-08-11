@@ -1,0 +1,50 @@
+name: COT research correctness
+
+on:
+  pull_request:
+    paths:
+      - 'analysis/**'
+      - '.github/workflows/cot-research-correctness-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'analysis/**'
+      - '.github/workflows/cot-research-correctness-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  anti-lookahead:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate canonical CFTC availability and timing fixtures
+        working-directory: analysis
+        run: python validate_cot_research_correctness.py
+      - name: Reject new naive COT release assumptions in authoritative files
+        shell: bash
+        run: |
+          set -euo pipefail
+          bad=0
+          while IFS= read -r file; do
+            case "$file" in
+              analysis/cot_overlay_exact.py|analysis/cot_legacy_correlations.py|analysis/cot_weekly_position_effects.py|analysis/verify_findings.py)
+                continue
+                ;;
+            esac
+            if grep -nE 'report(_date)? *\+ *timedelta\(days *= *3\)|Friday *= *report date *\+ *3|release.*report.*\+3' "$file" >/tmp/cot_bad 2>/dev/null; then
+              echo "Naive release-date logic remains in authoritative file: $file"
+              cat /tmp/cot_bad
+              bad=1
+            fi
+          done < <(find analysis -type f -name '*.py' | sort)
+          test "$bad" -eq 0
+      - name: Compile corrected research modules
+        working-directory: analysis
+        run: |
+          python -m py_compile cftc_release_calendar.py cot_research_core.py cftc_release_tracker.py build_worldclass_backtest.py build_cot_current_state.py validate_cot_research_correctness.py
