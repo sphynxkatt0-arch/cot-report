@@ -33,6 +33,21 @@ test('COT Intelligence passes WCAG A/AA and does not cause mobile page overflow'
   await page.setViewportSize({width:390,height:844}); await open(page); const panel=page.locator('#cotIntelligence'); await expect(panel.locator('.cot-now-cards')).toBeVisible(); const widths=await page.evaluate(()=>({client:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth})); expect(widths.scroll).toBeLessThanOrEqual(widths.client+2); const results=await new AxeBuilder({page}).include('#cotIntelligence').withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa']).analyze(); expect(results.violations).toEqual([]);
 });
 
+test('mobile day mode loads the light COT Intelligence asset and has no dark overlay surface', async ({ page }) => {
+  await page.setViewportSize({width:390,height:844});
+  await page.addInitScript(() => localStorage.setItem('cot-worldclass-theme','light'));
+  await open(page);
+  await expect(page.locator('html')).toHaveAttribute('data-theme','light');
+  await expect(page.locator('link[data-cot-intelligence-asset="light-css"]')).toHaveCount(1);
+  const panel=page.locator('#cotIntelligence');
+  await expect(panel.locator('.cot-now-cards')).toBeVisible();
+  const colors=await panel.evaluate(el=>({background:getComputedStyle(el).backgroundColor,color:getComputedStyle(el).color}));
+  expect(colors.background).toBe('rgb(255, 255, 255)');
+  expect(colors.color).not.toBe('rgb(243, 247, 251)');
+  const cardBackground=await panel.locator('.cot-now-card').first().evaluate(el=>getComputedStyle(el).backgroundColor);
+  expect(cardBackground).toMatch(/^rgba?\(255,\s*255,\s*255/);
+});
+
 test('live tab never relabels historical research as live evidence', async ({ page }) => {
   await open(page); const panel=page.locator('#cotIntelligence'); await panel.getByRole('button',{name:'LIVE'}).click(); await expect(panel).toContainText('Prospective edge validation'); await expect(panel).toContainText('No past week is backfilled as live'); await expect(panel).toContainText('ELIGIBLE FOR GOVERNANCE REVIEW');
 });
