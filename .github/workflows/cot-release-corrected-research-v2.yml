@@ -15,7 +15,7 @@ permissions:
 jobs:
   rebuild:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -38,6 +38,9 @@ jobs:
       - name: Build release-corrected actor-event research
         working-directory: analysis
         run: python build_cot_actor_event_research_v2.py
+      - name: Build dependence-aware threshold inference
+        working-directory: analysis
+        run: python evaluate_cot_threshold_inference_v2.py
       - name: Build release-corrected actor predictive power
         working-directory: analysis
         run: python evaluate_cot_actor_predictive_power_v2.py
@@ -60,6 +63,8 @@ jobs:
           cp analysis/worldclass/regime_backtest.json "$SNAP/worldclass-regime-backtest.json"
           cp analysis/worldclass/research/cot-actor-event-summary.json "$SNAP/cot-actor-event-summary.json"
           gzip -9 -c analysis/worldclass/research/cot-actor-event-research.json > "$SNAP/cot-actor-event-research.json.gz"
+          cp analysis/worldclass/research/cot-threshold-inference-v2-summary.json "$SNAP/cot-threshold-inference-v2-summary.json"
+          gzip -9 -c analysis/worldclass/research/cot-threshold-inference-v2.json > "$SNAP/cot-threshold-inference-v2.json.gz"
           cp analysis/worldclass/research/cot-actor-predictive-power-summary.json "$SNAP/cot-actor-predictive-power-summary.json"
           gzip -9 -c analysis/worldclass/research/cot-actor-predictive-power.json > "$SNAP/cot-actor-predictive-power.json.gz"
           cp analysis/worldclass/research/cot-raw-position-oi-predictive-power-summary.json "$SNAP/cot-raw-position-oi-predictive-power-summary.json"
@@ -72,7 +77,7 @@ jobs:
           for p in sorted(snap.iterdir()):
               if p.is_file(): files[p.name]={'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
           calendar=Path('analysis/reference/cftc_release_calendar.json')
-          manifest={'schema_version':1,'snapshot_id':'2026-08-11-release-corrected-v2','research_generation':'release-corrected-v2','information_contract_version':'cftc-public-availability-v2','release_calendar_sha256':hashlib.sha256(calendar.read_bytes()).hexdigest(),'supersedes_for_predictive_use':['2026-08-10','2026-08-10-predictive-power','2026-08-11-position-oi','2026-08-11-position-oi-all-actors'],'old_snapshots_modified':False,'files':files,'promotion_eligible':False,'note':'Candidate snapshot. Promotion remains disabled until statistical and old-vs-new comparison gates pass.'}
+          manifest={'schema_version':1,'snapshot_id':'2026-08-11-release-corrected-v2','research_generation':'release-corrected-v2','information_contract_version':'cftc-public-availability-v2','release_calendar_sha256':hashlib.sha256(calendar.read_bytes()).hexdigest(),'supersedes_for_predictive_use':['2026-08-10','2026-08-10-predictive-power','2026-08-11-position-oi','2026-08-11-position-oi-all-actors'],'old_snapshots_modified':False,'files':files,'promotion_eligible':False,'note':'Candidate snapshot. Promotion remains disabled until timing, dependence/FDR, and old-vs-new comparison gates pass.'}
           (snap/'verification-manifest.json').write_text(json.dumps(manifest,indent=2,sort_keys=True)+'\n')
           PY
       - uses: actions/upload-artifact@v4
