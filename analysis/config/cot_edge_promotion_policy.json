@@ -1,0 +1,49 @@
+{
+  "automatic_weight_changes": false,
+  "decision_states": {
+    "ELIGIBLE_FOR_GOVERNANCE_REVIEW": "All historical and live gates pass; requires explicit human/model governance approval.",
+    "REJECTED_FOR_PRODUCTION": "Fails locked holdout, dependence, role, or live-direction requirements.",
+    "RESEARCH_ONLY": "Fails one or more promotion gates or live evidence is immature."
+  },
+  "eligible_actor_roles": ["PRIMARY_DIRECTIONAL"],
+  "minimum_independent_n": {
+    "13w": 15,
+    "1w": 60,
+    "26w": 15,
+    "2w": 45,
+    "39w": 15,
+    "3w": 40,
+    "4w": 30,
+    "52w": 15,
+    "6w": 25,
+    "8w": 20,
+    "friday": 60,
+    "monday": 60,
+    "thursday": 60,
+    "tuesday": 60,
+    "wednesday": 60
+  },
+  "notes": [
+    "A correlation coefficient is not causal proof.",
+    "A percentage-point edge is not a predicted absolute return.",
+    "Long-horizon results with independent N < 15 are never promotion eligible.",
+    "Cross-market and cross-actor combination discoveries require a separately preregistered confirmation study before eligibility."
+  ],
+  "policy_id": "cot-edge-promotion-v1",
+  "purpose": "Define eligibility for human governance review. This policy never changes production weights automatically.",
+  "required_historical_checks": {
+    "lookahead_safe_friday_release_anchor": true,
+    "no_context_actor_promotion": true,
+    "non_overlapping_direction_confirmation": true,
+    "positive_oos_r2": true,
+    "pre_specified_predictor_family": true,
+    "threshold_neighbors_consistent_when_threshold_based": true
+  },
+  "required_live_checks": {
+    "13w": {"matured_signals": 12, "same_direction_as_historical": true},
+    "1w": {"matured_signals": 30, "same_direction_as_historical": true},
+    "4w": {"matured_signals": 20, "same_direction_as_historical": true}
+  },
+  "required_research_status": ["GLOBAL_FDR", "FAMILY_FDR"],
+  "schema_version": 1
+}
