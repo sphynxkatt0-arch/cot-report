@@ -1,0 +1,82 @@
+name: COT release-corrected research v2
+
+on:
+  push:
+    branches:
+      - fix/cot-release-correctness-v2
+    paths:
+      - 'analysis/**'
+      - '.github/workflows/cot-release-corrected-research-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install research dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f analysis/requirements.txt ]; then pip install -r analysis/requirements.txt; fi
+      - name: Anti-lookahead preflight
+        working-directory: analysis
+        run: python validate_cot_research_correctness.py
+      - name: Build release-corrected worldclass backtest
+        working-directory: analysis
+        run: python build_worldclass_backtest.py
+      - name: Build release-corrected regime research
+        working-directory: analysis
+        run: python build_worldclass_regime_backtest.py
+      - name: Build release-corrected actor-event research
+        working-directory: analysis
+        run: python build_cot_actor_event_research_v2.py
+      - name: Build release-corrected actor predictive power
+        working-directory: analysis
+        run: python evaluate_cot_actor_predictive_power_v2.py
+      - name: Build release-corrected raw position and OI predictive power
+        working-directory: analysis
+        run: python evaluate_cot_raw_position_oi_predictive_power_v2.py
+      - name: Rebuild current state with superseded-edge quarantine
+        working-directory: analysis
+        run: python build_cot_current_state.py
+      - name: Post-build correctness validation
+        working-directory: analysis
+        run: python validate_cot_research_correctness.py
+      - name: Package immutable candidate snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          SNAP=analysis/worldclass/research/candidate-snapshots/2026-08-11-release-corrected-v2
+          mkdir -p "$SNAP"
+          cp analysis/worldclass/backtest.json "$SNAP/worldclass-backtest.json"
+          cp analysis/worldclass/regime_backtest.json "$SNAP/worldclass-regime-backtest.json"
+          cp analysis/worldclass/research/cot-actor-event-summary.json "$SNAP/cot-actor-event-summary.json"
+          gzip -9 -c analysis/worldclass/research/cot-actor-event-research.json > "$SNAP/cot-actor-event-research.json.gz"
+          cp analysis/worldclass/research/cot-actor-predictive-power-summary.json "$SNAP/cot-actor-predictive-power-summary.json"
+          gzip -9 -c analysis/worldclass/research/cot-actor-predictive-power.json > "$SNAP/cot-actor-predictive-power.json.gz"
+          cp analysis/worldclass/research/cot-raw-position-oi-predictive-power-summary.json "$SNAP/cot-raw-position-oi-predictive-power-summary.json"
+          gzip -9 -c analysis/worldclass/research/cot-raw-position-oi-predictive-power.json > "$SNAP/cot-raw-position-oi-predictive-power.json.gz"
+          python - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          snap=Path('analysis/worldclass/research/candidate-snapshots/2026-08-11-release-corrected-v2')
+          files={}
+          for p in sorted(snap.iterdir()):
+              if p.is_file(): files[p.name]={'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
+          calendar=Path('analysis/reference/cftc_release_calendar.json')
+          manifest={'schema_version':1,'snapshot_id':'2026-08-11-release-corrected-v2','research_generation':'release-corrected-v2','information_contract_version':'cftc-public-availability-v2','release_calendar_sha256':hashlib.sha256(calendar.read_bytes()).hexdigest(),'supersedes_for_predictive_use':['2026-08-10','2026-08-10-predictive-power','2026-08-11-position-oi','2026-08-11-position-oi-all-actors'],'old_snapshots_modified':False,'files':files,'promotion_eligible':False,'note':'Candidate snapshot. Promotion remains disabled until statistical and old-vs-new comparison gates pass.'}
+          (snap/'verification-manifest.json').write_text(json.dumps(manifest,indent=2,sort_keys=True)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cot-release-corrected-v2
+          path: analysis/worldclass/research/candidate-snapshots/2026-08-11-release-corrected-v2
+          if-no-files-found: error
