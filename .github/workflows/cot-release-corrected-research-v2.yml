@@ -24,6 +24,8 @@ jobs:
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -32,6 +34,25 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           if [ -f analysis/requirements.txt ]; then pip install -r analysis/requirements.txt; fi
+      - name: Fetch persistent full-history research sources
+        run: git fetch origin gh-pages:refs/remotes/origin/gh-pages || true
+      - name: Materialize canonical full-history research inputs
+        working-directory: analysis
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import build_worldclass_research_artifacts as research
+          research.WORLDCLASS.mkdir(parents=True, exist_ok=True)
+          base = research.build_research_base()
+          metals = research.ensure_full_metals()
+          research.atomic_write(research.WORLDCLASS / 'base.json', base)
+          # Research builds require the full daily-price metals payload, not the
+          # compact browser runtime representation.
+          research.atomic_write(research.WORLDCLASS / 'metals.json', metals)
+          assert (research.WORLDCLASS / 'base.json').stat().st_size > 100_000
+          assert research.metals_history_is_full(metals)
+          print('Full-history research inputs materialized')
+          PY
       - name: Compile strict v2 research and live-ledger modules
         working-directory: analysis
         run: |
