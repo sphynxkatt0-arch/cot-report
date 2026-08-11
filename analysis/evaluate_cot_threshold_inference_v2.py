@@ -12,7 +12,7 @@ from datetime import UTC,date,datetime
 from pathlib import Path
 from typing import Any
 
-import build_cot_actor_event_research_v2 as actor
+import build_cot_actor_event_research_release_corrected as actor
 import evaluate_analog_robustness as robustness
 from cftc_release_calendar import calendar_hash
 
@@ -84,9 +84,9 @@ def main()->None:
         if gq is not None and gq<=.10:row["classification"]="GLOBAL_FDR"
     counts=defaultdict(int)
     for r in rows:counts[r["classification"]]+=1
-    payload={"schema_version":1,"research_generation":"release-corrected-v2","information_contract_version":"cftc-public-availability-v2","release_calendar_hash":calendar_hash(),"generated_at_utc":datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00","Z"),"methodology":{"holdout_start":"2022-01-01","threshold_grid":list(THRESHOLDS),"bootstrap_replicates":BOOTSTRAPS,"bootstrap_seed":SEED,"bootstrap_seed_derivation":"SHA256(series|direction|threshold|horizon)","independent_episode_rule":"greedy chronological non-overlap by signal_index and horizon trading closes","multiple_testing":"Benjamini-Hochberg at actor-family and global searched-universe levels","minimum_discovery_n":MIN_DISCOVERY_N,"minimum_holdout_n":MIN_HOLDOUT_N,"minimum_independent_n":MIN_INDEPENDENT_N},"classification_counts":dict(counts),"metric_count":len(rows),"metrics":rows,"production_model_changed":False,"automatic_promotion_allowed":False}
+    payload={"schema_version":1,"research_generation":"release-corrected-v2","information_contract_version":"cftc-public-availability-v2","release_calendar_hash":calendar_hash(),"strict_release_alignment":True,"generated_at_utc":datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00","Z"),"methodology":{"holdout_start":"2022-01-01","threshold_grid":list(THRESHOLDS),"bootstrap_replicates":BOOTSTRAPS,"bootstrap_seed":SEED,"bootstrap_seed_derivation":"SHA256(series|direction|threshold|horizon)","independent_episode_rule":"greedy chronological non-overlap by signal_index and horizon trading closes","multiple_testing":"Benjamini-Hochberg at actor-family and global searched-universe levels","minimum_discovery_n":MIN_DISCOVERY_N,"minimum_holdout_n":MIN_HOLDOUT_N,"minimum_independent_n":MIN_INDEPENDENT_N},"classification_counts":dict(counts),"metric_count":len(rows),"metrics":rows,"production_model_changed":False,"automatic_promotion_allowed":False}
     OUT.parent.mkdir(parents=True,exist_ok=True);OUT.write_text(json.dumps(payload,separators=(",",":"),sort_keys=True)+"\n",encoding="utf-8")
     priority={"GLOBAL_FDR":0,"FAMILY_FDR":1,"NONOVERLAP_CONFIRMED":2};strongest=sorted([r for r in rows if r["classification"] in priority],key=lambda r:(priority[r["classification"]],float(r.get("global_fdr_q") or 1),-int(r.get("independent_n") or 0)))
-    SUMMARY.write_text(json.dumps({"schema_version":1,"research_generation":"release-corrected-v2","release_calendar_hash":calendar_hash(),"classification_counts":dict(counts),"metric_count":len(rows),"strongest":strongest[:250],"automatic_promotion_allowed":False},separators=(",",":"),sort_keys=True)+"\n",encoding="utf-8")
-    print(f"Threshold inference v2 complete · metrics={len(rows)} · classifications={dict(counts)}")
+    SUMMARY.write_text(json.dumps({"schema_version":1,"research_generation":"release-corrected-v2","release_calendar_hash":calendar_hash(),"strict_release_alignment":True,"classification_counts":dict(counts),"metric_count":len(rows),"strongest":strongest[:250],"automatic_promotion_allowed":False},separators=(",",":"),sort_keys=True)+"\n",encoding="utf-8")
+    print(f"Threshold inference strict v2 complete · metrics={len(rows)} · classifications={dict(counts)}")
 if __name__=="__main__":main()
