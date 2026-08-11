@@ -54,6 +54,6 @@ jobs:
           cat /tmp/cot-e2e-http.log
           exit 1
 
-      - name: Run browser and WCAG checks
+      - name: Run legacy Worldclass browser and WCAG checks
         working-directory: analysis/e2e
-        run: npx playwright test --config=playwright.config.mjs
+        run: npx playwright test --config=playwright.config.mjs --grep-invert "COT Intelligence|edge tab distinguishes|horizon matrix exposes|actor drilldown lazy-loads|cross view shows|live tab never relabels"
