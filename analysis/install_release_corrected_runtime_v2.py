@@ -5,7 +5,7 @@ import gzip,hashlib,json,shutil,subprocess,sys
 from pathlib import Path
 from typing import Any
 import fetch_release_corrected_snapshot_v2 as remote_snapshot
-ROOT=Path(__file__).resolve().parent;WC=ROOT/'worldclass';RESEARCH=WC/'research';SNAP=RESEARCH/'snapshots'/'2026-08-11-release-corrected-v2';CANON_REG=WC/'cot-edge-registry.json';CANON_ACTIVE=WC/'cot-active-edges.json';CANON_CROSS=WC/'cot-cross-market.json';CANON_DETAILS=WC/'cot-edge-details';COPY_JS=WC/'cot-intelligence-v2-copy.js';HTML=ROOT/'worldclass_dashboard.html'
+ROOT=Path(__file__).resolve().parent;WC=ROOT/'worldclass';RESEARCH=WC/'research';SNAP=RESEARCH/'snapshots'/'2026-08-11-release-corrected-v2';V2_REG=WC/'cot-edge-registry-v2.json';CANON_REG=WC/'cot-edge-registry.json';CANON_ACTIVE=WC/'cot-active-edges.json';CANON_CROSS=WC/'cot-cross-market.json';CANON_DETAILS=WC/'cot-edge-details';COPY_JS=WC/'cot-intelligence-v2-copy.js';HTML=ROOT/'worldclass_dashboard.html'
 def sha(path:Path)->str:return hashlib.sha256(path.read_bytes()).hexdigest()
 def short_sha(path:Path)->str:return sha(path)[:12]
 def load(path:Path)->dict[str,Any]:
@@ -35,7 +35,7 @@ def install_copy_asset()->None:
  if '</body>' not in text:raise RuntimeError('dashboard HTML missing </body>')
  HTML.write_text(text.replace('</body>',f'  {tag}\n</body>',1),encoding='utf-8')
 def main()->None:
- manifest=verify_snapshot();atomic_copy(SNAP/'cot-edge-registry-v2.json',CANON_REG)
+ manifest=verify_snapshot();atomic_copy(SNAP/'cot-edge-registry-v2.json',V2_REG);atomic_copy(V2_REG,CANON_REG)
  if CANON_DETAILS.exists():shutil.rmtree(CANON_DETAILS)
  CANON_DETAILS.mkdir(parents=True,exist_ok=True)
  for src in sorted((SNAP/'cot-edge-details-v2').glob('*.json')):atomic_copy(src,CANON_DETAILS/src.name)
