@@ -2,6 +2,9 @@
    The base module is intentionally dark-first; these overrides make the
    dashboard feel native in day mode instead of looking like a dim overlay. */
 html[data-theme="light"] .cot-intel {
+  color-scheme: light;
+  color: var(--text);
+  isolation: isolate;
   background:
     radial-gradient(circle at 0% 0%, rgba(14,165,233,.055), transparent 28rem),
     linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.98));
@@ -33,6 +36,10 @@ html[data-theme="light"] .cot-intel-tabs button.active {
   color: #172033;
   background: #e8eef5;
   box-shadow: inset 0 0 0 1px rgba(100,116,139,.08), 0 1px 2px rgba(15,23,42,.04);
+}
+
+html[data-theme="light"] .cot-intel-body {
+  background: transparent;
 }
 
 html[data-theme="light"] .cot-intel-strip span {
@@ -177,9 +184,27 @@ html[data-theme="light"] .cot-error {
 }
 
 html[data-theme="light"] .cot-now-card {
-  background: rgba(255,255,255,.92);
+  background: rgba(255,255,255,.96);
   border-color: rgba(100,116,139,.16);
-  color: inherit;
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(15,23,42,.035);
+}
+
+/* Mobile NOW is the first visible surface on phones. Force an opaque light
+   card/surface stack so a dark base layer can never visually bleed through. */
+@media(max-width:640px){
+  html[data-theme="light"] .cot-intel {
+    background: #ffffff;
+  }
+  html[data-theme="light"] .cot-intel-tabs {
+    background: #f8fafc;
+  }
+  html[data-theme="light"] .cot-intel-body {
+    background: #ffffff;
+  }
+  html[data-theme="light"] .cot-now-cards {
+    background: transparent;
+  }
 }
 
 /* Keep the light treatment crisp: no dark translucent layer should survive a
