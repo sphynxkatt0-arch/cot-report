@@ -10,7 +10,7 @@ async function open(page) {
 test('COT Intelligence separates current state from statistical evidence', async ({ page }) => {
   await open(page);
   const panel = page.locator('#cotIntelligence');
-  for (const label of ['NOW','EDGES','HORIZONS','ACTORS','LIVE']) await expect(panel.getByRole('button', {name:label})).toBeVisible();
+  for (const label of ['NOW','EDGES','HORIZONS','ACTORS','CROSS','LIVE']) await expect(panel.getByRole('button', {name:label})).toBeVisible();
   await expect(panel).toContainText('pp = percentage points');
   expect(await panel.locator('.cot-now-table tbody tr').count()).toBeGreaterThan(0);
   await expect(page.locator('#wcCommandCenter')).toContainText('Data / decision quality');
@@ -29,6 +29,11 @@ test('horizon matrix exposes all 15 horizons and sample warnings', async ({ page
 test('actor drilldown lazy-loads predictor comparison, percentile bands and OI interactions', async ({ page }) => {
   await open(page); const panel=page.locator('#cotIntelligence'); await panel.getByRole('button',{name:'ACTORS'}).click();
   await expect(panel).toContainText('PREDICTOR COMPARISON'); await expect(panel).toContainText('PERCENTILE CURVES'); await expect(panel).toContainText('P0–10'); await expect(panel).toContainText('P90–100'); await expect(panel).toContainText('Actor flow × Open Interest direction'); await expect(panel).toContainText('ADD OI CUT');
+});
+
+test('cross view shows current same-actor markets but keeps combinations discovery-only', async ({ page }) => {
+  await open(page); const panel=page.locator('#cotIntelligence'); await panel.getByRole('button',{name:'CROSS'}).click();
+  await expect(panel).toContainText('Same actor across markets'); await expect(panel).toContainText('DISCOVERY ONLY'); await expect(panel).toContainText('SAME ACTOR · CROSS INSTRUMENT'); await expect(panel).toContainText('RISK BREADTH');
 });
 
 test('COT Intelligence passes WCAG A/AA and does not cause mobile page overflow', async ({ page }) => {
