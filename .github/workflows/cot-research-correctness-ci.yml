@@ -6,7 +6,9 @@ on:
       - 'analysis/**'
       - '.github/workflows/cot-research-correctness-ci.yml'
   push:
-    branches: [main]
+    branches:
+      - main
+      - fix/cot-release-correctness-v2
     paths:
       - 'analysis/**'
       - '.github/workflows/cot-research-correctness-ci.yml'
