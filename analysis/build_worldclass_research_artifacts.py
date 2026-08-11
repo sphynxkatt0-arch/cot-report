@@ -16,6 +16,7 @@ import build_worldclass_regime_backtest as regime_backtest
 import build_cot_edge_registry as edge_registry
 import build_cot_current_state as current_state
 import build_cot_active_edges as active_edges
+import build_cot_cross_market_runtime as cross_market
 import install_cot_intelligence_shell as cot_shell
 
 ROOT=Path(__file__).resolve().parent; SOURCE=ROOT/"interactive_cot_dashboard.html"; WORLDCLASS=ROOT/"worldclass"; TEMP_RESEARCH_BASE=WORLDCLASS/".research-base.tmp.json"; FULL_METALS=metals_builder.RESEARCH_OUT; RUNTIME_METALS=metals_builder.OUT
@@ -65,7 +66,7 @@ def ensure_full_metals()->dict:
     return rebuild_full_metals_from_official()
 
 def validate_cot_intelligence_outputs()->None:
-    required={WORLDCLASS/"cot-current-state.json":200000,WORLDCLASS/"cot-edge-registry.json":500000,WORLDCLASS/"cot-active-edges.json":180000,WORLDCLASS/"cot-intelligence.js":50000,WORLDCLASS/"cot-intelligence.css":40000}
+    required={WORLDCLASS/"cot-current-state.json":200000,WORLDCLASS/"cot-edge-registry.json":500000,WORLDCLASS/"cot-active-edges.json":180000,WORLDCLASS/"cot-cross-market.json":180000,WORLDCLASS/"cot-intelligence.js":60000,WORLDCLASS/"cot-intelligence.css":45000}
     for path,maximum in required.items():
         if not path.exists() or path.stat().st_size<=100: raise RuntimeError(f"COT Intelligence output missing/empty: {path}")
         if path.stat().st_size>maximum: raise RuntimeError(f"COT Intelligence performance budget exceeded: {path} = {path.stat().st_size:,} > {maximum:,}")
@@ -84,6 +85,6 @@ def main()->None:
     finally:
         cot_backtest.BASE=original_cot_base; cot_backtest.METALS=original_cot_metals; regime_backtest.BASE=original_regime_base; regime_backtest.METALS=original_regime_metals; TEMP_RESEARCH_BASE.unlink(missing_ok=True)
     atomic_write(RUNTIME_METALS,metals_builder.runtime_from_research(full_metals))
-    edge_registry.main(); current_state.main(); active_edges.main(); cot_shell.main(); validate_cot_intelligence_outputs()
+    edge_registry.main(); current_state.main(); active_edges.main(); cross_market.main(); cot_shell.main(); validate_cot_intelligence_outputs()
     print(f"Saved full-history COT backtest: {cot_backtest.OUT} ({cot_backtest.OUT.stat().st_size:,} bytes)"); print(f"Saved full-history regime backtest: {regime_backtest.OUT} ({regime_backtest.OUT.stat().st_size:,} bytes)"); print("COT Intelligence runtime contract PASS")
 if __name__=="__main__":main()
