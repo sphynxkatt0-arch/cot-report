@@ -28,6 +28,7 @@ test('COT Intelligence separates current state from statistical evidence', async
 
 test('current edge command ranks active conditions without summing correlated edges', async ({ page }) => {
   await open(page); const panel=page.locator('#currentEdgeCommand');
+  expect(await page.evaluate(() => document.querySelector('.instrument-bar')?.nextElementSibling?.id)).toBe('currentEdgeCommand');
   await expect(panel).toContainText('Current edge stack');
   await expect(panel).toContainText('ranked, never summed');
   await expect(panel).toContainText('Rank; do not sum');
