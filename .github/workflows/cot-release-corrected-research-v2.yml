@@ -35,6 +35,15 @@ jobs:
       - name: Build release-corrected regime research
         working-directory: analysis
         run: python build_worldclass_regime_backtest.py
+      - name: Build release-corrected analog robustness
+        working-directory: analysis
+        run: python evaluate_analog_robustness_v2.py
+      - name: Build financial weight model-selection research
+        working-directory: analysis
+        run: python evaluate_financial_actor_weights_v2.py
+      - name: Build metals weight model-selection research
+        working-directory: analysis
+        run: python evaluate_disaggregated_weights_v2.py
       - name: Build release-corrected actor-event research
         working-directory: analysis
         run: python build_cot_actor_event_research_v2.py
@@ -61,6 +70,9 @@ jobs:
           mkdir -p "$SNAP"
           cp analysis/worldclass/backtest.json "$SNAP/worldclass-backtest.json"
           cp analysis/worldclass/regime_backtest.json "$SNAP/worldclass-regime-backtest.json"
+          cp analysis/worldclass/research/analog-robustness.json "$SNAP/analog-robustness.json"
+          cp analysis/worldclass/financial-weight-study.json "$SNAP/financial-weight-study.json"
+          cp analysis/worldclass/metal-weight-study.json "$SNAP/metal-weight-study.json"
           cp analysis/worldclass/research/cot-actor-event-summary.json "$SNAP/cot-actor-event-summary.json"
           gzip -9 -c analysis/worldclass/research/cot-actor-event-research.json > "$SNAP/cot-actor-event-research.json.gz"
           cp analysis/worldclass/research/cot-threshold-inference-v2-summary.json "$SNAP/cot-threshold-inference-v2-summary.json"
