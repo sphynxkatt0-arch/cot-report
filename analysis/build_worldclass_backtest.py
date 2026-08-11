@@ -10,12 +10,12 @@ from __future__ import annotations
 import json
 import math
 import statistics
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 import model_spec as model_cfg
-from cftc_release_calendar import calendar_hash, release_record
+from cftc_release_calendar import calendar_hash, release_date as canonical_release_date, release_record
 from cot_research_core import finite, horizon_result as core_horizon_result, parse_date, percentile_rank, price_records, release_aligned_entry
 
 ROOT = Path(__file__).resolve().parent
@@ -38,6 +38,29 @@ MARKET_LABELS = {
     "sp500": "S&P 500", "nq": "Nasdaq-100", "vix": "VIX Futures",
     "rty": "Russell 2000", "dow": "Dow Jones", "gold": "Gold", "silver": "Silver",
 }
+
+
+def first_price_index_on_or_after(prices: list[dict[str, Any]], target) -> int | None:
+    """Compatibility API for older research modules.
+
+    Older COT modules pass `report_date + 3 days` as a nominal Friday target.
+    When that signature is detected (target-3 is Tuesday), transparently replace
+    it with the canonical CFTC availability date. This fixes delayed/holiday
+    releases for actor-event, analog, weight and predictive-power descendants
+    without allowing each module to invent its own calendar logic.
+    """
+    effective = target
+    try:
+        inferred_report = target - timedelta(days=3)
+        if inferred_report.weekday() == 1:
+            effective = canonical_release_date(inferred_report)
+    except (TypeError, AttributeError):
+        pass
+    for index, row in enumerate(prices):
+        row_date = row.get("date")
+        if row_date is not None and row_date >= effective:
+            return index
+    return None
 
 
 def score_at(rows: list[dict[str, Any]], index: int, dataset: str, categories: list[str]) -> float | None:
