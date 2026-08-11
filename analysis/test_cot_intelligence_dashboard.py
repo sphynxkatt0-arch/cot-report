@@ -18,22 +18,25 @@ def main():
   if long_v is not None and short_v is not None and net_v is not None: assert close(float(long_v)-float(short_v),net_v),(key,long_v,short_v,net_v)
   oi=row.get("open_interest")
   if oi not in (None,0) and net_v is not None and row.get("net_oi_pct") is not None: assert close(float(net_v)/float(oi)*100.0,row["net_oi_pct"],tol=2e-4),key
- assert registry["horizons"]==HORIZONS; assert len(registry.get("actors") or {})==59; assert registry.get("automatic_promotion_allowed") is False; counts=registry["research_counts"]; assert counts["continuous_metrics"]==12915; assert counts["actor_horizon_cells"]==885; assert counts["market_oi_horizon_cells"]==105
- for series,actor in registry["actors"].items():
-  assert set(actor["horizons"])==set(HORIZONS),series
-  for horizon,metric in actor["horizons"].items():
-   n=int(metric.get("independent_n") or 0)
-   if n<15: assert metric.get("evidence_status")=="INSUFFICIENT_N",(series,horizon,n,metric.get("evidence_status"))
-   assert metric.get("sample_grade") in {"FULL","SAMPLE_WARNING","RESEARCH_ONLY","INSUFFICIENT"}
+ assert registry["horizons"]==HORIZONS; assert len(registry.get("actors") or {})==59; assert registry.get("automatic_promotion_allowed") is False; assert "horizons" not in next(iter(registry["actors"].values())); counts=registry["research_counts"]; assert counts["continuous_metrics"]==12915; assert counts["actor_horizon_cells"]==885; assert counts["market_oi_horizon_cells"]==105
+ detail_series=set(); detail_cells=0
  for market in MARKETS:
   detail=load(WC/"cot-edge-details"/f"{market}.json"); assert detail["market"]==market; assert detail.get("actors"); assert "threshold_percentile_profiles" in detail; assert "actor_flow_x_oi_direction" in detail
+  for row in detail["actors"]:
+   detail_cells+=1; detail_series.add(row["series"]); metric=row["best_overall"]; n=int(metric.get("independent_n") or 0)
+   if n<15: assert metric.get("evidence_status")=="INSUFFICIENT_N",(row["series"],row["horizon"],n,metric.get("evidence_status"))
+   assert metric.get("sample_grade") in {"FULL","SAMPLE_WARNING","RESEARCH_ONLY","INSUFFICIENT"}
+ assert detail_cells==885,detail_cells; assert len(detail_series)==59,len(detail_series)
  assert active["governance"]["production_model_changed"] is False; assert active["governance"]["automatic_promotion_allowed"] is False; assert active["governance"]["pp_definition"]=="percentage points"
- for row in active.get("active_thresholds") or []:
-  assert float(row["current_change_percentile"])>=float(row["selected_threshold"]); assert row["direction"] in {"ADD","CUT"}
-  for metric in row.get("metrics") or []: assert "conditional_return_pct" in metric and "baseline_return_pct" in metric and "excess_vs_baseline_pp" in metric
+ total_active=0
+ for market,block in (active.get("by_market") or {}).items():
+  for row in block.get("active_thresholds") or []:
+   total_active+=1; assert float(row["current_change_percentile"])>=float(row["selected_threshold"]); assert row["direction"] in {"ADD","CUT"}
+   for metric in row.get("metrics") or []: assert "conditional_return_pct" in metric and "baseline_return_pct" in metric and "excess_vs_baseline_pp" in metric
+ assert total_active==int(active.get("active_threshold_count") or 0)
  assert policy["automatic_weight_changes"] is False; assert policy["eligible_actor_roles"]==["PRIMARY_DIRECTIONAL"]; assert policy["decision_states"]["ELIGIBLE_FOR_GOVERNANCE_REVIEW"]
  html=HTML.read_text(encoding="utf-8"); assert 'data-cot-intelligence-asset="css"' in html; assert 'data-cot-intelligence-asset="js"' in html
- js=(WC/"cot-intelligence.js").read_text(encoding="utf-8"); assert "pp = <b>percentage points</b>" in js; assert "Data / decision quality" in js
- for path,limit in {CURRENT:200000,REGISTRY:900000,ACTIVE:350000,WC/"cot-intelligence.js":80000,WC/"cot-intelligence.css":40000}.items(): assert path.stat().st_size<=limit,(path,path.stat().st_size,limit)
- print("COT Intelligence contract PASS"); print(f"actor_states={len(states)} active_thresholds={active.get('active_threshold_count')} registry_bytes={REGISTRY.stat().st_size}")
+ js=(WC/"cot-intelligence.js").read_text(encoding="utf-8"); assert "pp = <b>percentage points</b>" in js; assert "Data / decision quality" in js; assert "cot-edge-details/" in js
+ for path,limit in {CURRENT:200000,REGISTRY:500000,ACTIVE:180000,WC/"cot-intelligence.js":50000,WC/"cot-intelligence.css":40000}.items(): assert path.stat().st_size<=limit,(path,path.stat().st_size,limit)
+ print("COT Intelligence contract PASS"); print(f"actor_states={len(states)} actor_horizon_cells={detail_cells} active_thresholds={total_active} registry_bytes={REGISTRY.stat().st_size} active_bytes={ACTIVE.stat().st_size}")
 if __name__=="__main__":main()
