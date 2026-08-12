@@ -9,8 +9,12 @@ on:
       - 'analysis/build_worldclass_research_artifacts.py'
       - 'analysis/fetch_release_corrected_snapshot_v2.py'
       - 'analysis/install_release_corrected_runtime_v2.py'
+      - 'analysis/install_cot_intelligence_shell.py'
       - 'analysis/worldclass/cot-intelligence-v2-copy.js'
+      - 'analysis/worldclass/cot-intelligence-worldclass-ux.css'
+      - 'analysis/worldclass/cot-intelligence-worldclass-ux.js'
       - 'analysis/worldclass/current-edge-*'
+      - 'analysis/e2e/worldclass-cot-ux-order.spec.mjs'
       - 'analysis/test_cot_intelligence_dashboard_v2.py'
       - 'analysis/worldclass/research/snapshots/**'
       - '.github/workflows/cot-intelligence-dashboard-v2-ci.yml'
@@ -30,12 +34,13 @@ jobs:
         run: pip install -r analysis/requirements.txt
       - name: Syntax and legacy immutable snapshot verification
         run: |
-          python -m py_compile analysis/fetch_release_corrected_snapshot_v2.py analysis/build_cot_current_state.py analysis/build_cot_edge_registry_v2.py analysis/build_cot_edge_details_v2.py analysis/build_cot_active_edges_v2.py analysis/build_cot_cross_market_runtime_v2.py analysis/install_release_corrected_runtime_v2.py analysis/test_cot_intelligence_dashboard_v2.py analysis/build_worldclass_research_artifacts.py
+          python -m py_compile analysis/fetch_release_corrected_snapshot_v2.py analysis/build_cot_current_state.py analysis/build_cot_edge_registry_v2.py analysis/build_cot_edge_details_v2.py analysis/build_cot_active_edges_v2.py analysis/build_cot_cross_market_runtime_v2.py analysis/install_release_corrected_runtime_v2.py analysis/install_cot_intelligence_shell.py analysis/test_cot_intelligence_dashboard_v2.py analysis/build_worldclass_research_artifacts.py
           node --check analysis/worldclass/cot-intelligence.js
           node --check analysis/worldclass/cot-intelligence-v2-copy.js
           node --check analysis/worldclass/current-edge-model.js
           node --check analysis/worldclass/current-edge-command.js
           node --check analysis/worldclass/mobile-ux-runtime.js
+          node --check analysis/worldclass/cot-intelligence-worldclass-ux.js
           for snap in 2026-08-11-position-oi-all-actors 2026-08-10; do (cd "analysis/worldclass/research/snapshots/$snap" && sha256sum -c SHA256SUMS.txt); done
       - name: Materialize exact independently certified v2 snapshot
         run: |
@@ -50,6 +55,8 @@ jobs:
           python analysis/build_worldclass_research_artifacts.py
           python analysis/test_cot_intelligence_dashboard_v2.py
           test ! -e analysis/worldclass/.research-base.tmp.json
+          test -s analysis/worldclass/cot-intelligence-worldclass-ux.css
+          test -s analysis/worldclass/cot-intelligence-worldclass-ux.js
       - uses: actions/setup-node@v5
         with: {node-version: '22'}
       - name: Browser tests on certified v2 runtime
@@ -59,4 +66,4 @@ jobs:
           npx playwright install --with-deps chromium
           python3 -m http.server 4173 --bind 127.0.0.1 --directory .. >/tmp/cot-intel-http.log 2>&1 &
           for _ in {1..30}; do curl -fsS http://127.0.0.1:4173/worldclass_dashboard.html >/dev/null && break; sleep 1; done
-          npx playwright test worldclass-cot-intelligence.spec.mjs --config=playwright.config.mjs
+          npx playwright test worldclass-cot-intelligence.spec.mjs worldclass-cot-ux-order.spec.mjs --config=playwright.config.mjs
