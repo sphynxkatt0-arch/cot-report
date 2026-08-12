@@ -1,98 +1,136 @@
 import { test, expect } from '@playwright/test';
 
-async function open(page) {
-  await page.goto('/worldclass_dashboard.html');
+async function open(page, query = '?market=nq&horizon=4w&view=overview') {
+  await page.goto(`/worldclass_dashboard.html${query}`);
   await page.waitForFunction(() => document.documentElement.classList.contains('cot-worldclass-ux-ready'));
-  await expect(page.locator('#cotIntelligence')).toBeVisible();
-  await expect(page.locator('.cot-ux-market-switcher')).toBeVisible();
   await expect(page.locator('#currentEdgeCommand')).toBeVisible();
+  await expect(page.locator('.instrument-bar')).toBeVisible();
 }
 
-test('market selection and decision surfaces stay above deep statistical evidence', async ({ page }) => {
+test('desktop first viewport is decision-first and contains the full market read', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await open(page);
-  await page.waitForFunction(() => Boolean(document.querySelector('#currentEdgeCommand')) && Boolean(document.querySelector('#wcCommandCenter')));
-  await page.waitForTimeout(100);
 
-  const order = await page.evaluate(() => {
-    const top = selector => document.querySelector(selector)?.getBoundingClientRect().top ?? null;
+  await expect(page.locator('.hero')).toBeHidden();
+  await expect(page.locator('.decision-title-row')).toBeVisible();
+  await expect(page.locator('.decision-strongest')).toBeVisible();
+  await expect(page.locator('.decision-horizons [data-decision-horizon="4w"]')).toHaveClass(/active/);
+  await expect(page.locator('.decision-driver-strip > div')).toHaveCount(4);
+  await expect(page.locator('.decision-driver-strip')).toContainText('COT');
+  await expect(page.locator('.decision-driver-strip')).toContainText('MACRO');
+  await expect(page.locator('.decision-driver-strip')).toContainText('SENTIMENT');
+  await expect(page.locator('.decision-grade')).toContainText(/Evidence/i);
+
+  const bounds = await page.evaluate(() => {
+    const bottom = selector => document.querySelector(selector)?.getBoundingClientRect().bottom ?? Infinity;
     return {
-      instrument: top('.instrument-bar'),
-      current: top('#currentEdgeCommand'),
-      command: top('#wcCommandCenter'),
-      evidence: top('#cotIntelligence')
+      selector: bottom('.instrument-bar'),
+      read: bottom('.decision-title-row'),
+      strongest: bottom('.decision-strongest')
     };
   });
+  expect(bounds.selector).toBeLessThan(1000);
+  expect(bounds.read).toBeLessThan(1000);
+  expect(bounds.strongest).toBeLessThan(1000);
 
-  expect(order.instrument).not.toBeNull();
-  expect(order.current).not.toBeNull();
-  expect(order.command).not.toBeNull();
-  expect(order.evidence).not.toBeNull();
-  expect(order.instrument).toBeLessThan(order.evidence);
-  expect(order.current).toBeLessThan(order.evidence);
-  expect(order.command).toBeLessThan(order.evidence);
+  await expect(page.locator('#cotIntelligence')).toBeHidden();
+  await expect(page.locator('.workbench-panel')).toBeHidden();
 });
 
-test('evidence panel exposes a synchronized market selector at the top', async ({ page }) => {
+test('prospective forecast and historical edge are visually and semantically separate', async ({ page }) => {
   await open(page);
-  const panel = page.locator('#cotIntelligence');
-  const switcher = panel.locator('.cot-ux-market-switcher');
-  await expect(switcher.locator('[data-cot-ux-market]')).toHaveCount(7);
+  const prospective = page.locator('.decision-semantic.prospective');
+  const historical = page.locator('.decision-semantic.historical');
+  await expect(prospective).toContainText('PROSPECTIVE FORECAST');
+  await expect(historical).toContainText('HISTORICAL EDGE');
 
-  await switcher.locator('[data-cot-ux-market="nq"]').click();
-  await expect(page.locator('#instrumentTabs [data-market="nq"]')).toHaveClass(/active/);
-  await expect(switcher.locator('[data-cot-ux-market="nq"]')).toHaveAttribute('aria-pressed', 'true');
-  await expect(panel.locator('#cotIntelMarket')).toContainText('Nasdaq-100');
+  const historicalText = await historical.innerText();
+  expect(historicalText).toMatch(/normal|inside normal/i);
+  if (historicalText.includes('pp')) expect(historicalText).toMatch(/uplift/i);
+
+  const prospectiveText = await prospective.innerText();
+  expect(prospectiveText).not.toMatch(/uplift .*pp/i);
 });
 
-test('active edge view prioritizes directional actors and uses a compact evidence summary', async ({ page }) => {
-  await open(page);
-  const panel = page.locator('#cotIntelligence');
-  await panel.getByRole('button', { name: 'EDGES' }).click();
-  await expect(panel.locator('.cot-edge-overview article')).toHaveCount(3);
+test('market, horizon and view persist in URL and synchronize the dashboard', async ({ page }) => {
+  await open(page, '?market=sp500&horizon=4w&view=overview');
 
-  const priorities = await panel.locator('.cot-edge-grid-active .cot-edge-card.threshold').evaluateAll(cards => cards.map(card => {
-    if (card.querySelector('.cot-role.primary_directional')) return 0;
-    if (card.querySelector('.cot-role.secondary_directional')) return 1;
-    return 2;
-  }));
-  expect(priorities).toEqual([...priorities].sort((a, b) => a - b));
+  await page.locator('.decision-scanner [data-decision-market="gold"]').click();
+  await expect(page.locator('#instrumentTabs [data-market="gold"]')).toHaveClass(/active/);
+  await expect(page).toHaveURL(/market=gold/);
+  await expect(page.locator('.decision-title-row')).toContainText('Gold');
+
+  await page.locator('[data-decision-horizon="2w"]').click();
+  await expect(page.locator('[data-decision-horizon="2w"]')).toHaveClass(/active/);
+  await expect(page).toHaveURL(/horizon=2w/);
+
+  await page.locator('[data-decision-view="research"]').click();
+  await expect(page).toHaveURL(/view=research/);
+  await expect(page.locator('#cotIntelligence')).toBeVisible();
+  await expect(page.locator('#cotIntelligence .cot-ux-market-switcher')).toHaveCount(0);
+  await expect(page.locator('#cotIntelligence #cotIntelMarket')).toContainText(/Gold/i);
 });
 
-test('world-class command center keeps direction, all-market active edges and coming triggers together', async ({ page }) => {
+test('active edges prioritize directional actors and coming edges remain explicitly conditional', async ({ page }) => {
   await open(page);
-  const command = page.locator('#currentEdgeCommand');
-  await expect(command.locator('.current-edge-layers .current-edge-layer')).toHaveCount(3);
-  await expect(command).toContainText('ALL MARKETS · ACTIVE COT EDGES');
-  await expect(command).toContainText('COMING EDGE WATCHLIST');
-  await expect(command).toContainText('Conditional watch · not a prediction');
-  await expect(command).toContainText('Macro liquidity');
-  await expect(command).toContainText('Market sentiment');
-  await expect(command).toContainText('ranked, never summed');
-  expect(await command.locator('.current-edge-radar-row').count()).toBeGreaterThan(0);
-});
+  await page.locator('[data-decision-view="edges"]').click();
+  await expect(page.locator('.decision-view-panel')).toContainText('Ranked current actor conditions');
+  await expect(page.locator('.decision-watch-section')).toContainText('Conditional watch — not a prediction');
 
-test('all-market radar opens the selected instrument without losing the command hierarchy', async ({ page }) => {
-  await open(page);
-  const command = page.locator('#currentEdgeCommand');
-  const first = command.locator('.current-edge-radar-row').first();
-  const market = await first.getAttribute('data-current-edge-market');
-  expect(market).toBeTruthy();
-  await first.click();
-  await expect(page.locator(`#instrumentTabs [data-market="${market}"]`)).toHaveClass(/active/);
-  await expect(command.locator(`.current-edge-radar-row[data-current-edge-market="${market}"]`)).toHaveClass(/active/);
-});
-
-test('coming-edge watchlist exposes direction, distance and conditional historical edge without claiming a future trigger', async ({ page }) => {
-  await open(page);
-  const command = page.locator('#currentEdgeCommand');
-  const rows = command.locator('.current-edge-watch-row');
+  const rows = page.locator('.decision-edge-row');
   if (await rows.count()) {
-    await expect(rows.first()).toContainText('Current → trigger');
-    await expect(rows.first()).toContainText('Distance');
-    await expect(rows.first()).toContainText('If triggered');
-    const text = await rows.first().innerText();
-    expect(text).toMatch(/BULLISH|BEARISH|NEUTRAL/);
-    await expect(command).toContainText('it does not claim the next report will cross it');
+    await expect(rows.first()).toContainText(/Historical result/i);
+    await expect(rows.first()).toContainText(/Uplift/i);
+    await expect(rows.first().locator('.decision-why')).toHaveCount(1);
+  }
+
+  const watches = page.locator('.decision-watch');
+  if (await watches.count()) {
+    await expect(watches.first()).toContainText('If triggered');
+    await expect(watches.first()).toContainText(/percentile points away/i);
+    await expect(watches.first().locator('.decision-progress')).toBeVisible();
+  }
+});
+
+test('weekday view reads as a cumulative path and preserves release timing language', async ({ page }) => {
+  await open(page);
+  await page.locator('[data-decision-view="week"]').click();
+  const panel = page.locator('.decision-view-panel');
+  await expect(panel).toContainText('THIS WEEK — CUMULATIVE HISTORICAL PATH');
+  if (await panel.locator('.decision-week-path article').count()) {
+    await expect(panel).toContainText('previous Tuesday COT positioning');
+    await expect(panel).toContainText('publicly available Friday');
+    await expect(panel.locator('.decision-week-path article')).toHaveCount(5);
+  }
+});
+
+test('mobile has no page-level horizontal overflow and strongest edge needs no table scroll', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page);
+  let overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+
+  await page.locator('[data-decision-view="edges"]').click();
+  overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+
+  const firstRow = page.locator('.decision-edge-row').first();
+  if (await firstRow.count()) {
+    const box = await firstRow.boundingBox();
+    expect(box.width).toBeLessThanOrEqual(390);
+  }
+});
+
+test('light and dark themes retain readable decision surfaces', async ({ page }) => {
+  await open(page);
+  for (const theme of ['dark', 'light']) {
+    const current = await page.locator('html').getAttribute('data-theme');
+    if (current !== theme) await page.locator('#themeToggle').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+    const contrastSanity = await page.locator('.decision-current').evaluate(node => {
+      const style = getComputedStyle(node);
+      return { color: style.color, background: style.backgroundColor };
+    });
+    expect(contrastSanity.color).not.toBe(contrastSanity.background);
   }
 });
