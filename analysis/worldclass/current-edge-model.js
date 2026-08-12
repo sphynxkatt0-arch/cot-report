@@ -82,8 +82,8 @@
       if(magnitude===null||!['ADD','CUT'].includes(direction))continue;
       const future=edges.filter(edge=>edge.series===row.series&&edge.direction===direction&&WATCH_CLASSES.has(String(edge.best_classification||""))&&finite(edge.threshold)!==null&&finite(edge.threshold)>magnitude).map(edge=>({...edge,distance:finite(edge.threshold)-magnitude})).sort((a,b)=>a.distance-b.distance||(EVIDENCE_ORDER[b.best_classification]??0)-(EVIDENCE_ORDER[a.best_classification]??0));
       if(!future.length)continue;
-      const edge=future[0];
-      candidates.push({market:row.market,row,edge,distance:edge.distance,direction:sign(edge.best_holdout_edge_pp)>=0?{label:"BULLISH",tone:"positive"}:{label:"BEARISH",tone:"negative"},grade:evidenceGrade(edge.best_classification)});
+      const edge=future[0],edgeSign=sign(edge.best_holdout_edge_pp),edgeDirection=edgeSign>0?{label:"BULLISH",tone:"positive"}:edgeSign<0?{label:"BEARISH",tone:"negative"}:{label:"NEUTRAL",tone:"neutral"};
+      candidates.push({market:row.market,row,edge,distance:edge.distance,direction:edgeDirection,grade:evidenceGrade(edge.best_classification)});
     }
     return candidates.sort((a,b)=>a.distance-b.distance||(EVIDENCE_ORDER[b.edge.best_classification]??0)-(EVIDENCE_ORDER[a.edge.best_classification]??0)||Math.abs(finite(b.edge.best_holdout_edge_pp)||0)-Math.abs(finite(a.edge.best_holdout_edge_pp)||0)).slice(0,limit);
   }
@@ -118,10 +118,12 @@
     return{available:true,tone,label:crowding,index,detail:`${composite.available_sources??0}/${composite.required_sources??4} sources · bullish ${finite(composite.bullish_pct)?.toFixed(0)??"n/a"}% · bearish ${finite(composite.bearish_pct)?.toFixed(0)??"n/a"}%`,sources:composite.available_sources??0,date:latest.observation_date};
   }
   function layerAlignment(market=state.market){
-    const read=directionalRead(market,state.horizon),macro=macroSnapshot(),sentiment=sentimentSnapshot(),cot=toneSign(read.tone),m=toneSign(macro.tone),s=toneSign(sentiment.tone),observed=[cot,m,s].filter(Boolean);
-    let label="CONFLICTED",tone="neutral",count=0;
-    if(observed.length){const pos=observed.filter(x=>x>0).length,neg=observed.filter(x=>x<0).length;count=Math.max(pos,neg);if(count===3){label="3 / 3 ALIGNMENT";tone=pos===3?"positive":"negative"}else if(count===2){label="2 / 3 ALIGNMENT";tone=pos===2?"positive":"negative"}else label="CONFLICTED"}
-    return{label,tone,count,read,macro,sentiment,note:"Alignment is descriptive context only; COT, macro and sentiment are not summed into a synthetic trading score."};
+    const read=directionalRead(market,state.horizon),macro=macroSnapshot(),sentiment=sentimentSnapshot();
+    const layers=[{available:Boolean(read.strongest||read.model),sign:toneSign(read.tone)},{available:macro.available,sign:toneSign(macro.tone)},{available:sentiment.available,sign:toneSign(sentiment.tone)}],available=layers.filter(x=>x.available),directional=available.map(x=>x.sign).filter(Boolean);
+    let label=available.length<2?"INSUFFICIENT LAYERS":"CONFLICTED",tone="neutral",count=0;
+    if(directional.length>=2){const pos=directional.filter(x=>x>0).length,neg=directional.filter(x=>x<0).length;count=Math.max(pos,neg);if(count===directional.length){label=`${count} / ${available.length} ALIGNMENT`;tone=pos===count?"positive":"negative"}else if(count>=2){label=`${count} / ${available.length} ALIGNMENT`;tone=pos===count?"positive":"negative"}}
+    else if(available.length>=2)label="MIXED / NEUTRAL";
+    return{label,tone,count,read,macro,sentiment,availableCount:available.length,note:"Alignment is descriptive context only; COT, macro and sentiment are not summed into a synthetic trading score."};
   }
 
   function selectedMarket(){const m=document.querySelector("#instrumentTabs [data-market].active")?.dataset.market;return MARKETS[m]?m:state.market}
