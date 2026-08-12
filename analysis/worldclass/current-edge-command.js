@@ -1,102 +1,440 @@
 (() => {
   "use strict";
 
-  const M=()=>window.__COT_CURRENT_EDGE_MODEL__;
-  const WEEKDAYS=[["monday","MON"],["tuesday","MON–TUE"],["wednesday","MON–WED"],["thursday","MON–THU"],["friday","MON–FRI"]];
-  const FORWARD=["1w","2w","4w","13w","26w"];
-  const esc=v=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
-  const signed=(v,d=2,s="")=>{const n=M().finite(v);if(n===null)return"n/a";const body=Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});return`${n>0?"+":n<0?"−":""}${body}${s}`};
-  const integer=v=>{const n=M().finite(v);return n===null?"n/a":Math.round(n).toLocaleString()};
-  const percentile=v=>{const n=M().finite(v);return n===null?"n/a":`P${Math.round(n)}`};
-  const probability=v=>{const n=M().finite(v);return n===null?"n/a":`${Math.round(n*100)}%`};
-  const hl=v=>String(v||"").toUpperCase();
+  const M = () => window.__COT_CURRENT_EDGE_MODEL__;
+  const HORIZONS = ["1w", "2w", "4w", "13w", "26w"];
+  const VIEWS = ["overview", "edges", "week", "research", "live"];
+  const WEEKDAYS = [["monday", "MON"], ["tuesday", "MON–TUE"], ["wednesday", "MON–WED"], ["thursday", "MON–THU"], ["friday", "MON–FRI"]];
+  const esc = value => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+  const finite = value => {
+    const n = Number(value);
+    return value === null || value === undefined || value === "" || !Number.isFinite(n) ? null : n;
+  };
+  const signed = (value, digits = 2, suffix = "") => {
+    const n = finite(value);
+    if (n === null) return "n/a";
+    const body = Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    return `${n > 0 ? "+" : n < 0 ? "−" : ""}${body}${suffix}`;
+  };
+  const integer = value => finite(value) === null ? "n/a" : Math.round(finite(value)).toLocaleString();
+  const percentile = value => finite(value) === null ? "n/a" : `P${Math.round(finite(value))}`;
+  const pctProbability = value => {
+    const n = finite(value);
+    if (n === null) return "n/a";
+    return `${Math.round(Math.abs(n) <= 1 ? n * 100 : n)}%`;
+  };
+  const horizonLabel = value => String(value || "").toUpperCase();
 
-  function prioritize(){const root=document.querySelector("#currentEdgeCommand"),anchor=document.querySelector(".instrument-bar");if(root&&anchor&&anchor.nextElementSibling!==root)anchor.insertAdjacentElement("afterend",root)}
-  function mount(){
-    let root=document.querySelector("#currentEdgeCommand");
-    if(root){prioritize();return root}
-    root=document.createElement("section");root.id="currentEdgeCommand";root.className="current-edge-command";root.setAttribute("aria-label","Current COT edge, macro liquidity, sentiment and forward evidence");
-    const anchor=document.querySelector(".instrument-bar");if(anchor)anchor.insertAdjacentElement("afterend",root);else document.querySelector("main")?.prepend(root);
-    root.innerHTML='<div class="current-edge-loading">Loading current governed market command center…</div>';
-    root.addEventListener("click",event=>{
-      const h=event.target.closest("[data-current-edge-horizon]")?.dataset.currentEdgeHorizon;
-      if(h){M().state.horizon=h;render();return}
-      const market=event.target.closest("[data-current-edge-market]")?.dataset.currentEdgeMarket;
-      if(market){document.querySelector(`#instrumentTabs [data-market="${market}"]`)?.click();M().state.market=market;render()}
-    });
+  let view = "overview";
+  let rendering = false;
+  let observer = null;
+
+  function urlState() {
+    const url = new URL(window.location.href);
+    const market = M()?.MARKETS?.[url.searchParams.get("market")] ? url.searchParams.get("market") : null;
+    const horizon = HORIZONS.includes(url.searchParams.get("horizon")) ? url.searchParams.get("horizon") : null;
+    const nextView = VIEWS.includes(url.searchParams.get("view")) ? url.searchParams.get("view") : null;
+    return { market, horizon, view: nextView };
+  }
+
+  function writeUrl({ push = false } = {}) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("market", M().state.market);
+    url.searchParams.set("horizon", M().state.horizon);
+    url.searchParams.set("view", view);
+    history[push ? "pushState" : "replaceState"]({}, "", url);
+  }
+
+  function mount() {
+    let root = document.getElementById("currentEdgeCommand");
+    if (!root) {
+      root = document.createElement("section");
+      root.id = "currentEdgeCommand";
+      root.className = "current-edge-command";
+      root.setAttribute("aria-label", "Decision-first COT market intelligence");
+    }
+    const anchor = document.querySelector(".instrument-bar");
+    if (anchor && anchor.nextElementSibling !== root) anchor.insertAdjacentElement("afterend", root);
+    else if (!root.parentNode) document.querySelector("main")?.prepend(root);
     return root;
   }
-  function roleBadge(role){return`<span class="current-edge-role">${esc(M().ROLE_LABEL[role]||String(role||"Context").replaceAll("_"," "))}</span>`}
-  function gradeBadge(row,metric){const g=M().evidenceGrade(M().evidenceStatus(row,metric));return`<span class="current-edge-grade ${g.tone}" title="${esc(g.label)}">${g.grade}</span>`}
-  function controls(){return`<div class="current-edge-horizon-controls" role="group" aria-label="Rank active edges by horizon">${["1w","4w","13w","26w"].map(h=>`<button type="button" data-current-edge-horizon="${h}" class="${M().state.horizon===h?"active":""}" aria-pressed="${M().state.horizon===h}">${h.toUpperCase()}</button>`).join("")}</div>`}
 
-  function layerChip(label,value,tone,sub){return`<div class="current-edge-layer ${tone}"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(sub||"")}</small></div>`}
-  function hero(s){
-    const dates=M().reportDates(),strong=s.strongest,dir=M().edgeDirection(strong?.metric),live=M().state.live||{},model=s.model,integrity=String(live?.ledger?.integrity||"UNKNOWN").toUpperCase(),alignment=M().layerAlignment(),macro=alignment.macro,sentiment=alignment.sentiment,watch=M().thresholdWatchlist(20).filter(x=>x.market===M().state.market),nearest=watch[0]||null;
-    const mainMetric=strong?.metric||null,grade=strong?M().evidenceGrade(M().evidenceStatus(strong.row,strong.metric)):null;
-    const readSub=s.source==="prospective"?"Prospective combined model is the headline direction; historical actor edges remain separate below.":strong?`${esc(strong.row.actor_label)} · current ${percentile(strong.row.current_change_percentile)} ${esc(strong.row.direction)} · trigger P${esc(strong.row.selected_threshold)}`:nearest?`Nearest governed watch: ${esc(nearest.row.actor_label)} ${percentile(nearest.row.change_magnitude_percentile)} → P${Math.round(nearest.edge.threshold)}`:"No frozen threshold is currently active or near trigger.";
-    const cotValue=s.source==="prospective"?s.label:s.tone==="positive"?"BULLISH":s.tone==="negative"?"BEARISH":s.label.includes("NO ACTIVE")?"NO EDGE":"MIXED";
-    const cotSub=s.source==="prospective"?"prospective combined model":strong?`${dir.label} · ${signed(mainMetric?.excess_vs_baseline_pp,2," pp")} ${hl(mainMetric?.horizon||M().state.horizon)}`:"no active threshold";
-    const primaryKpiLabel=s.source==="prospective"?`Strongest historical ${esc(hl(M().state.horizon))} actor edge`:`Strongest ${esc(hl(M().state.horizon))} edge`;
-    return`<div class="current-edge-hero ${s.tone}">
-      <div class="current-edge-hero-copy">
-        <div class="current-edge-hero-top"><span class="current-edge-kicker">CURRENT DIRECTION · ${esc(M().MARKETS[M().state.market])}</span><span class="current-edge-alignment ${alignment.tone}">${esc(alignment.label)}</span></div>
-        <h2>${esc(s.label)}</h2>
-        <p>${esc(readSub)}</p>
-        <div class="current-edge-asof"><span>Tuesday positions <b>${esc(dates.report||"n/a")}</b></span><span>Public availability <b>${esc(dates.release||"n/a")}</b></span><span>Ledger <b>${esc(integrity)}</b></span></div>
-        <div class="current-edge-layers" aria-label="COT macro sentiment layers">
-          ${layerChip("COT",cotValue,s.tone,cotSub)}
-          ${layerChip("Macro liquidity",macro.label,macro.tone,macro.score===null?"score unavailable":`${Math.round(macro.score)} / 100`)}
-          ${layerChip("Market sentiment",sentiment.label,sentiment.tone,sentiment.index===null?"no fabricated neutral":`${Math.round(sentiment.index)} / 100`)}
-        </div>
-        <p class="current-edge-layer-note">${esc(alignment.note)}</p>
+  function setView(next, { push = true } = {}) {
+    view = VIEWS.includes(next) ? next : "overview";
+    document.documentElement.dataset.cotDecisionView = view;
+    writeUrl({ push });
+    render();
+    if (view === "research") window.setTimeout(() => document.getElementById("cotIntelligence")?.scrollIntoView({ block: "start", behavior: "smooth" }), 0);
+    if (view === "live") window.setTimeout(() => document.getElementById("liveTrackRecordPanel")?.scrollIntoView({ block: "start", behavior: "smooth" }), 0);
+  }
+
+  function selectMarket(market, { push = true } = {}) {
+    if (!M().MARKETS[market]) return;
+    const button = document.querySelector(`#instrumentTabs [data-market="${market}"]`);
+    if (button && market !== M().selectedMarket()) button.click();
+    M().state.market = market;
+    writeUrl({ push });
+    render();
+  }
+
+  function selectHorizon(horizon, { push = true } = {}) {
+    if (!HORIZONS.includes(horizon)) return;
+    M().state.horizon = horizon;
+    writeUrl({ push });
+    render();
+  }
+
+  function forecastFor(model, horizon) {
+    if (!model) return null;
+    const expected = finite(model[`expected_${horizon}_return_pct`]);
+    const probability = finite(model[`probability_positive_${horizon}`] ?? model[`probability_positive_${horizon}_pct`]);
+    if (expected === null && probability === null) return null;
+    return { expected, probability, confidence: model.confidence || "n/a", status: model.status || "OPEN" };
+  }
+
+  function gradeFor(item) {
+    return item ? M().evidenceGrade(M().evidenceStatus(item.row, item.metric)) : null;
+  }
+
+  function gradeText(grade) {
+    if (!grade) return "No evidence";
+    return `${grade.grade} — ${grade.grade === "A" ? "STRONG" : grade.grade === "B" ? "SUPPORTED" : grade.grade === "C" ? "TENTATIVE" : "RESEARCH ONLY"}`;
+  }
+
+  function cotLayer(summary) {
+    if (!summary.strongest) return { label: "NO ACTIVE EDGE", tone: "neutral", sub: "flows inside governed thresholds" };
+    const dir = M().edgeDirection(summary.strongest.metric);
+    return {
+      label: dir.label,
+      tone: dir.tone,
+      sub: `${summary.strongest.row.actor_label} · ${signed(summary.strongest.metric.excess_vs_baseline_pp, 2, " pp")} uplift`
+    };
+  }
+
+  function environment(summary) {
+    const alignment = M().layerAlignment();
+    const cot = cotLayer(summary);
+    return [
+      { name: "COT", label: cot.label, tone: cot.tone, sub: cot.sub },
+      { name: "MACRO", label: alignment.macro.label, tone: alignment.macro.tone, sub: alignment.macro.score === null ? "score unavailable" : `${Math.round(alignment.macro.score)} / 100` },
+      { name: "SENTIMENT", label: alignment.sentiment.label, tone: alignment.sentiment.tone, sub: alignment.sentiment.index === null ? "not available" : `${Math.round(alignment.sentiment.index)} / 100` },
+      { name: "PRICE CONFIRM", label: "NOT GOVERNED", tone: "neutral", sub: "no dedicated confirmation field" }
+    ];
+  }
+
+  function nearestWatch(market = M().state.market) {
+    return M().thresholdWatchlist(50).find(item => item.market === market) || null;
+  }
+
+  function evidenceDrawer(item) {
+    if (!item) return "";
+    const { row, metric } = item;
+    const status = M().evidenceStatus(row, metric);
+    const rawChange = finite(row.raw_weekly_change ?? row.weekly_change ?? row.net_change ?? row.change_value);
+    const discoveryN = finite(metric.discovery_n ?? row.discovery_n);
+    const holdoutN = finite(metric.holdout_n ?? row.holdout_n);
+    const positiveDiff = finite(metric.positive_rate_diff_pp ?? metric.positive_rate_excess_pp);
+    const registry = M().state.registry || {};
+    const active = M().state.active || {};
+    const lookahead = registry.lookahead_safe ?? active.lookahead_safe ?? true;
+    const era = metric.era_consistency ?? metric.era_stability ?? "n/a";
+    const overlap = metric.overlap_correction ?? metric.overlap_method ?? "n/a";
+    const modelVersion = registry.model_version || active.model_version || registry.research_generation || active.research_generation || "n/a";
+    return `<details class="decision-why">
+      <summary>Why this edge? <span>→</span></summary>
+      <div class="decision-why-grid">
+        <div><span>Current percentile</span><strong>${percentile(row.current_change_percentile ?? row.change_magnitude_percentile)}</strong></div>
+        <div><span>Raw weekly change</span><strong>${rawChange === null ? "n/a" : signed(rawChange, 0)}</strong></div>
+        <div><span>Frozen threshold</span><strong>P${esc(row.selected_threshold ?? "n/a")}</strong></div>
+        <div><span>Discovery sample</span><strong>${integer(discoveryN)}</strong></div>
+        <div><span>Holdout sample</span><strong>${integer(holdoutN)}</strong></div>
+        <div><span>Independent N</span><strong>${integer(metric.independent_n ?? metric.n)}</strong></div>
+        <div><span>Conditional mean</span><strong>${signed(metric.conditional_return_pct, 2, "%")}</strong></div>
+        <div><span>Baseline mean</span><strong>${signed(metric.baseline_return_pct, 2, "%")}</strong></div>
+        <div><span>Excess return</span><strong>${signed(metric.excess_vs_baseline_pp, 2, " pp")}</strong></div>
+        <div><span>Positive-rate diff.</span><strong>${positiveDiff === null ? "n/a" : signed(positiveDiff, 1, " pp")}</strong></div>
+        <div><span>Era consistency</span><strong>${esc(era)}</strong></div>
+        <div><span>Overlap correction</span><strong>${esc(overlap)}</strong></div>
+        <div><span>Evidence class</span><strong>${esc(status)}</strong></div>
+        <div><span>Research version</span><strong>${esc(modelVersion)}</strong></div>
+        <div><span>Lookahead safe</span><strong>${lookahead ? "YES" : "NO"}</strong></div>
       </div>
-      <div class="current-edge-kpis">
-        <article class="current-edge-kpi-primary"><span>${primaryKpiLabel}</span><strong class="${dir.tone}">${strong?signed(mainMetric?.excess_vs_baseline_pp,2," pp"):"n/a"}</strong><small>${strong?`${dir.label} · ${signed(mainMetric?.conditional_return_pct,2,"%")} conditional vs ${signed(mainMetric?.baseline_return_pct,2,"%")} normal`:"No active frozen threshold"}</small></article>
-        <article><span>Evidence</span><strong>${grade?`${grade.grade} · ${esc(grade.label)}`:"n/a"}</strong><small>${strong?`${M().sampleLabel(mainMetric?.independent_n??mainMetric?.n)} · N ${integer(mainMetric?.independent_n??mainMetric?.n)}`:"No active sample"}</small></article>
-        <article><span>Active threshold edges</span><strong>${s.ranked.length}</strong><small>${s.bullish} bullish · ${s.bearish} bearish · ranked, never summed</small></article>
-        <article><span>Coming edge watch</span><strong>${watch.length}</strong><small>${nearest?`${nearest.direction.label} if triggered · ${nearest.distance.toFixed(1)} percentile points to ${esc(nearest.row.actor_label)} P${Math.round(nearest.edge.threshold)}`:"No nearby governed threshold"}</small></article>
-        ${model?`<article><span>Combined model</span><strong>${signed(model.expected_4w_return_pct,2,"%")}</strong><small>4W expected · P(+) ${probability(model.probability_positive_4w)} · ${esc(model.confidence||"confidence n/a")}</small></article>`:`<article><span>Prospective evidence</span><strong>${integer(live.matured_signal_count||0)}</strong><small>${integer(live.forecast_count||0)} core forecasts · ${integer(live?.edge_evidence?.matured_signal_count||0)} matured actor edges</small></article>`}
-      </div>
+    </details>`;
+  }
+
+  function horizonControls() {
+    return `<div class="decision-horizons" role="group" aria-label="Selected forward horizon">${HORIZONS.map(h => `<button type="button" data-decision-horizon="${h}" class="${M().state.horizon === h ? "active" : ""}" aria-pressed="${M().state.horizon === h}">${horizonLabel(h)}</button>`).join("")}</div>`;
+  }
+
+  function navigation() {
+    const labels = { overview: "Overview", edges: "Active Edges", week: "Week Path", research: "Research", live: "Live Record" };
+    return `<div class="decision-nav">
+      <nav aria-label="Dashboard sections">${VIEWS.map(v => `<button type="button" data-decision-view="${v}" class="${view === v ? "active" : ""}" aria-current="${view === v ? "page" : "false"}">${labels[v]}</button>`).join("")}</nav>
+      ${horizonControls()}
     </div>`;
   }
 
-  function marketRadar(){
-    const opportunities=M().marketOpportunities(),active=opportunities.filter(x=>x.top),inactive=opportunities.filter(x=>!x.top);
-    return`<section class="current-edge-block current-edge-radar"><div class="current-edge-block-head"><div><span class="current-edge-kicker">ALL MARKETS · ACTIVE COT EDGES</span><h3>Where this COT release is actually triggering</h3></div><span class="current-edge-count">${active.length} / ${opportunities.length} markets active</span></div>
-      <p class="current-edge-block-copy">Every row is a current frozen percentile condition. The table surfaces the strongest forward edge for each instrument; click a market to open its complete actor stack. No actor edges are added together.</p>
-      ${active.length?`<div class="current-edge-radar-list">${active.map(item=>{const {row,metric}=item.top,g=M().evidenceGrade(M().evidenceStatus(row,metric)),dir=M().edgeDirection(metric);return`<button type="button" class="current-edge-radar-row ${item.market===M().state.market?"active":""}" data-current-edge-market="${esc(item.market)}"><span class="current-edge-radar-market"><b>${esc(item.label)}</b><small>${item.activeCount} active${item.activeCount===1?"":"s"}${item.opposingCount?` · ${item.opposingCount} opposing`:""}</small></span><span><small>Strongest trigger</small><b>${esc(row.actor_label)}</b><small>${percentile(row.current_change_percentile)} ${esc(row.direction)} ≥ P${esc(row.selected_threshold)}</small></span><span class="${dir.tone}"><small>Best edge</small><b>${signed(metric.excess_vs_baseline_pp,2," pp")}</b><small>${dir.label} · ${hl(metric.horizon)} · ${signed(metric.conditional_return_pct,2,"%")} conditional</small></span><span><small>Evidence</small><b>${g.grade} · ${esc(g.label)}</b><small>N ${integer(metric.independent_n??metric.n)}</small></span><span class="current-edge-open">OPEN →</span></button>`}).join("")}</div>`:`<div class="current-edge-empty">No instrument has a governed active threshold in the current release.</div>`}
-      ${inactive.length?`<div class="current-edge-inactive"><span>No current threshold</span>${inactive.map(x=>`<button type="button" data-current-edge-market="${x.market}">${esc(x.label)}</button>`).join("")}</div>`:""}
+  function headerMeta() {
+    const dates = M().reportDates();
+    const live = M().state.live || {};
+    const integrity = String(live?.ledger?.integrity || "UNKNOWN").toUpperCase();
+    let meta = document.getElementById("decisionHeaderMeta");
+    if (!meta) {
+      meta = document.createElement("div");
+      meta.id = "decisionHeaderMeta";
+      meta.className = "decision-header-meta";
+      document.querySelector(".topbar-actions")?.prepend(meta);
+    }
+    meta.innerHTML = `<span>Report <b>${esc(dates.report || "n/a")}</b></span><span>Released <b>${esc(dates.release || "n/a")}</b></span><span class="ledger ${integrity === "PASS" ? "pass" : ""}">${esc(integrity)}</span>`;
+    document.documentElement.classList.add("decision-first-ready");
+  }
+
+  function overview(summary) {
+    const strongest = summary.strongest;
+    const metric = strongest?.metric || null;
+    const grade = gradeFor(strongest);
+    const direction = strongest ? M().edgeDirection(metric) : { tone: "neutral", label: "NO EDGE" };
+    const model = summary.model || M().corePrediction();
+    const forecast = forecastFor(model, M().state.horizon);
+    const env = environment(summary);
+    const watch = nearestWatch();
+    const forecastHtml = forecast
+      ? `<div class="decision-semantic prospective"><span>PROSPECTIVE FORECAST</span><strong>${signed(forecast.expected, 2, "%")}</strong><small>Expected ${horizonLabel(M().state.horizon)} return · P(positive) ${pctProbability(forecast.probability)} · Confidence ${esc(forecast.confidence)}</small></div>`
+      : `<div class="decision-semantic prospective unavailable"><span>PROSPECTIVE FORECAST</span><strong>n/a</strong><small>No governed prospective ${horizonLabel(M().state.horizon)} return is published for this model.</small></div>`;
+    const historyHtml = strongest
+      ? `<div class="decision-semantic historical"><span>HISTORICAL EDGE</span><strong class="${direction.tone}">${signed(metric.conditional_return_pct, 2, "%")}</strong><small>Historical conditional return · normal ${signed(metric.baseline_return_pct, 2, "%")} · <b>uplift ${signed(metric.excess_vs_baseline_pp, 2, " pp")}</b></small></div>`
+      : `<div class="decision-semantic historical unavailable"><span>HISTORICAL EDGE</span><strong>NO ACTIVE COT EDGE</strong><small>Current flows are inside normal governed historical ranges.</small></div>`;
+    const condition = strongest ? `${strongest.row.actor_label} · ${percentile(strongest.row.current_change_percentile)} ${esc(strongest.row.direction)} · trigger P${esc(strongest.row.selected_threshold)}` : watch ? `Nearest: ${watch.row.actor_label} ${percentile(watch.row.change_magnitude_percentile)} → trigger P${Math.round(watch.edge.threshold)} · ${watch.distance.toFixed(1)}P away` : "No validated threshold is currently active or near trigger.";
+    return `<section class="decision-overview" data-decision-surface="overview">
+      <div class="decision-current">
+        <div class="decision-title-row">
+          <div><span class="decision-kicker">${esc(M().MARKETS[M().state.market])}</span><h2>${esc(summary.label)}</h2><p>${condition}</p></div>
+          <div class="decision-grade ${grade?.tone || "weak"}"><span>Evidence</span><strong>${grade ? gradeText(grade) : "D — RESEARCH ONLY"}</strong><small>${strongest ? `${M().sampleLabel(metric.independent_n ?? metric.n)} · N ${integer(metric.independent_n ?? metric.n)}` : "No active governed sample"}</small></div>
+        </div>
+        <div class="decision-semantics">${forecastHtml}${historyHtml}</div>
+        <div class="decision-driver-strip">${env.map(item => `<div class="${item.tone}"><span>${item.name}</span><strong>${esc(item.label)}</strong><small>${esc(item.sub)}</small></div>`).join("")}</div>
+      </div>
+      ${strongestPanel(summary)}
+      <aside class="decision-scanner">${opportunityScanner()}</aside>
+      <div class="decision-invalidation">${invalidation(summary)}</div>
     </section>`;
   }
 
-  function comingEdgeWatch(){
-    const rows=M().thresholdWatchlist(10);
-    return`<section class="current-edge-block current-edge-watchlist"><div class="current-edge-block-head"><div><span class="current-edge-kicker">COMING EDGE WATCHLIST</span><h3>Closest governed thresholds across all instruments</h3></div><span class="current-edge-watch-note">Conditional watch · not a prediction</span></div>
-      <p class="current-edge-block-copy">Distance measures how far the current weekly flow magnitude is below a frozen historical threshold. “If triggered” shows the historical holdout edge attached to that threshold; it does not claim the next report will cross it.</p>
-      ${rows.length?`<div class="current-edge-watch-rows">${rows.map(item=>`<button type="button" data-current-edge-market="${item.market}" class="current-edge-watch-row"><span><b>${esc(M().MARKETS[item.market])}</b><small>${esc(item.row.actor_label)} · ${esc(item.row.direction)}</small></span><span><small>Current → trigger</small><b>${percentile(item.row.change_magnitude_percentile)} → P${Math.round(item.edge.threshold)}</b></span><span><small>Distance</small><b>${item.distance.toFixed(1)}P</b></span><span class="${item.direction.tone}"><small>If triggered</small><b>${signed(item.edge.best_holdout_edge_pp,2," pp")}</b><small>${item.direction.label} · ${hl(item.edge.best_horizon)}</small></span><span><small>Evidence</small><b>${item.grade.grade}</b><small>${esc(item.grade.label)}</small></span></button>`).join("")}</div>`:`<div class="current-edge-empty">No validated threshold is currently close enough to form a governed watchlist.</div>`}
+  function strongestPanel(summary) {
+    const strongest = summary.strongest;
+    if (!strongest) {
+      const watch = nearestWatch();
+      return `<section class="decision-strongest no-edge"><div><span class="decision-kicker">STRONGEST CURRENT EDGE</span><h3>NO ACTIVE COT EDGE</h3><p>Current flows are inside normal historical ranges.</p></div>${watch ? watchCard(watch, true) : "<small>No governed threshold is currently close enough to highlight.</small>"}</section>`;
+    }
+    const { row, metric } = strongest;
+    const grade = gradeFor(strongest);
+    const dir = M().edgeDirection(metric);
+    return `<section class="decision-strongest">
+      <div class="decision-block-head"><div><span class="decision-kicker">STRONGEST CURRENT EDGE</span><h3>${esc(row.actor_label)} · ${percentile(row.current_change_percentile)} ${esc(row.direction)}</h3></div><span class="decision-direction ${dir.tone}">${dir.label}</span></div>
+      <div class="decision-edge-metrics">
+        <div><span>Trigger</span><strong>P${esc(row.selected_threshold)}</strong></div>
+        <div><span>Historical conditional</span><strong>${signed(metric.conditional_return_pct, 2, "%")}</strong></div>
+        <div><span>Normal return</span><strong>${signed(metric.baseline_return_pct, 2, "%")}</strong></div>
+        <div><span>Uplift vs normal</span><strong class="${dir.tone}">${signed(metric.excess_vs_baseline_pp, 2, " pp")}</strong></div>
+        <div><span>Independent N</span><strong>${integer(metric.independent_n ?? metric.n)}</strong></div>
+        <div><span>Evidence</span><strong>${gradeText(grade)}</strong></div>
+      </div>
+      ${evidenceDrawer(strongest)}
     </section>`;
   }
 
-  function edgeRow({row,metric}){const dir=M().edgeDirection(metric),p=M().finite(metric.positive_rate_pct),g=M().evidenceGrade(M().evidenceStatus(row,metric));return`<tr><td><strong>${esc(row.actor_label)}</strong>${roleBadge(row.actor_role)}<small>${esc(row.dataset?.toUpperCase())} · current ${percentile(row.current_change_percentile)} ${esc(row.direction)} · trigger ≥ P${esc(row.selected_threshold)}</small></td><td><span class="current-edge-direction ${dir.tone}">${dir.label}</span></td><td>${signed(metric.conditional_return_pct,2,"%")}</td><td>${signed(metric.baseline_return_pct,2,"%")}</td><td><strong class="${dir.tone}">${signed(metric.excess_vs_baseline_pp,2," pp")}</strong></td><td>${p===null?"n/a":`${p.toFixed(0)}%`}</td><td>${integer(metric.independent_n??metric.n)}</td><td>${gradeBadge(row,metric)}<small>${esc(g.label)}</small></td></tr>`}
-  function edgeStack(s){
-    const primary=s.ranked.filter(x=>["PRIMARY_DIRECTIONAL","SECONDARY_DIRECTIONAL"].includes(x.row.actor_role)),context=s.ranked.filter(x=>!["PRIMARY_DIRECTIONAL","SECONDARY_DIRECTIONAL"].includes(x.row.actor_role)),visible=[...primary,...context].slice(0,4),remaining=[...primary,...context].slice(4);
-    const table=rows=>`<div class="current-edge-table-wrap"><table class="current-edge-table"><thead><tr><th>Actor / trigger</th><th>Direction</th><th>Conditional</th><th>Normal</th><th>Edge</th><th>P(+)</th><th>N</th><th>Evidence</th></tr></thead><tbody>${rows.map(edgeRow).join("")}</tbody></table></div>`;
-    return`<section class="current-edge-block current-edge-stack"><div class="current-edge-block-head"><div><span class="current-edge-kicker">SELECTED MARKET · ACTIVE STACK</span><h3>${esc(M().MARKETS[M().state.market])} current actor edges</h3></div>${controls()}</div><p class="current-edge-block-copy">Primary and secondary directional actors are surfaced first. Context actors remain available but do not receive equal visual weight. Edge = conditional return minus unconditional return in percentage points.</p>${visible.length?table(visible):`<div class="current-edge-empty">No governed OOS-supported threshold condition is active for ${esc(M().MARKETS[M().state.market])} at ${esc(hl(M().state.horizon))}.</div>`}${remaining.length?`<details class="current-edge-more"><summary>Show ${remaining.length} additional contextual / supporting condition${remaining.length===1?"":"s"}</summary>${table(remaining)}</details>`:""}</section>`;
+  function opportunityScanner() {
+    const rows = M().MARKET_ORDER.map(market => {
+      const top = M().rankedEdges(M().state.horizon, market)[0] || null;
+      return { market, top, dir: top ? M().edgeDirection(top.metric) : { tone: "neutral", label: "—" }, grade: gradeFor(top) };
+    }).sort((a, b) => Boolean(b.top) - Boolean(a.top) || Math.abs(finite(b.top?.metric?.excess_vs_baseline_pp) || 0) - Math.abs(finite(a.top?.metric?.excess_vs_baseline_pp) || 0));
+    return `<div class="decision-block-head"><div><span class="decision-kicker">OPPORTUNITY SCANNER</span><h3>Markets with active edge</h3></div></div>
+      <div class="decision-scanner-list">${rows.map(item => `<button type="button" data-decision-market="${item.market}" class="${item.market === M().state.market ? "active" : ""}">
+        <span>${esc(M().MARKETS[item.market])}</span>
+        <strong class="${item.dir.tone}">${item.top ? signed(item.top.metric.excess_vs_baseline_pp, 2, " pp") : "No edge"}</strong>
+        <small>${item.grade ? item.grade.grade : "—"}</small>
+      </button>`).join("")}</div>`;
   }
 
-  function weekdayPath(s){const strongest=s.strongest;if(!strongest)return`<section class="current-edge-block"><div class="current-edge-block-head"><div><span class="current-edge-kicker">EXACT WEEKDAY PATH</span><h3>Monday → Friday cumulative view</h3></div></div><div class="current-edge-empty">No active threshold means there is no governed weekday path to surface this week.</div></section>`;const available=WEEKDAYS.map(([key,label])=>({key,label,metric:M().metricFor(strongest.row,key)})).filter(x=>x.metric),dir=M().edgeDirection(strongest.metric);return`<section class="current-edge-block"><div class="current-edge-block-head"><div><span class="current-edge-kicker">EXACT WEEKDAY PATH</span><h3>${esc(strongest.row.actor_label)} · next full trading week</h3></div><span class="current-edge-direction ${dir.tone}">${dir.label} ${esc(hl(M().state.horizon))}</span></div><p class="current-edge-block-copy">Frozen exact weekday horizons from the Friday release anchor. Returns are cumulative to each weekday; no interpolation and no averaging across actors.</p><div class="current-edge-weekdays">${available.map(x=>`<article><span>${esc(x.label)}</span><strong>${signed(x.metric.conditional_return_pct,2,"%")}</strong><small>edge ${signed(x.metric.excess_vs_baseline_pp,2," pp")} · N ${integer(x.metric.n)}</small></article>`).join("")}</div></section>`}
+  function edgeRow(item) {
+    const { row, metric } = item;
+    const dir = M().edgeDirection(metric);
+    const grade = gradeFor(item);
+    return `<article class="decision-edge-row">
+      <div><strong>${esc(row.actor_label)}</strong><small>${percentile(row.current_change_percentile)} ${esc(row.direction)} · trigger P${esc(row.selected_threshold)}</small></div>
+      <span class="decision-direction ${dir.tone}">${dir.label}</span>
+      <div><span>Historical result</span><strong>${signed(metric.conditional_return_pct, 2, "%")}</strong></div>
+      <div><span>Normal</span><strong>${signed(metric.baseline_return_pct, 2, "%")}</strong></div>
+      <div><span>Uplift</span><strong class="${dir.tone}">${signed(metric.excess_vs_baseline_pp, 2, " pp")}</strong></div>
+      <div><span>Evidence</span><strong>${grade?.grade || "D"}</strong><small>N ${integer(metric.independent_n ?? metric.n)}</small></div>
+      ${evidenceDrawer(item)}
+    </article>`;
+  }
 
-  function forwardPath(s){const strongest=s.strongest,model=s.model;return`<section class="current-edge-block current-edge-forward-block"><div class="current-edge-block-head"><div><span class="current-edge-kicker">FORWARD HORIZONS</span><h3>Current setup · frozen historical path</h3></div>${model?`<span class="current-edge-live-badge">PROSPECTIVE ${esc(model.status||"OPEN")}</span>`:""}</div>${strongest?`<div class="current-edge-forward">${FORWARD.map(h=>{const metric=M().metricFor(strongest.row,h);if(!metric)return"";const dir=M().edgeDirection(metric),p=M().finite(metric.positive_rate_pct);return`<article class="${dir.tone}"><span>${esc(hl(h))}</span><strong>${signed(metric.excess_vs_baseline_pp,2," pp")}</strong><small>${dir.label} · ${signed(metric.conditional_return_pct,2,"%")} conditional · ${signed(metric.baseline_return_pct,2,"%")} normal<br>P(+) ${p===null?"n/a":`${p.toFixed(0)}%`} · N ${integer(metric.independent_n??metric.n)}</small></article>`}).join("")}</div>`:'<div class="current-edge-empty">No active threshold edge has a forward path to display.</div>'}${model?`<div class="current-edge-model-strip"><div><span>Governed combined model</span><strong>${esc(String(model.signal||"n/a").toUpperCase())}</strong></div><div><span>1W expected</span><strong>${signed(model.expected_1w_return_pct,2,"%")}</strong></div><div><span>4W expected</span><strong>${signed(model.expected_4w_return_pct,2,"%")}</strong></div><div><span>4W P(+)</span><strong>${probability(model.probability_positive_4w)}</strong></div></div>`:""}</section>`}
+  function activeEdges(summary) {
+    const directional = summary.ranked.filter(item => ["PRIMARY_DIRECTIONAL", "SECONDARY_DIRECTIONAL"].includes(item.row.actor_role));
+    const context = summary.ranked.filter(item => !["PRIMARY_DIRECTIONAL", "SECONDARY_DIRECTIONAL"].includes(item.row.actor_role));
+    const watches = M().thresholdWatchlist(12).filter(item => item.market === M().state.market).slice(0, 4);
+    return `<section class="decision-view-panel" data-decision-surface="edges">
+      <div class="decision-block-head"><div><span class="decision-kicker">ACTIVE EDGES · ${esc(M().MARKETS[M().state.market])}</span><h2>Ranked current actor conditions</h2><p>Primary directional actors remain dominant. Historical edge = conditional return minus baseline; actors are ranked, never summed.</p></div></div>
+      <div class="decision-edge-list">${directional.length ? directional.map(edgeRow).join("") : `<div class="decision-empty"><strong>NO ACTIVE DIRECTIONAL COT EDGE</strong><span>Current flows are inside normal historical ranges.</span></div>`}</div>
+      ${context.length ? `<details class="decision-context"><summary>+ ${context.length} contextual signal${context.length === 1 ? "" : "s"}</summary><div class="decision-edge-list">${context.map(edgeRow).join("")}</div></details>` : ""}
+      <div class="decision-watch-section"><div class="decision-block-head"><div><span class="decision-kicker">COMING EDGE</span><h3>Distance to governed trigger</h3></div><span class="decision-condition-label">Conditional watch — not a prediction</span></div>
+        ${watches.length ? `<div class="decision-watch-list">${watches.map(item => watchCard(item)).join("")}</div>` : `<div class="decision-empty"><span>No validated threshold is close enough to form a governed watch for this market.</span></div>`}
+      </div>
+    </section>`;
+  }
 
-  function macroSentiment(){const macro=M().macroSnapshot(),sentiment=M().sentimentSnapshot();return`<section class="current-edge-block current-edge-environment"><div class="current-edge-block-head"><div><span class="current-edge-kicker">ENVIRONMENT</span><h3>Macro liquidity & market sentiment</h3></div><span class="current-edge-watch-note">Independent context layers</span></div><div class="current-edge-environment-grid"><article class="current-edge-environment-main ${macro.tone}"><span>MACRO LIQUIDITY</span><strong>${esc(macro.label)}</strong><b>${macro.score===null?"—":`${Math.round(macro.score)} / 100`}</b><small>Liquidity is displayed as context and never rewrites the frozen COT edge.</small></article><div class="current-edge-driver-grid">${macro.drivers.map(d=>`<div><span>${esc(d.label)}</span><strong>${M().finite(d.value)===null?"n/a":signed(d.value,2,d.suffix)}</strong></div>`).join("")}</div><article class="current-edge-environment-main ${sentiment.tone}"><span>MARKET SENTIMENT</span><strong>${esc(sentiment.label)}</strong><b>${sentiment.index===null?"—":`${Math.round(sentiment.index)} / 100`}</b><small>${esc(sentiment.detail)}</small></article></div></section>`}
+  function watchCard(item, compact = false) {
+    const current = finite(item.row.change_magnitude_percentile) ?? 0;
+    const trigger = finite(item.edge.threshold) ?? 100;
+    const width = Math.max(0, Math.min(100, trigger ? current / trigger * 100 : 0));
+    return `<article class="decision-watch ${compact ? "compact" : ""}">
+      <div><strong>${esc(item.row.actor_label)} ${esc(item.row.direction)}</strong><small>Current ${percentile(current)} · trigger P${Math.round(trigger)} · ${item.distance.toFixed(1)} percentile points away</small></div>
+      <div class="decision-progress" aria-label="Current percentile ${Math.round(current)} toward trigger ${Math.round(trigger)}"><i style="width:${width.toFixed(1)}%"></i><b style="left:${Math.max(0, Math.min(100, trigger))}%"></b></div>
+      <div class="${item.direction.tone}"><span>If triggered</span><strong>${signed(item.edge.best_holdout_edge_pp, 2, " pp")}</strong><small>${horizonLabel(item.edge.best_horizon)} historical uplift · Evidence ${item.grade.grade}</small></div>
+    </article>`;
+  }
 
-  function whyNow(s){const ranked=s.ranked,strongest=ranked[0];if(!strongest)return"";const sign=Math.sign(M().finite(strongest.metric.excess_vs_baseline_pp)||0),opposite=ranked.find(x=>Math.sign(M().finite(x.metric.excess_vs_baseline_pp)||0)===-sign),current=M().currentRows().find(row=>row.series===strongest.row.series);return`<section class="current-edge-why"><article><span>WHY NOW</span><strong>${esc(strongest.row.actor_label)} triggered ${percentile(strongest.row.current_change_percentile)} ${esc(strongest.row.direction)}</strong><p>Frozen trigger P${esc(strongest.row.selected_threshold)}. Current position is ${percentile(current?.position_percentile??strongest.row.current_position_percentile)}. At ${esc(hl(M().state.horizon))}, the condition historically returned ${signed(strongest.metric.conditional_return_pct,2,"%")} versus ${signed(strongest.metric.baseline_return_pct,2,"%")} normally.</p></article><article><span>MAIN OPPOSING EDGE</span><strong>${opposite?esc(opposite.row.actor_label):"None among active thresholds"}</strong><p>${opposite?`Its ${esc(hl(M().state.horizon))} excess is ${signed(opposite.metric.excess_vs_baseline_pp,2," pp")}; the edge stack is therefore not one-sided.`:"No active frozen threshold currently points in the opposite historical return direction."}</p></article><article><span>INTERPRETATION RULE</span><strong>Rank; do not sum</strong><p>Actor conditions overlap and can be correlated. The governed combined prospective model stays separate; the interface never manufactures a combined percentage by adding actor edges.</p></article></section>`}
+  function weekPath(summary) {
+    const strongest = summary.strongest;
+    if (!strongest) return `<section class="decision-view-panel"><span class="decision-kicker">THIS WEEK — CUMULATIVE HISTORICAL PATH</span><h2>No governed weekday path</h2><div class="decision-empty"><span>A weekday path appears only when a frozen current threshold is active.</span></div></section>`;
+    const points = WEEKDAYS.map(([key, label]) => ({ label, metric: M().metricFor(strongest.row, key) })).filter(point => point.metric);
+    const grade = gradeFor(strongest);
+    return `<section class="decision-view-panel" data-decision-surface="week">
+      <div class="decision-block-head"><div><span class="decision-kicker">THIS WEEK — CUMULATIVE HISTORICAL PATH</span><h2>${esc(strongest.row.actor_label)} · release-corrected weekday path</h2><p>Based on previous Tuesday COT positioning; publicly available Friday. Returns are cumulative to each weekday.</p></div><span class="decision-evidence-badge">${gradeText(grade)}</span></div>
+      <div class="decision-week-path">${points.map((point, index) => `<article><span>${esc(point.label)}</span><strong>${signed(point.metric.conditional_return_pct, 2, "%")}</strong><small>${finite(point.metric.positive_rate_pct) === null ? "" : `${Math.round(point.metric.positive_rate_pct)}% + · `}edge ${signed(point.metric.excess_vs_baseline_pp, 2, " pp")}</small>${index < points.length - 1 ? "<i>→</i>" : ""}</article>`).join("")}</div>
+      ${forwardHistory(strongest)}
+    </section>`;
+  }
 
-  function liveVerification(){const live=M().state.live||{},edge=live.edge_evidence||{},coreIntegrity=String(live?.ledger?.integrity||"UNKNOWN").toUpperCase(),edgeIntegrity=String(edge?.ledger?.integrity||"UNKNOWN").toUpperCase(),marketLive=M().actorLivePredictions(),matured=Number(live.matured_signal_count||0)+Number(edge.matured_signal_count||0),label=coreIntegrity!=="PASS"||(edge.ledger&&edgeIntegrity!=="PASS")?"INTEGRITY CHECK":matured>0?"LIVE EVIDENCE":"FORWARD TESTING";return`<section class="current-edge-live"><div><span class="current-edge-kicker">WHAT “LIVE” MEANS</span><h3>${esc(label)}</h3><p>Live means the forecast was frozen before the outcome. Historical backtests remain research evidence and are never retroactively relabeled as live performance.</p></div><div class="current-edge-live-grid"><article><span>Core ledger</span><strong>${esc(coreIntegrity)}</strong><small>${integer(live.forecast_count||0)} forecasts · ${integer(live.matured_signal_count||0)} matured</small></article><article><span>Actor-edge ledger</span><strong>${esc(edge.ledger?edgeIntegrity:"NOT MERGED")}</strong><small>${integer(edge.forecast_count||0)} forecasts · ${integer(edge.matured_signal_count||0)} matured</small></article><article><span>${esc(M().MARKETS[M().state.market])} actor forecasts</span><strong>${integer(marketLive.length)}</strong><small>prospective current conditions</small></article><article><span>Historical backfill</span><strong>DISALLOWED</strong><small>append-only prospective evidence</small></article></div></section>`}
+  function forwardHistory(strongest) {
+    return `<div class="decision-forward"><div class="decision-block-head"><div><span class="decision-kicker">FORWARD HORIZONS</span><h3>Historical conditional path</h3></div></div>
+      <div class="decision-forward-grid">${HORIZONS.map(h => {
+        const metric = M().metricFor(strongest.row, h);
+        if (!metric) return `<div><span>${horizonLabel(h)}</span><strong>n/a</strong><small>No governed metric</small></div>`;
+        const dir = M().edgeDirection(metric);
+        return `<div><span>${horizonLabel(h)}</span><strong class="${dir.tone}">${signed(metric.conditional_return_pct, 2, "%")}</strong><small>normal ${signed(metric.baseline_return_pct, 2, "%")} · uplift ${signed(metric.excess_vs_baseline_pp, 2, " pp")} · N ${integer(metric.independent_n ?? metric.n)}</small></div>`;
+      }).join("")}</div>
+    </div>`;
+  }
 
-  function render(){const root=mount();prioritize();M().state.market=M().selectedMarket();if(!M().state.current||!M().state.active||!M().state.registry){root.innerHTML='<div class="current-edge-loading">Current edge data unavailable. Historical workbench remains separate.</div>';return}const s=M().summary();root.innerHTML=`${hero(s)}<div class="current-edge-global-grid">${marketRadar()}${comingEdgeWatch()}</div><div class="current-edge-grid">${edgeStack(s)}${weekdayPath(s)}</div>${forwardPath(s)}${macroSentiment()}${whyNow(s)}${liveVerification()}`}
-  function observe(){const tabs=document.querySelector("#instrumentTabs");if(tabs)tabs.addEventListener("click",()=>setTimeout(()=>{const market=M().selectedMarket();if(market!==M().state.market){M().state.market=market;render()}},0));new MutationObserver(()=>{const market=M().selectedMarket();if(market!==M().state.market){M().state.market=market;render()}}).observe(tabs||document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:["class"]});new MutationObserver(prioritize).observe(document.querySelector("main")||document.body,{subtree:true,childList:true})}
-  async function boot(){mount();if(!M())throw new Error("Current Edge model missing");await M().load();render();observe();window.__COT_APP_DATA_READY__?.then(()=>render()).catch(()=>{});window.addEventListener("cot:intelligence-ready",()=>render(),{once:true})}
-  boot().catch(error=>{console.error("Current Edge command center failed to initialize.",error);const root=mount();root.innerHTML='<div class="current-edge-loading"><strong>Current Edge unavailable.</strong><span>The research dashboard remains intact; no forward view is fabricated.</span></div>'});
+  function invalidation(summary) {
+    if (!summary.strongest) return `<strong>What changes the read?</strong><span>A new release crossing a frozen actor threshold, a new prospective forecast, or a material macro/sentiment regime change.</span>`;
+    const sign = M().edgeDirection(summary.strongest.metric).sign;
+    const opposing = summary.ranked.find(item => M().edgeDirection(item.metric).sign === -sign);
+    return `<strong>What could invalidate the thesis?</strong><span>${opposing ? `${esc(opposing.row.actor_label)} already carries an opposing ${signed(opposing.metric.excess_vs_baseline_pp, 2, " pp")} historical edge. ` : ""}The read weakens if the active threshold deactivates on the next release or independent macro/sentiment context turns decisively against it.</span>`;
+  }
+
+  function researchIntro() {
+    return `<section class="decision-view-panel decision-research-intro"><span class="decision-kicker">DEEP RESEARCH</span><h2>Proof after conclusion</h2><p>Detailed charts, weekly actor changes, positioning regime, COT score, macro drivers, actor research, methodology and provenance are available below. Market selection remains synchronized with the primary selector.</p></section>`;
+  }
+
+  function liveIntro() {
+    const live = M().state.live || {};
+    const integrity = String(live?.ledger?.integrity || "UNKNOWN").toUpperCase();
+    return `<section class="decision-view-panel"><span class="decision-kicker">LIVE RECORD</span><h2>Frozen prospective forecasts and realized outcomes</h2><div class="decision-live-summary">
+      <div><span>Ledger</span><strong>${esc(integrity)}</strong></div>
+      <div><span>Forecasts</span><strong>${integer(live.forecast_count || 0)}</strong></div>
+      <div><span>Matured signals</span><strong>${integer(live.matured_signal_count || 0)}</strong></div>
+      <div><span>Historical backfill</span><strong>DISALLOWED</strong></div>
+    </div><p>Only forecasts recorded before the outcome count as live evidence. The full immutable live record is shown below.</p></section>`;
+  }
+
+  function render() {
+    if (rendering || !M()) return;
+    rendering = true;
+    try {
+      const root = mount();
+      if (!M().state.current || !M().state.active || !M().state.registry) {
+        root.innerHTML = `<div class="decision-loading">Loading governed COT decision layer…</div>`;
+        return;
+      }
+      M().state.market = M().selectedMarket();
+      const summary = M().summary();
+      headerMeta();
+      document.documentElement.dataset.cotDecisionView = view;
+      const content = view === "overview" ? overview(summary)
+        : view === "edges" ? activeEdges(summary)
+        : view === "week" ? weekPath(summary)
+        : view === "research" ? researchIntro()
+        : liveIntro();
+      root.innerHTML = `${navigation()}${content}`;
+      writeUrl({ push: false });
+    } finally {
+      rendering = false;
+    }
+  }
+
+  function bind(root) {
+    root.addEventListener("click", event => {
+      const market = event.target.closest("[data-decision-market]")?.dataset.decisionMarket;
+      if (market) return selectMarket(market);
+      const horizon = event.target.closest("[data-decision-horizon]")?.dataset.decisionHorizon;
+      if (horizon) return selectHorizon(horizon);
+      const nextView = event.target.closest("[data-decision-view]")?.dataset.decisionView;
+      if (nextView) return setView(nextView);
+    });
+  }
+
+  function observeMarket() {
+    const tabs = document.getElementById("instrumentTabs");
+    tabs?.addEventListener("click", () => window.setTimeout(() => {
+      const market = M().selectedMarket();
+      if (market !== M().state.market) {
+        M().state.market = market;
+        writeUrl({ push: true });
+        render();
+      }
+    }, 0));
+    observer = new MutationObserver(() => {
+      if (rendering) return;
+      const market = M().selectedMarket();
+      if (market !== M().state.market) {
+        M().state.market = market;
+        render();
+      }
+    });
+    observer.observe(tabs || document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ["class", "aria-pressed"] });
+  }
+
+  function applyInitialUrl() {
+    const state = urlState();
+    view = state.view || "overview";
+    M().state.horizon = state.horizon || "4w";
+    if (state.market) {
+      const button = document.querySelector(`#instrumentTabs [data-market="${state.market}"]`);
+      if (button && !button.classList.contains("active")) button.click();
+      M().state.market = state.market;
+    } else {
+      M().state.market = M().selectedMarket();
+    }
+    document.documentElement.dataset.cotDecisionView = view;
+  }
+
+  async function boot() {
+    const root = mount();
+    bind(root);
+    if (!M()) throw new Error("Current Edge model missing");
+    await M().load();
+    applyInitialUrl();
+    render();
+    observeMarket();
+    window.addEventListener("popstate", () => {
+      const state = urlState();
+      view = state.view || "overview";
+      if (state.horizon) M().state.horizon = state.horizon;
+      if (state.market && state.market !== M().selectedMarket()) document.querySelector(`#instrumentTabs [data-market="${state.market}"]`)?.click();
+      M().state.market = state.market || M().selectedMarket();
+      render();
+    });
+    window.addEventListener("cot:intelligence-ready", render);
+    window.__COT_APP_DATA_READY__?.then(render).catch(() => {});
+  }
+
+  boot().catch(error => {
+    console.error("Decision-first COT command center failed to initialize.", error);
+    const root = mount();
+    root.innerHTML = `<div class="decision-loading"><strong>Decision layer unavailable.</strong><span>The underlying research dashboard remains intact; no forecast is fabricated.</span></div>`;
+  });
 })();
