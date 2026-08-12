@@ -83,7 +83,7 @@ test('all-market radar opens the selected instrument without losing the command 
   await expect(command.locator(`.current-edge-radar-row[data-current-edge-market="${market}"]`)).toHaveClass(/active/);
 });
 
-test('coming-edge watchlist exposes distance and conditional historical edge without claiming a future trigger', async ({ page }) => {
+test('coming-edge watchlist exposes direction, distance and conditional historical edge without claiming a future trigger', async ({ page }) => {
   await open(page);
   const command = page.locator('#currentEdgeCommand');
   const rows = command.locator('.current-edge-watch-row');
@@ -91,6 +91,8 @@ test('coming-edge watchlist exposes distance and conditional historical edge wit
     await expect(rows.first()).toContainText('Current → trigger');
     await expect(rows.first()).toContainText('Distance');
     await expect(rows.first()).toContainText('If triggered');
+    const text = await rows.first().innerText();
+    expect(text).toMatch(/BULLISH|BEARISH|NEUTRAL/);
     await expect(command).toContainText('it does not claim the next report will cross it');
   }
 });
