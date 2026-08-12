@@ -5,6 +5,7 @@ async function open(page) {
   await page.waitForFunction(() => document.documentElement.classList.contains('cot-worldclass-ux-ready'));
   await expect(page.locator('#cotIntelligence')).toBeVisible();
   await expect(page.locator('.cot-ux-market-switcher')).toBeVisible();
+  await expect(page.locator('#currentEdgeCommand')).toBeVisible();
 }
 
 test('market selection and decision surfaces stay above deep statistical evidence', async ({ page }) => {
@@ -56,4 +57,40 @@ test('active edge view prioritizes directional actors and uses a compact evidenc
     return 2;
   }));
   expect(priorities).toEqual([...priorities].sort((a, b) => a - b));
+});
+
+test('world-class command center keeps direction, all-market active edges and coming triggers together', async ({ page }) => {
+  await open(page);
+  const command = page.locator('#currentEdgeCommand');
+  await expect(command.locator('.current-edge-layers .current-edge-layer')).toHaveCount(3);
+  await expect(command).toContainText('ALL MARKETS · ACTIVE COT EDGES');
+  await expect(command).toContainText('COMING EDGE WATCHLIST');
+  await expect(command).toContainText('Conditional watch · not a prediction');
+  await expect(command).toContainText('Macro liquidity');
+  await expect(command).toContainText('Market sentiment');
+  await expect(command).toContainText('ranked, never summed');
+  expect(await command.locator('.current-edge-radar-row').count()).toBeGreaterThan(0);
+});
+
+test('all-market radar opens the selected instrument without losing the command hierarchy', async ({ page }) => {
+  await open(page);
+  const command = page.locator('#currentEdgeCommand');
+  const first = command.locator('.current-edge-radar-row').first();
+  const market = await first.getAttribute('data-current-edge-market');
+  expect(market).toBeTruthy();
+  await first.click();
+  await expect(page.locator(`#instrumentTabs [data-market="${market}"]`)).toHaveClass(/active/);
+  await expect(command.locator(`.current-edge-radar-row[data-current-edge-market="${market}"]`)).toHaveClass(/active/);
+});
+
+test('coming-edge watchlist exposes distance and conditional historical edge without claiming a future trigger', async ({ page }) => {
+  await open(page);
+  const command = page.locator('#currentEdgeCommand');
+  const rows = command.locator('.current-edge-watch-row');
+  if (await rows.count()) {
+    await expect(rows.first()).toContainText('Current → trigger');
+    await expect(rows.first()).toContainText('Distance');
+    await expect(rows.first()).toContainText('If triggered');
+    await expect(command).toContainText('it does not claim the next report will cross it');
+  }
 });
