@@ -35,10 +35,19 @@
       || "sp500";
   }
 
+  function lastDecisionSurface() {
+    const surfaces = [$("#currentEdgeCommand"), $("#wcCommandCenter")].filter(Boolean);
+    if (!surfaces.length) return $(".instrument-bar");
+    return surfaces.reduce((last, node) => {
+      if (last === node) return last;
+      return last.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING ? node : last;
+    });
+  }
+
   function placeEvidenceAfterDecisionLayer() {
     const intelligence = $("#cotIntelligence");
     if (!intelligence) return;
-    const anchor = $("#currentEdgeCommand") || $("#wcCommandCenter") || $(".instrument-bar");
+    const anchor = lastDecisionSurface();
     if (!anchor || anchor === intelligence) return;
     if (anchor.nextElementSibling !== intelligence) anchor.insertAdjacentElement("afterend", intelligence);
   }
@@ -85,7 +94,7 @@
       if (shell) shell.insertAdjacentElement("afterbegin", switcher);
       else root.querySelector(".cot-intel-head")?.insertAdjacentElement("afterend", switcher);
     } else {
-      const rendered = new Set($$(".cot-ux-market-button", switcher).map(button => button.dataset.cotUxMarket));
+      const rendered = new Set([...switcher.querySelectorAll(".cot-ux-market-button")].map(button => button.dataset.cotUxMarket));
       const expected = new Set(canonical.map(button => button.dataset.market));
       const same = rendered.size === expected.size && [...expected].every(market => rendered.has(market));
       if (!same) {
@@ -100,10 +109,10 @@
     root.querySelectorAll("[data-cot-ux-market]").forEach(button => {
       const active = button.dataset.cotUxMarket === market;
       button.classList.toggle("active", active);
-      button.setAttribute("aria-pressed", String(active));
+      if (button.getAttribute("aria-pressed") !== String(active)) button.setAttribute("aria-pressed", String(active));
     });
     const pill = root.querySelector("#cotIntelMarket");
-    if (pill) pill.textContent = MARKET_LABELS[market] || market;
+    if (pill && pill.textContent !== (MARKET_LABELS[market] || market)) pill.textContent = MARKET_LABELS[market] || market;
   }
 
   function edgePriority(card) {
@@ -162,10 +171,11 @@
       overview.className = "cot-edge-overview";
       title.insertAdjacentElement("afterend", overview);
     }
-    overview.innerHTML = `
+    const markup = `
       <article><span>Active now</span><strong>${activeCards.length}</strong><small>current percentile triggers</small></article>
       <article><span>Directional actors</span><strong>${directional}</strong><small>primary + secondary evidence</small></article>
       <article><span>Context actors</span><strong>${context}</strong><small>structure, hedging and aggregation</small></article>`;
+    if (overview.innerHTML !== markup) overview.innerHTML = markup;
   }
 
   function enhanceIntelligence() {
