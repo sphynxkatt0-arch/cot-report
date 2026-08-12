@@ -13,9 +13,11 @@ CURRENT_EDGE_JS=ROOT/"worldclass"/"current-edge-command.js"
 CURRENT_EDGE_CSS=ROOT/"worldclass"/"current-edge-command.css"
 MOBILE_UX_CSS=ROOT/"worldclass"/"mobile-ux.css"
 MOBILE_UX_RUNTIME=ROOT/"worldclass"/"mobile-ux-runtime.js"
+WORLDCLASS_UX_CSS=ROOT/"worldclass"/"cot-intelligence-worldclass-ux.css"
+WORLDCLASS_UX_RUNTIME=ROOT/"worldclass"/"cot-intelligence-worldclass-ux.js"
 def digest(path:Path)->str:return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
 def main()->None:
-    for path in (HTML,JS,CSS,LIGHT_CSS,CURRENT_EDGE_MODEL,CURRENT_EDGE_JS,CURRENT_EDGE_CSS,MOBILE_UX_CSS,MOBILE_UX_RUNTIME):
+    for path in (HTML,JS,CSS,LIGHT_CSS,CURRENT_EDGE_MODEL,CURRENT_EDGE_JS,CURRENT_EDGE_CSS,MOBILE_UX_CSS,MOBILE_UX_RUNTIME,WORLDCLASS_UX_CSS,WORLDCLASS_UX_RUNTIME):
         if not path.exists() or path.stat().st_size<=0: raise FileNotFoundError(path)
     text=HTML.read_text(encoding="utf-8")
     lines=[line for line in text.splitlines() if 'data-cot-intelligence-asset=' not in line]
@@ -24,12 +26,14 @@ def main()->None:
     light_css_tag=f'<link rel="stylesheet" href="worldclass/cot-intelligence-light.css?v={digest(LIGHT_CSS)}" data-cot-intelligence-asset="light-css">'
     edge_css_tag=f'<link rel="stylesheet" href="worldclass/current-edge-command.css?v={digest(CURRENT_EDGE_CSS)}" data-cot-intelligence-asset="current-edge-css">'
     mobile_css_tag=f'<link rel="stylesheet" href="worldclass/mobile-ux.css?v={digest(MOBILE_UX_CSS)}" data-cot-intelligence-asset="mobile-ux-css">'
+    worldclass_ux_css_tag=f'<link rel="stylesheet" href="worldclass/cot-intelligence-worldclass-ux.css?v={digest(WORLDCLASS_UX_CSS)}" data-cot-intelligence-asset="worldclass-ux-css">'
     js_tag=f'<script defer src="worldclass/cot-intelligence.js?v={digest(JS)}" data-cot-intelligence-asset="js"></script>'
     edge_model_tag=f'<script defer src="worldclass/current-edge-model.js?v={digest(CURRENT_EDGE_MODEL)}" data-cot-intelligence-asset="current-edge-model"></script>'
     edge_js_tag=f'<script defer src="worldclass/current-edge-command.js?v={digest(CURRENT_EDGE_JS)}" data-cot-intelligence-asset="current-edge-js"></script>'
     mobile_runtime_tag=f'<script defer src="worldclass/mobile-ux-runtime.js?v={digest(MOBILE_UX_RUNTIME)}" data-cot-intelligence-asset="mobile-ux-runtime"></script>'
+    worldclass_ux_runtime_tag=f'<script defer src="worldclass/cot-intelligence-worldclass-ux.js?v={digest(WORLDCLASS_UX_RUNTIME)}" data-cot-intelligence-asset="worldclass-ux-runtime"></script>'
     if "</head>" not in text or "</body>" not in text: raise RuntimeError("worldclass_dashboard.html is missing closing head/body")
-    text=text.replace("</head>",f"  {css_tag}\n  {light_css_tag}\n  {edge_css_tag}\n  {mobile_css_tag}\n</head>",1).replace("</body>",f"  {js_tag}\n  {edge_model_tag}\n  {edge_js_tag}\n  {mobile_runtime_tag}\n</body>",1)
+    text=text.replace("</head>",f"  {css_tag}\n  {light_css_tag}\n  {edge_css_tag}\n  {mobile_css_tag}\n  {worldclass_ux_css_tag}\n</head>",1).replace("</body>",f"  {js_tag}\n  {edge_model_tag}\n  {edge_js_tag}\n  {mobile_runtime_tag}\n  {worldclass_ux_runtime_tag}\n</body>",1)
     HTML.write_text(text,encoding="utf-8")
-    print(f"Installed COT Intelligence shell assets · css={digest(CSS)} light-css={digest(LIGHT_CSS)} js={digest(JS)} current-edge={digest(CURRENT_EDGE_JS)} mobile-ux={digest(MOBILE_UX_CSS)} mobile-runtime={digest(MOBILE_UX_RUNTIME)}")
+    print(f"Installed COT Intelligence shell assets · css={digest(CSS)} light-css={digest(LIGHT_CSS)} js={digest(JS)} current-edge={digest(CURRENT_EDGE_JS)} mobile-ux={digest(MOBILE_UX_CSS)} worldclass-ux={digest(WORLDCLASS_UX_CSS)}")
 if __name__=="__main__":main()
