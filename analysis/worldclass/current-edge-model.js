@@ -110,12 +110,16 @@
       {key:"credit",label:"HY OAS",value:findMetric(root,["hy_oas"]),suffix:"%"}
     ]};
   }
+  function factorSentiment(){
+    const stats=window.__COT_WORLDCLASS_BASE__?.FACTOR_DATA?.stats?.[state.market]||{},row=stats.cnn_fear_greed||Object.values(stats).find(item=>String(item?.key||"")==="cnn_fear_greed"||/fear.*greed/i.test(String(item?.label||"")))||null,index=finite(row?.latest_value);
+    if(index===null)return null;
+    const label=index>=75?"EXTREME GREED":index>=55?"GREED":index<=25?"EXTREME FEAR":index<=45?"FEAR":"NEUTRAL";
+    return{available:true,tone:index>=60?"positive":index<=40?"negative":"neutral",label,index,detail:`CNN Fear & Greed · percentile ${finite(row?.percentile)===null?"n/a":`P${Math.round(finite(row.percentile))}`}`,sources:1,date:row?.latest_date||null,source:"CNN Fear & Greed"};
+  }
   function sentimentSnapshot(){
     const latest=state.sentiment?.latest||null,composite=latest?.composite||null,index=finite(composite?.sentiment_index);
-    if(!latest||index===null)return{available:false,tone:"neutral",label:"UNAVAILABLE",index:null,detail:"No authenticated market-sentiment snapshot; no neutral value is fabricated.",sources:0};
-    const tone=index>=60?"positive":index<=40?"negative":"neutral";
-    const crowding=index>=75?"CROWDED BULLISH":index<=25?"CROWDED BEARISH":String(composite.regime||composite.state||"BALANCED").toUpperCase();
-    return{available:true,tone,label:crowding,index,detail:`${composite.available_sources??0}/${composite.required_sources??4} sources · bullish ${finite(composite.bullish_pct)?.toFixed(0)??"n/a"}% · bearish ${finite(composite.bearish_pct)?.toFixed(0)??"n/a"}%`,sources:composite.available_sources??0,date:latest.observation_date};
+    if(latest&&index!==null){const tone=index>=60?"positive":index<=40?"negative":"neutral",crowding=index>=75?"CROWDED BULLISH":index<=25?"CROWDED BEARISH":String(composite.regime||composite.state||"BALANCED").toUpperCase();return{available:true,tone,label:crowding,index,detail:`Authenticated composite · ${composite.available_sources??0}/${composite.required_sources??4} sources · bullish ${finite(composite.bullish_pct)?.toFixed(0)??"n/a"}% · bearish ${finite(composite.bearish_pct)?.toFixed(0)??"n/a"}%`,sources:composite.available_sources??0,date:latest.observation_date,source:"authenticated composite"}}
+    return factorSentiment()||{available:false,tone:"neutral",label:"UNAVAILABLE",index:null,detail:"No authenticated sentiment or governed Fear & Greed observation; no neutral value is fabricated.",sources:0,source:"none"};
   }
   function layerAlignment(market=state.market){
     const read=directionalRead(market,state.horizon),macro=macroSnapshot(),sentiment=sentimentSnapshot();
@@ -134,5 +138,5 @@
     state.current=current;state.active=active;state.live=live||{};state.registry=registry;state.sentiment=sentiment||{};state.market=selectedMarket();return state;
   }
 
-  window.__COT_CURRENT_EDGE_MODEL__={MARKETS,MARKET_ORDER,ROLE_ORDER,ROLE_LABEL,EVIDENCE_ORDER,EVIDENCE_LABEL,FORWARD,state,finite,currentRows,activeRows,metricFor,evidenceStatus,evidenceGrade,sampleLabel,rankedEdges,edgeDirection,edgeExplanation,modelTone,corePrediction,actorLivePredictions,reportDates,directionalRead,summary,bestForwardMetric,marketOpportunities,thresholdWatchlist,macroSnapshot,sentimentSnapshot,layerAlignment,selectedMarket,load};
+  window.__COT_CURRENT_EDGE_MODEL__={MARKETS,MARKET_ORDER,ROLE_ORDER,ROLE_LABEL,EVIDENCE_ORDER,EVIDENCE_LABEL,FORWARD,state,finite,currentRows,activeRows,metricFor,evidenceStatus,evidenceGrade,sampleLabel,rankedEdges,edgeDirection,edgeExplanation,modelTone,corePrediction,actorLivePredictions,reportDates,directionalRead,summary,bestForwardMetric,marketOpportunities,thresholdWatchlist,macroSnapshot,factorSentiment,sentimentSnapshot,layerAlignment,selectedMarket,load};
 })();
