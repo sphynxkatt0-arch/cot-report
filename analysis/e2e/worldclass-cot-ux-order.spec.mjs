@@ -155,8 +155,8 @@ test('important index and VIX option expiries are visible in overview', async ({
   await open(page, '?market=nq&horizon=1w&view=overview');
   const overview = page.locator('.decision-current');
   await expect(overview).toContainText('Important expiries');
-  await expect(overview).toContainText('AUG OPEX');
-  await expect(overview).toContainText('VIX AUG');
+  await expect(overview).toContainText('Next index OPEX');
+  await expect(overview).toContainText('Next VIX expiry');
 });
 
 test('mobile has no page-level horizontal overflow and strongest edge needs no table scroll', async ({ page }) => {
