@@ -2,6 +2,7 @@
 """Regression contract for the release-corrected COT Intelligence runtime."""
 from __future__ import annotations
 import json
+import re
 from pathlib import Path
 from cftc_release_calendar import release_date
 ROOT=Path(__file__).resolve().parent;WC=ROOT/'worldclass';CURRENT=WC/'cot-current-state.json';REGISTRY=WC/'cot-edge-registry.json';ACTIVE=WC/'cot-active-edges.json';CROSS=WC/'cot-cross-market.json';PROV=WC/'cot-research-provenance.json';POLICY=ROOT/'config'/'cot_edge_promotion_policy.json';HTML=ROOT/'worldclass_dashboard.html';LIGHT_CSS=WC/'cot-intelligence-light.css';EDGE_MODEL=WC/'current-edge-model.js';EDGE_JS=WC/'current-edge-command.js';EDGE_CSS=WC/'current-edge-command.css';MOBILE_CSS=WC/'mobile-ux.css';MOBILE_RUNTIME=WC/'mobile-ux-runtime.js'
@@ -41,7 +42,7 @@ def main():
  assert cross['governance']['status']=='DISCOVERY_ONLY';assert policy['automatic_weight_changes'] is False
  html=HTML.read_text(encoding='utf-8')
  for marker in ('data-cot-intelligence-asset="css"','data-cot-intelligence-asset="light-css"','data-cot-intelligence-asset="js"','data-cot-intelligence-asset="current-edge-model"','data-cot-intelligence-asset="current-edge-js"','data-cot-intelligence-asset="mobile-ux-css"','data-cot-intelligence-asset="mobile-ux-runtime"','data-cot-intelligence-asset="v2-copy-js"'):assert marker in html
- edge_model=EDGE_MODEL.read_text(encoding='utf-8');edge_js=EDGE_JS.read_text(encoding='utf-8');assert 'GLOBAL_FDR' in edge_model and 'NONOVERLAP_CONFIRMED' in edge_model and 'historical excess' in edge_model;assert 'Prospective combined model is frozen separately from historical actor edges.' in edge_model;assert 'Conditional watch · not a prediction' in edge_js and 'it does not claim the next report will cross it' in edge_js
+ edge_model=EDGE_MODEL.read_text(encoding='utf-8');edge_js=EDGE_JS.read_text(encoding='utf-8');assert 'GLOBAL_FDR' in edge_model and 'NONOVERLAP_CONFIRMED' in edge_model and 'historical excess' in edge_model;assert 'Prospective combined model is frozen separately from historical actor edges.' in edge_model;assert re.search(r'Conditional watch\s+—\s+not a prediction',edge_js) and 'it does not claim the next report will cross it' in edge_js
  mobile_runtime=MOBILE_RUNTIME.read_text(encoding='utf-8');assert 'mobileUxReady' in mobile_runtime and 'repeat(4, minmax(0, 1fr))' in mobile_runtime
  for path,limit in {CURRENT:200000,REGISTRY:500000,ACTIVE:180000,CROSS:180000,PROV:100000,WC/'cot-intelligence.js':60000,WC/'cot-intelligence.css':45000,LIGHT_CSS:20000,EDGE_MODEL:30000,EDGE_JS:40000,EDGE_CSS:32000,MOBILE_CSS:30000,MOBILE_RUNTIME:12000}.items():assert path.stat().st_size<=limit,(path,path.stat().st_size,limit)
  print(f'COT Intelligence v2 PASS · actors={len(states)} actor_cells={detail_cells} oi_cells={oi_cells} active={total_active} active_bytes={ACTIVE.stat().st_size}')
