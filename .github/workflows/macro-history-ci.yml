@@ -1,0 +1,48 @@
+name: Canonical Macro History CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'feat/**'
+      - 'fix/**'
+    paths:
+      - 'analysis/refresh_macro_history.py'
+      - 'analysis/test_macro_history.py'
+      - 'analysis/macro_liquidity_expansion_v12.py'
+      - '.github/workflows/macro-history-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'analysis/refresh_macro_history.py'
+      - 'analysis/test_macro_history.py'
+      - 'analysis/macro_liquidity_expansion_v12.py'
+      - '.github/workflows/macro-history-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: analysis/requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r analysis/requirements.txt
+      - name: Compile macro pipeline
+        run: |
+          python -m py_compile \
+            analysis/refresh_macro_history.py \
+            analysis/test_macro_history.py \
+            analysis/macro_liquidity_expansion_v12.py
+      - name: Run canonical-history regression tests
+        run: python analysis/test_macro_history.py
