@@ -8,7 +8,6 @@ then valid row coverage and deterministic pathname. Filesystem mtime is ignored.
 """
 from __future__ import annotations
 from pathlib import Path
-from typing import Any
 import pandas as pd
 import build_interactive_cot_dashboard as legacy
 
@@ -25,11 +24,27 @@ def file_rank(path:Path)->tuple[str,int,str]:
     if parsed.empty:raise RuntimeError(f'candidate COT source has no valid dates: {path}')
     return (parsed.max().strftime('%Y-%m-%d'),int(parsed.nunique()),path.as_posix())
 
+def is_summary_pattern(pattern:str)->bool:
+    return '_summary_' in pattern.replace('\\','/').lower()
+
 def latest_file(pattern:str)->Path:
     matches=list(ROOT.glob(pattern))
     if not matches:raise FileNotFoundError(f'No files match {ROOT/pattern}')
-    ranked=sorted(((file_rank(path),path) for path in matches),key=lambda item:item[0])
+    if is_summary_pattern(pattern):
+        best=sorted(matches,key=lambda path:path.as_posix())[-1]
+        print(f'Source metadata selection {pattern}: {best.name} (deterministic pathname)')
+        return best
+    ranked=[];skipped=[]
+    for path in matches:
+        try:ranked.append((file_rank(path),path))
+        except RuntimeError as exc:skipped.append(f'{path.name}: {exc}')
+    if not ranked:
+        detail='; '.join(skipped[:5])
+        suffix=f' Skipped candidates: {detail}' if detail else ''
+        raise RuntimeError(f'No valid dated COT source files match {ROOT/pattern}.{suffix}')
+    ranked=sorted(ranked,key=lambda item:item[0])
     best_rank,best=ranked[-1]
+    if skipped:print(f'Source selection {pattern}: skipped {len(skipped)} non-observation candidate(s)')
     print(f'Source selection {pattern}: {best.name} latest={best_rank[0]} dated_rows={best_rank[1]} (mtime ignored)')
     return best
 
