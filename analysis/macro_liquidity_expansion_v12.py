@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import macro_liquidity_expansion as base
@@ -14,6 +16,7 @@ from treasury_auction_absorption import fetch_auction_context
 from treasury_cash_flow_extension import fetch_treasury_cash_context, fiscal_pillar
 
 FISCAL_CSV = base.OUT_DIR / "treasury_cash_source_status.csv"
+CANONICAL_MACRO_HISTORY = base.OUT_DIR / "macro_history.csv"
 CANONICAL_MACRO_LATEST = base.OUT_DIR / "macro_history_latest.json"
 CANONICAL_MACRO_PROVENANCE = base.OUT_DIR / "macro_history_provenance.json"
 SOURCE_TIMEOUT_SECONDS = 10
@@ -103,22 +106,91 @@ def resolve_core_macro_latest() -> tuple[dict[str, Any], dict[str, Any]]:
     }
 
 
+def canonical_artifacts() -> tuple[Path, ...]:
+    return (CANONICAL_MACRO_HISTORY, CANONICAL_MACRO_LATEST, CANONICAL_MACRO_PROVENANCE)
+
+
+def restore_canonical_from_gh_pages() -> dict[str, Any]:
+    """Recover the last published canonical history after the workflow fetches gh-pages."""
+    restored: list[str] = []
+    for path in canonical_artifacts():
+        if path.exists() and path.stat().st_size > 0:
+            continue
+        relative = path.relative_to(base.ROOT).as_posix()
+        try:
+            result = subprocess.run(
+                ["git", "show", f"origin/gh-pages:{relative}"],
+                cwd=base.ROOT.parent,
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        except (OSError, subprocess.CalledProcessError):
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(result.stdout)
+        restored.append(relative)
+    return {"restored": restored}
+
+
+def snapshot_canonical_artifacts() -> dict[Path, bytes]:
+    return {
+        path: path.read_bytes()
+        for path in canonical_artifacts()
+        if path.exists() and path.stat().st_size > 0
+    }
+
+
+def restore_canonical_snapshot(snapshot: dict[Path, bytes]) -> None:
+    for path in canonical_artifacts():
+        if path in snapshot:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(snapshot[path])
+        elif path.exists():
+            path.unlink()
+
+
+def canonical_latest_date() -> str | None:
+    latest, _metadata = load_canonical_macro_latest()
+    stamp = str(latest.get("date") or "")
+    return stamp[:10] if len(stamp) >= 10 else None
+
+
 def refresh_canonical_macro_history() -> dict[str, Any]:
-    """Refresh canonical history, degrading to the last-good artifact on failure."""
+    """Refresh canonical history without allowing a failed run to regress last-good data."""
+    restore_report = restore_canonical_from_gh_pages()
+    snapshot = snapshot_canonical_artifacts()
+    previous_date = canonical_latest_date()
     try:
         import refresh_macro_history as canonical
         canonical.main()
         latest, metadata = load_canonical_macro_latest()
+        refreshed_date = canonical_latest_date()
+        if previous_date and (not refreshed_date or refreshed_date < previous_date):
+            restore_canonical_snapshot(snapshot)
+            latest, metadata = load_canonical_macro_latest()
+            return {
+                "status": "cached_fallback" if latest else "unavailable",
+                "source": metadata.get("source"),
+                "restored_from_gh_pages": restore_report["restored"],
+                "error": (
+                    "canonical refresh regressed latest date "
+                    f"from {previous_date} to {refreshed_date or 'missing'}"
+                ),
+            }
         return {
             "status": "refreshed" if latest else "missing_after_refresh",
             "source": metadata.get("source"),
+            "restored_from_gh_pages": restore_report["restored"],
             "error": None,
         }
     except Exception as exc:
+        restore_canonical_snapshot(snapshot)
         latest, metadata = load_canonical_macro_latest()
         return {
             "status": "cached_fallback" if latest else "unavailable",
             "source": metadata.get("source"),
+            "restored_from_gh_pages": restore_report["restored"],
             "error": str(exc)[:500],
         }
 
