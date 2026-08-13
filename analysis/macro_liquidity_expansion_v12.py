@@ -14,6 +14,8 @@ from treasury_auction_absorption import fetch_auction_context
 from treasury_cash_flow_extension import fetch_treasury_cash_context, fiscal_pillar
 
 FISCAL_CSV = base.OUT_DIR / "treasury_cash_source_status.csv"
+CANONICAL_MACRO_LATEST = base.OUT_DIR / "macro_history_latest.json"
+CANONICAL_MACRO_PROVENANCE = base.OUT_DIR / "macro_history_provenance.json"
 SOURCE_TIMEOUT_SECONDS = 10
 SOURCE_RETRIES = 1
 
@@ -56,6 +58,69 @@ def resilient_ofr_indicator(spec: dict[str, Any], current: datetime) -> base.Ind
     if searched.error:
         result.error = f"configured: {result.error}; metadata fallback: {searched.error}"[-500:]
     return result
+
+
+def load_canonical_macro_latest() -> tuple[dict[str, Any], dict[str, Any]]:
+    """Read the persisted macro history instead of scraping generated dashboard HTML."""
+    if not CANONICAL_MACRO_LATEST.exists():
+        return {}, {}
+    try:
+        payload = json.loads(CANONICAL_MACRO_LATEST.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}, {}
+    latest = payload.get("latest")
+    if not isinstance(latest, dict) or not latest.get("date"):
+        return {}, {}
+    provenance: dict[str, Any] = {}
+    if CANONICAL_MACRO_PROVENANCE.exists():
+        try:
+            loaded = json.loads(CANONICAL_MACRO_PROVENANCE.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                provenance = loaded
+        except (OSError, json.JSONDecodeError):
+            provenance = {}
+    return latest, {
+        "source": "model_output/macro_history_latest.json",
+        "generated_at_utc": payload.get("generated_at_utc"),
+        "lookahead_safe": bool(payload.get("lookahead_safe")),
+        "status": payload.get("status"),
+        "provenance": provenance,
+    }
+
+
+def resolve_core_macro_latest() -> tuple[dict[str, Any], dict[str, Any]]:
+    """Prefer canonical persisted history; retain HTML extraction only as legacy fallback."""
+    latest, metadata = load_canonical_macro_latest()
+    if latest:
+        return latest, metadata
+    legacy = base.last_macro(base.extract_macro_monitor())
+    return legacy, {
+        "source": "interactive_cot_dashboard.html (legacy fallback)",
+        "generated_at_utc": None,
+        "lookahead_safe": False,
+        "status": "legacy_fallback" if legacy else "missing",
+        "provenance": {},
+    }
+
+
+def refresh_canonical_macro_history() -> dict[str, Any]:
+    """Refresh canonical history, degrading to the last-good artifact on failure."""
+    try:
+        import refresh_macro_history as canonical
+        canonical.main()
+        latest, metadata = load_canonical_macro_latest()
+        return {
+            "status": "refreshed" if latest else "missing_after_refresh",
+            "source": metadata.get("source"),
+            "error": None,
+        }
+    except Exception as exc:
+        latest, metadata = load_canonical_macro_latest()
+        return {
+            "status": "cached_fallback" if latest else "unavailable",
+            "source": metadata.get("source"),
+            "error": str(exc)[:500],
+        }
 
 
 def apply_core_macro_fallbacks(pillars: dict[str, Any], macro_latest: dict[str, Any]) -> None:
@@ -142,7 +207,7 @@ def build_payload(*, now: datetime | None = None) -> dict:
         config, current
     )
     by_key = {result.key: result for result in ofr_results}
-    macro_latest = base.last_macro(base.extract_macro_monitor())
+    macro_latest, macro_history = resolve_core_macro_latest()
     pillars = base.existing_pillars(macro_latest)
     apply_core_macro_fallbacks(pillars, macro_latest)
     pillars.update(
@@ -179,11 +244,14 @@ def build_payload(*, now: datetime | None = None) -> dict:
         "source_coverage_ratio": round(coverage, 3),
         "source_coverage_label": "Good" if coverage >= 0.75 else "Partial" if coverage >= 0.40 else "Low",
         "existing_macro_latest": macro_latest,
+        "canonical_macro_history": macro_history,
         "treasury_cash_context": fiscal_context,
         "treasury_auction_context": auction_context,
         "pillars": pillars,
         "sources": base.source_rows(all_results),
         "source_notes": [
+            "Core macro state is read from the persisted canonical macro-history artifact when available; generated HTML is legacy fallback only.",
+            "Canonical history uses conservative business-day availability lags and admits future Treasury issue amounts only after the auction date.",
             "Treasury Daily Treasury Statement provides daily operating cash plus deposits and withdrawals on a modified-cash basis.",
             "Positive fiscal cash flow means Treasury withdrawals injected cash into the private sector; deposits and tax receipts are drains.",
             "Treasury auction absorption compares bid-to-cover, dealer share, and indirect share against prior auctions of the same tenor.",
@@ -198,7 +266,14 @@ def build_payload(*, now: datetime | None = None) -> dict:
 
 
 def main() -> None:
+    refresh_result = refresh_canonical_macro_history()
+    if refresh_result.get("error"):
+        print(
+            "WARNING: canonical macro refresh failed; "
+            f"status={refresh_result['status']} error={refresh_result['error']}"
+        )
     payload = build_payload()
+    payload["canonical_macro_refresh"] = refresh_result
     base.OUT_DIR.mkdir(parents=True, exist_ok=True)
     base.JSON_OUT.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     base.write_csv(
@@ -212,6 +287,7 @@ def main() -> None:
     print(f"Wrote {base.JSON_OUT}")
     print(f"Wrote {base.CSV_OUT}")
     print(f"Wrote {FISCAL_CSV}")
+    print(f"Core macro source: {payload['canonical_macro_history'].get('source')}")
     print(f"Expanded source coverage: {payload['source_coverage_ratio'] * 100:.0f}%")
 
 
