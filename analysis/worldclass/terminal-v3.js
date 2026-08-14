@@ -178,26 +178,27 @@
   function macroLabel(score) {
     const n = finite(score);
     if (n === null) return "unavailable";
-    if (n >= 70) return "strongly supportive";
-    if (n >= 60) return "supportive";
-    if (n <= 30) return "strongly restrictive";
-    if (n <= 40) return "restrictive";
+    if (n >= 70) return "high";
+    if (n >= 60) return "elevated";
+    if (n <= 30) return "low";
+    if (n <= 40) return "subdued";
     return "neutral";
   }
 
   function regime(snapshot) {
-    const values = [snapshot.score, snapshot.macroScore, snapshot.price3m];
+    // Aggregate macro score is context-only. The 2026-08-14 backtest found no
+    // robust standalone directional edge across 1W/2W/4W/13W/26W horizons.
+    const values = [snapshot.score, snapshot.price3m];
     const signs = [
       directionalSign(snapshot.score, 60, 40),
-      directionalSign(snapshot.macroScore, 60, 40),
       directionalSign(snapshot.price3m, 3, -3)
     ];
     const observed = values.filter(value => finite(value) !== null).length;
     const bullish = signs.filter(x => x > 0).length;
     const bearish = signs.filter(x => x < 0).length;
-    if (bullish >= 2 && bullish > bearish) return { label: "Risk-on alignment", tone: "positive", detail: `${bullish}/${observed || 3} observed layers are supportive.`, alignment: bullish };
-    if (bearish >= 2 && bearish > bullish) return { label: "Risk-off alignment", tone: "negative", detail: `${bearish}/${observed || 3} observed layers are defensive.`, alignment: bearish };
-    return { label: "Mixed regime", tone: "neutral", detail: "Positioning, macro and price are not cleanly aligned.", alignment: Math.max(bullish, bearish) };
+    if (bullish >= 2) return { label: "Positioning + price aligned long", tone: "positive", detail: `${bullish}/${observed || 2} directional layers are constructive. Macro remains context-only.`, alignment: bullish };
+    if (bearish >= 2) return { label: "Positioning + price aligned short", tone: "negative", detail: `${bearish}/${observed || 2} directional layers are defensive. Macro remains context-only.`, alignment: bearish };
+    return { label: "Mixed positioning / price", tone: "neutral", detail: "Positioning and 3M price are not cleanly aligned. Aggregate macro is shown as context, not a directional vote.", alignment: Math.max(bullish, bearish) };
   }
 
   function crowdingText(actor) {
@@ -222,13 +223,11 @@
 
   function tensionText(snapshot) {
     const cot = directionalSign(snapshot.score, 60, 40);
-    const macro = directionalSign(snapshot.macroScore, 60, 40);
     const price = directionalSign(snapshot.price3m, 3, -3);
     const tensions = [];
-    if (cot && macro && cot !== macro) tensions.push("positioning and macro disagree");
     if (cot && price && cot !== price) tensions.push("positioning and 3M price disagree");
     if (!tensions.length) return null;
-    return `Tension: ${tensions.join("; ")}. Treat the read as conditional until layers converge.`;
+    return `Tension: ${tensions.join("; ")}. Aggregate macro is context-only and is not counted as a directional disagreement.`;
   }
 
   function brief(snapshot) {
@@ -239,20 +238,20 @@
     if (snapshot.score !== null) parts.push(`COT is ${stateLabel(snapshot.score).toLowerCase()} at ${snapshot.score.toFixed(0)}/100`);
     if (impulse !== null) parts.push(`weekly impulse is ${signed(impulse, 1)} pts`);
     if (snapshot.leadActor?.rank !== null) parts.push(actor);
-    if (snapshot.macroScore !== null) parts.push(`macro is ${macroLabel(snapshot.macroScore)} at ${snapshot.macroScore.toFixed(0)}/100`);
+    if (snapshot.macroScore !== null) parts.push(`macro context is ${macroLabel(snapshot.macroScore)} at ${snapshot.macroScore.toFixed(0)}/100 (0 directional weight)`);
     if (snapshot.price3m !== null) parts.push(`3M price is ${signed(snapshot.price3m, 1, "%")}`);
     const whyNow = parts.length ? `${parts.join("; ")}.` : "Insufficient live inputs for a decision brief.";
 
     let confirmation;
     let invalidation;
     if (cotTone > 0) {
-      confirmation = "Higher-quality continuation requires COT to stay above 60, weekly impulse to avoid a material reversal, and price/macro not to flip defensive.";
+      confirmation = "Higher-quality continuation requires COT to stay above 60, weekly impulse to avoid a material reversal, and 3M price not to flip defensive.";
       invalidation = "Downgrade the constructive read if COT falls below 60; invalidate alignment if it enters the defensive band or the release becomes stale/delayed.";
     } else if (cotTone < 0) {
-      confirmation = "Higher-quality downside continuation requires COT to stay below 40, weekly impulse to avoid a material rebound, and price/macro not to flip supportive.";
+      confirmation = "Higher-quality downside continuation requires COT to stay below 40, weekly impulse to avoid a material rebound, and 3M price not to flip supportive.";
       invalidation = "Downgrade the defensive read if COT rises above 40; invalidate alignment if it enters the constructive band or the release becomes stale/delayed.";
     } else {
-      confirmation = "No directional regime is active. Require COT to leave the 40–60 balance band and seek confirmation from macro or 3M price before upgrading the read.";
+      confirmation = "No directional regime is active. Require COT to leave the 40–60 balance band and seek confirmation from 3M price before upgrading the read.";
       invalidation = "A balanced read is invalidated only by a sustained move into a directional COT band; stale or delayed data always lowers evidence quality.";
     }
     return { whyNow, confirmation, invalidation };
@@ -320,13 +319,13 @@
       ["Weekly impulse", snapshot.scoreDelta === null ? "n/a" : `${signed(snapshot.scoreDelta, 1)} pts`, snapshot.scoreDelta === null ? "Unavailable" : snapshot.scoreDelta > 2 ? "Improving" : snapshot.scoreDelta < -2 ? "Deteriorating" : "Stable", snapshot.scoreDelta > 2 ? "positive" : snapshot.scoreDelta < -2 ? "negative" : "neutral"],
       ["Crowding", snapshot.leadActor?.rank === null || !snapshot.leadActor ? "n/a" : `${snapshot.leadActor.rank.toFixed(0)}th`, crowdingText(snapshot.leadActor), snapshot.leadActor?.rank >= 80 ? "positive" : snapshot.leadActor?.rank <= 20 ? "negative" : "neutral"],
       ["3M price", snapshot.price3m === null ? "n/a" : signed(snapshot.price3m, 1, "%"), snapshot.price1m === null ? "Price context" : `1M ${signed(snapshot.price1m, 1, "%")}`, snapshot.price3m > 3 ? "positive" : snapshot.price3m < -3 ? "negative" : "neutral"],
-      ["Macro", snapshot.macroScore === null ? "n/a" : `${snapshot.macroScore.toFixed(0)}/100`, snapshot.macroScore === null ? "Unavailable" : snapshot.macroScore >= 60 ? "Supportive" : snapshot.macroScore <= 40 ? "Defensive" : "Neutral", toneForScore(snapshot.macroScore)]
+      ["Macro context", snapshot.macroScore === null ? "n/a" : `${snapshot.macroScore.toFixed(0)}/100`, snapshot.macroScore === null ? "Unavailable" : "Context only · 0 directional weight", "neutral"]
     ];
     return `<div class="wc-v3-verdict ${r.tone}">
       <div>
         <span class="wc-v3-kicker">EVIDENCE-BASED MARKET READ</span>
         <h3>${esc(MARKET_META[snapshot.market].label)} · ${esc(r.label)}</h3>
-        <p>${esc(r.detail)} This is a governed decomposition of observable inputs, not a claimed trading edge.</p>
+        <p>${esc(r.detail)} This is a governed decomposition of observable inputs. Aggregate macro score is not a validated directional edge.</p>
       </div>
       <div class="wc-v3-verdict-meta">
         <span class="${quality.tone}">Evidence quality <strong>${esc(quality.label)}</strong></span>
@@ -379,7 +378,7 @@
         <div>
           <span class="wc-v3-kicker">GLOBAL POSITIONING COMMAND CENTER</span>
           <h2>Cross-market regime & decision map</h2>
-          <p>Positioning, weekly impulse, crowding, price confirmation, macro alignment, release health and prospective evidence in one auditable screen.</p>
+          <p>Positioning, weekly impulse, crowding, price confirmation, macro context, release health and prospective evidence in one auditable screen.</p>
         </div>
         <div class="wc-v3-head-actions">
           <div class="wc-v3-breadth" aria-label="Cross-market breadth">
