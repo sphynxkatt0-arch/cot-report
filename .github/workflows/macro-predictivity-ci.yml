@@ -1,0 +1,43 @@
+name: Macro Predictivity Research
+
+on:
+  push:
+    branches:
+      - feat/macro-predictivity-backtest-20260814
+    paths:
+      - analysis/macro_predictivity_backtest.py
+      - .github/workflows/macro-predictivity-ci.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install analysis dependencies
+        run: python -m pip install pandas numpy tabulate
+      - name: Load published canonical macro history
+        run: |
+          git fetch origin gh-pages:refs/remotes/origin/gh-pages --depth=1
+          mkdir -p .macro-input
+          git show origin/gh-pages:model_output/macro_history.csv > .macro-input/macro_history.csv
+          test -s .macro-input/macro_history.csv
+      - name: Run macro predictivity backtest
+        run: |
+          python analysis/macro_predictivity_backtest.py \
+            --input .macro-input/macro_history.csv \
+            --out-dir macro-predictivity-output
+      - name: Upload research outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: macro-predictivity-results
+          path: macro-predictivity-output/
+          if-no-files-found: error
+          retention-days: 30
