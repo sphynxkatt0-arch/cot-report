@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-async function openToday(page, viewport = { width: 1440, height: 960 }) {
+async function openToday(page, viewport = { width: 1440, height: 960 }, query = '?market=nq&view=today') {
   await page.setViewportSize(viewport);
-  await page.goto('/worldclass_dashboard.html?market=nq&view=today');
+  await page.goto(`/worldclass_dashboard.html${query}`);
   await page.waitForFunction(() => document.documentElement.classList.contains('cot-worldclass-ux-ready'));
   await page.waitForFunction(() => document.documentElement.classList.contains('cot-ux-hardening-ready'));
   await expect(page.locator('#currentEdgeCommand')).toBeVisible();
@@ -22,9 +22,69 @@ test('latest COT changes expose complete table semantics', async ({ page }) => {
 
   const firstRow = table.locator('.decision-cot-change-row').first();
   await expect(firstRow.locator(':scope > *').first()).toHaveAttribute('role', 'rowheader');
-  const cells = firstRow.locator(':scope > *').nth(1);
-  await expect(cells).toHaveAttribute('role', 'cell');
-  await expect(table).toHaveAttribute('aria-rowcount', /[2-9][0-9]*/);
+  await expect(firstRow.locator(':scope > *').nth(1)).toHaveAttribute('role', 'cell');
+  const rowCount = Number(await table.getAttribute('aria-rowcount'));
+  expect(rowCount).toBeGreaterThanOrEqual(2);
+});
+
+test('financial futures switch TFF and Legacy as one coherent report taxonomy', async ({ page }) => {
+  await openToday(page);
+
+  const control = page.locator('#reportTaxonomyControl');
+  await expect(control).toBeVisible();
+  await expect(control.locator('[data-report-dataset="tff"]')).toHaveClass(/active/);
+
+  const tffState = await page.evaluate(async () => {
+    const model = window.__COT_CURRENT_EDGE_MODEL__;
+    const rows = model.currentRows('nq');
+    const active = model.activeRows('nq');
+    const regime = await (await fetch('worldclass/regime_backtest.json')).json();
+    const detail = await (await fetch('worldclass/cot-edge-details/nq.json')).json();
+    return {
+      datasets: [...new Set(rows.map(row => row.dataset))],
+      actors: rows.map(row => row.actor_label),
+      activeSeries: active.map(row => row.series),
+      regimeDataset: regime.markets?.nq?.presentation_dataset,
+      detailDatasets: [...new Set((detail.actors || []).map(row => String(row.series).split(':')[0]))]
+    };
+  });
+  expect(tffState.datasets).toEqual(['tff']);
+  expect(tffState.actors.join(' ')).toMatch(/Asset Manager|Institutional/i);
+  expect(tffState.activeSeries.every(series => String(series).startsWith('tff:'))).toBeTruthy();
+  expect(tffState.regimeDataset).toBe('tff');
+  expect(tffState.detailDatasets).toEqual(['tff']);
+
+  await control.locator('[data-report-dataset="legacy"]').click();
+  await page.waitForURL(/report=legacy/);
+  await page.waitForFunction(() => document.documentElement.classList.contains('cot-worldclass-ux-ready'));
+  await expect(page.locator('#reportTaxonomyControl [data-report-dataset="legacy"]')).toHaveClass(/active/);
+
+  const legacyState = await page.evaluate(async () => {
+    const model = window.__COT_CURRENT_EDGE_MODEL__;
+    const rows = model.currentRows('nq');
+    const active = model.activeRows('nq');
+    const regime = await (await fetch('worldclass/regime_backtest.json')).json();
+    const detail = await (await fetch('worldclass/cot-edge-details/nq.json')).json();
+    return {
+      datasets: [...new Set(rows.map(row => row.dataset))],
+      actors: rows.map(row => row.actor_label),
+      activeSeries: active.map(row => row.series),
+      regimeDataset: regime.markets?.nq?.presentation_dataset,
+      detailDatasets: [...new Set((detail.actors || []).map(row => String(row.series).split(':')[0]))],
+      livePredictions: (model.state.live?.current_predictions || []).filter(row => row.market === 'nq').length
+    };
+  });
+  expect(legacyState.datasets).toEqual(['legacy']);
+  expect(legacyState.actors.join(' ')).toMatch(/Non-Commercial/i);
+  expect(legacyState.activeSeries.every(series => String(series).startsWith('legacy:'))).toBeTruthy();
+  expect(legacyState.regimeDataset).toBe('legacy');
+  expect(legacyState.detailDatasets).toEqual(['legacy']);
+  expect(legacyState.livePredictions).toBe(0);
+
+  await page.locator('#instrumentTabs [data-market="gold"]').click();
+  await expect(page.locator('#reportTaxonomyControl')).toContainText('Disaggregated');
+  const goldDatasets = await page.evaluate(() => [...new Set(window.__COT_CURRENT_EDGE_MODEL__.currentRows('gold').map(row => row.dataset))]);
+  expect(goldDatasets).toEqual(['disaggregated']);
 });
 
 test('important expiries are generated from the calendar instead of a frozen date list', async ({ page }) => {
@@ -48,7 +108,9 @@ test('mobile decision controls provide touch-sized targets and visible keyboard 
     '#instrumentTabs [data-market="nq"]',
     '[data-decision-view="today"]',
     '[data-decision-horizon="1w"]',
-    '[data-model-family="combined"]'
+    '[data-model-family="combined"]',
+    '[data-report-dataset="tff"]',
+    '[data-report-dataset="legacy"]'
   ];
 
   for (const selector of selectors) {
