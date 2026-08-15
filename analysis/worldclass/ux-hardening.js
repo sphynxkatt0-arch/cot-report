@@ -79,19 +79,20 @@
     node.dataset.uxExpiryKey = key;
     node.classList.add("ux-expiry-calendar");
     node.setAttribute("aria-label", "Important options expiry dates");
-    node.title = "Calendar-standard expiry dates. Exchange holiday adjustments can shift settlement dates.";
-    node.innerHTML = `<strong>Important expiries</strong><div class="ux-expiry-items">${expiryItem("Next index OPEX", monthly, today)}${expiryItem("Next quarterly OPEX", quarterly, today)}${expiryItem("Next VIX settlement", vix, today)}</div>`;
+    node.innerHTML = `<strong>Important expiries</strong><div class="ux-expiry-items">${expiryItem("Next index OPEX", monthly, today)}${expiryItem("Next quarterly OPEX", quarterly, today)}${expiryItem("Next VIX settlement", vix, today)}<small class="ux-expiry-note">Calendar-standard dates; exchange holiday rules can shift settlement.</small></div>`;
   }
 
   function enhanceTableSemantics(root) {
     const table = $(".decision-cot-change-table", root);
     if (!table) return;
     const head = $(".decision-cot-change-head", table);
+    const columnCount = head?.children?.length || 0;
     if (head) {
       [...head.children].forEach(cell => cell.setAttribute("role", "columnheader"));
     }
     const rows = $$(".decision-cot-change-row", table);
     table.setAttribute("aria-rowcount", String(rows.length + (head ? 1 : 0)));
+    if (columnCount) table.setAttribute("aria-colcount", String(columnCount));
     rows.forEach(row => {
       [...row.children].forEach((cell, index) => cell.setAttribute("role", index === 0 ? "rowheader" : "cell"));
       const actor = $(":scope > div strong", row)?.textContent?.trim();
