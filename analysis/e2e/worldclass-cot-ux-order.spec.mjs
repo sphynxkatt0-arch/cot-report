@@ -207,7 +207,8 @@ test('mobile has no page-level horizontal overflow and latest COT changes become
 
   const firstChange = page.locator('.decision-cot-change-row').first();
   await expect(firstChange).toBeVisible();
-  await expect(firstChange).toContainText(/Net position|Weekly Δ/i);
+  await expect(firstChange.locator(':scope > strong')).toHaveCount(2);
+  await expect(firstChange.locator(':scope > span')).toHaveCount(4);
   const box = await firstChange.boundingBox();
   expect(box.width).toBeLessThanOrEqual(390);
 
