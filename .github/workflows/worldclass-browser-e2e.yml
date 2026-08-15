@@ -32,6 +32,7 @@ jobs:
           python3 analysis/install_cot_intelligence_shell.py
           test -s analysis/worldclass/base.json
           test -s analysis/worldclass/model-spec.json
+          grep -q 'data-cot-intelligence-asset="report-taxonomy-js"' analysis/worldclass_dashboard.html
           grep -q 'data-cot-intelligence-asset="current-edge-js"' analysis/worldclass_dashboard.html
           grep -q 'data-cot-intelligence-asset="ux-hardening-js"' analysis/worldclass_dashboard.html
 
