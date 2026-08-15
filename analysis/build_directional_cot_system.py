@@ -1,25 +1,17 @@
 #!/usr/bin/env python3
-"""Build the integrated decision-first COT system.
+"""Build the governed multi-market directional COT system.
 
-Outputs:
-  model_output/cot_direction_latest.json
-  model_output/cot_direction_latest.csv
-  model_output/cot_direction_history.csv
-  model_output/cot_direction_validation_summary.csv
-  model_output/macro_direction_context.json
-  directional_cot_report.html
-
-The existing macro dashboard remains the source of macro evidence. This script
-adds release-state tracking, explicit macro sub-scores, a canonical Friday-
-aligned COT history, and one final decision per equity-index market.
+All markets share the same hierarchy:
+Legacy Non-commercial structure -> report-family tactical context -> crowding
+size -> macro size/guards -> release state -> price execution.
 """
-
 from __future__ import annotations
 
 import argparse
 import csv
 import html
 import json
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -48,6 +40,7 @@ from cot_direction_model import (
     structural_score_from_percentile,
     tactical_modifier,
 )
+from cot_market_registry import DIRECTIONAL_MARKETS
 from macro_direction_adapter import load_macro_direction_context
 
 ROOT = Path(__file__).resolve().parent
@@ -65,31 +58,76 @@ def finite(value: Any) -> float | None:
     return number if number == number else None
 
 
+def market_model_config(market: str, config: dict[str, Any]) -> dict[str, Any]:
+    """Return a copied model config with market-specific confidence/invalidation."""
+    meta = MARKETS[market]
+    slot = str(meta.get("model_slot") or "sp500")
+    configured = deepcopy(config)
+    configured["execution"][f"{slot}_invalidation_pct"] = float(meta["invalidation_pct"])
+    configured["confidence"][f"{slot}_structural_base"] = float(meta["confidence_base"])
+    return configured
+
+
 def load_market_inputs(market: str) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     meta = MARKETS[market]
-    legacy = read_position_file(latest_file(meta["legacy_glob"]))
-    tff = read_position_file(latest_file(meta["tff_glob"]))
-    prices = read_prices(meta["price_path"], meta["price_col"])
-    return legacy, tff, prices
+    legacy = read_position_file(latest_file(str(meta["legacy_glob"])))
+    secondary = read_position_file(latest_file(str(meta["secondary_glob"])))
+    prices = read_prices(Path(meta["price_path"]), str(meta["price_col"]))
+    return legacy, secondary, prices
 
 
-def common_report_dates(legacy: pd.DataFrame, tff: pd.DataFrame) -> list[pd.Timestamp]:
-    return [pd.Timestamp(value) for value in sorted(set(legacy["date"]).intersection(set(tff["date"])))]
+def common_report_dates(legacy: pd.DataFrame, secondary: pd.DataFrame) -> list[pd.Timestamp]:
+    return [pd.Timestamp(value) for value in sorted(set(legacy["date"]).intersection(set(secondary["date"])))]
+
+
+def resolve_secondary_columns(
+    secondary: pd.DataFrame,
+    market: str | None = None,
+) -> tuple[str, str, str, str]:
+    if market is not None:
+        meta = MARKETS[market]
+        return (
+            str(meta["conviction_column"]),
+            str(meta["other_reportable_column"]),
+            str(meta["nonreportable_column"]),
+            str(meta["conviction_group_label"]),
+        )
+    if "asset_mgr_net_oi_pct" in secondary.columns:
+        return (
+            "asset_mgr_net_oi_pct",
+            "other_reportable_net_oi_pct",
+            "non_reportable_net_oi_pct",
+            "Asset Manager",
+        )
+    if "managed_money_net_oi_pct" in secondary.columns:
+        return (
+            "managed_money_net_oi_pct",
+            "other_reportable_net_oi_pct",
+            "non_reportable_net_oi_pct",
+            "Managed Money",
+        )
+    raise KeyError("Secondary report has neither Asset Manager nor Managed Money positioning")
 
 
 def feature_snapshot(
     legacy: pd.DataFrame,
-    tff: pd.DataFrame,
+    secondary: pd.DataFrame,
     report_ts: pd.Timestamp,
     minimum: int,
-) -> dict[str, float | None]:
+    market: str | None = None,
+) -> dict[str, float | str | None]:
     legacy_hist = legacy.loc[legacy["date"] <= report_ts].copy()
-    tff_hist = tff.loc[tff["date"] <= report_ts].copy()
+    secondary_hist = secondary.loc[secondary["date"] <= report_ts].copy()
+    conviction_col, other_col, nonreportable_col, conviction_label = resolve_secondary_columns(secondary, market)
+    conviction = expanding_percentile(secondary_hist[conviction_col], minimum)
     return {
         "noncommercial_percentile": expanding_percentile(legacy_hist["noncommercial_net_oi_pct"], minimum),
-        "asset_manager_percentile": expanding_percentile(tff_hist["asset_mgr_net_oi_pct"], minimum),
-        "other_reportable_trend13_rank": trend_rank(tff_hist, "other_reportable_net_oi_pct", 13, minimum),
-        "nonreportable_trend13_rank": trend_rank(tff_hist, "non_reportable_net_oi_pct", 13, minimum),
+        # Compatibility field consumed by existing guards and report injectors.
+        "asset_manager_percentile": conviction,
+        "conviction_percentile": conviction,
+        "conviction_group_label": conviction_label,
+        "other_reportable_trend13_rank": trend_rank(secondary_hist, other_col, 13, minimum),
+        "nonreportable_trend13_rank": trend_rank(secondary_hist, nonreportable_col, 13, minimum),
         "noncommercial_flow4_rank": flow_rank(legacy_hist, "noncommercial_net_oi_pct", 4, minimum),
     }
 
@@ -102,14 +140,14 @@ def price_index_at_or_after(prices: pd.DataFrame, target: pd.Timestamp) -> int |
 def build_history_for_market(
     market: str,
     legacy: pd.DataFrame,
-    tff: pd.DataFrame,
+    secondary: pd.DataFrame,
     prices: pd.DataFrame,
     config: dict[str, Any],
 ) -> list[dict[str, Any]]:
     minimum = int(config["minimum_history_weeks"])
     rows: list[dict[str, Any]] = []
-    for report_ts in common_report_dates(legacy, tff):
-        snapshot = feature_snapshot(legacy, tff, report_ts, minimum)
+    for report_ts in common_report_dates(legacy, secondary):
+        snapshot = feature_snapshot(legacy, secondary, report_ts, minimum, market)
         structural = structural_score_from_percentile(snapshot["noncommercial_percentile"], config)
         tactical, _ = tactical_modifier(
             structural,
@@ -119,12 +157,16 @@ def build_history_for_market(
             config,
         )
         adjusted = preserve_structural_sign(structural, tactical)
-        scheduled = resolve_release_state(report_ts.date(), now=pd.Timestamp(report_ts + pd.Timedelta(days=3, hours=22)).to_pydatetime())
+        scheduled = resolve_release_state(
+            report_ts.date(),
+            now=pd.Timestamp(report_ts + pd.Timedelta(days=3, hours=22)).to_pydatetime(),
+        )
         release_date = pd.Timestamp(scheduled["effective_release_date"])
         base_index = price_index_at_or_after(prices, release_date)
         base_price = float(prices.iloc[base_index]["price"]) if base_index is not None else None
         row: dict[str, Any] = {
             "market": market,
+            "market_label": MARKETS[market]["label"],
             "report_date": report_ts.date().isoformat(),
             "scheduled_release_date": release_date.date().isoformat(),
             **snapshot,
@@ -179,23 +221,26 @@ def build_validation_summary(history: list[dict[str, Any]]) -> list[dict[str, An
 def build_latest_market_decision(
     market: str,
     legacy: pd.DataFrame,
-    tff: pd.DataFrame,
+    secondary: pd.DataFrame,
     prices: pd.DataFrame,
     macro: dict[str, Any],
     config: dict[str, Any],
 ) -> dict[str, Any]:
-    dates = common_report_dates(legacy, tff)
+    meta = MARKETS[market]
+    dates = common_report_dates(legacy, secondary)
     if not dates:
-        raise RuntimeError(f"{market}: no common Legacy/TFF report dates")
+        raise RuntimeError(f"{market}: no common Legacy/{meta['secondary_label']} report dates")
     report_ts = dates[-1]
     observe_report(report_ts.date())
     release = resolve_release_state(report_ts.date())
-    snapshot = feature_snapshot(legacy, tff, report_ts, int(config["minimum_history_weeks"]))
+    snapshot = feature_snapshot(legacy, secondary, report_ts, int(config["minimum_history_weeks"]), market)
     signal_date, signal_price = price_at_or_after(prices, pd.Timestamp(release["effective_release_date"]))
     latest_date, current_price = latest_price(prices)
 
+    configured = market_model_config(market, config)
+    model_slot = str(meta.get("model_slot") or "sp500")
     decision = build_decision(
-        market=market,
+        market=model_slot,
         report_date=report_ts.date().isoformat(),
         actual_release_date=release["effective_release_date"],
         release_date_source=release["release_date_source"],
@@ -210,8 +255,15 @@ def build_latest_market_decision(
         asset_manager_percentile_value=snapshot["asset_manager_percentile"],
         macro_score_value=macro.get("macro_regime_score"),
         macro_override=bool(macro.get("hard_override")),
-        config=config,
+        config=configured,
     ).to_dict()
+    decision["market"] = market
+
+    conviction_label = str(meta["conviction_group_label"])
+    decision["reasons"] = [
+        str(reason).replace("Asset Manager", conviction_label)
+        for reason in decision.get("reasons") or []
+    ]
 
     availability = float(macro.get("availability_ratio") or 0.0)
     adjusted_confidence = float(decision["confidence_score"]) * (0.70 + 0.30 * availability)
@@ -224,7 +276,7 @@ def build_latest_market_decision(
         float(decision.get("exposure_multiplier") or 0.0),
         adjusted_confidence,
         bool(macro.get("hard_override")),
-        config,
+        configured,
     )
     if release["is_delayed"]:
         action = "Hold Prior Signal — CFTC Report Delayed"
@@ -233,7 +285,12 @@ def build_latest_market_decision(
 
     decision.update(snapshot)
     decision.update({
-        "market_label": MARKETS[market]["label"],
+        "market_label": meta["label"],
+        "asset_class": meta["asset_class"],
+        "secondary_report": meta["secondary_label"],
+        "conviction_group_label": conviction_label,
+        "contract_selection_mode": meta["contract_selection_mode"],
+        "contract_selection_note": meta["contract_selection_note"],
         "final_action": action,
         "confidence_score": round(adjusted_confidence, 4),
         "confidence_label": confidence_label(adjusted_confidence),
@@ -252,12 +309,15 @@ def build_latest_market_decision(
         "supply_pressure_score": macro.get("supply_pressure_score"),
         "macro_availability_ratio": availability,
         "macro_severe_alerts": macro.get("severe_alerts") or [],
-        "source_legacy": str(latest_file(MARKETS[market]["legacy_glob"]).relative_to(ROOT)),
-        "source_tff": str(latest_file(MARKETS[market]["tff_glob"]).relative_to(ROOT)),
+        "source_legacy": str(latest_file(str(meta["legacy_glob"])).relative_to(ROOT)),
+        "source_secondary": str(latest_file(str(meta["secondary_glob"])).relative_to(ROOT)),
+        # Backward-compatible source name retained for consumers expecting source_tff.
+        "source_tff": str(latest_file(str(meta["secondary_glob"])).relative_to(ROOT)),
     })
     decision["reasons"] = list(decision.get("reasons") or []) + [
         f"CFTC release status {release['release_status']}; expected report {release['expected_report_date']}",
         f"Macro availability {availability * 100:.0f}%",
+        str(meta["contract_selection_note"]),
     ]
     return decision
 
@@ -277,39 +337,40 @@ def render_html(decisions: list[dict[str, Any]], validation: list[dict[str, Any]
     panels: list[str] = []
     for row in decisions:
         action_class = tone_class(str(row["final_action"]))
-        release_class = "warning" if row.get("release_status") == "delayed" else ""
+        release_class = "warning" if row.get("release_status") in {"delayed", "awaiting_release", "catch_up_delayed"} else ""
         cards.append(f"""
         <article class="decision-card {action_class} {release_class}">
-          <div class="kicker">{html.escape(row['market_label'])}</div>
-          <h2>{html.escape(row['final_action'])}</h2>
-          <div class="bias">{html.escape(row['structural_bias'])} · {html.escape(row['execution_state'])}</div>
+          <div class="kicker">{html.escape(str(row['market_label']))}</div>
+          <h2>{html.escape(str(row['final_action']))}</h2>
+          <div class="bias">{html.escape(str(row['structural_bias']))} · {html.escape(str(row['execution_state']))}</div>
           <div class="metric-grid">
             <div><span>Structural</span><strong>{format_value(row['structural_score'])}</strong></div>
             <div><span>Tactical</span><strong>{format_value(row['tactical_modifier'])}</strong></div>
             <div><span>Exposure</span><strong>{format_value(row['exposure_multiplier'])}×</strong></div>
-            <div><span>Confidence</span><strong>{html.escape(row['confidence_label'])}</strong></div>
+            <div><span>Confidence</span><strong>{html.escape(str(row['confidence_label']))}</strong></div>
           </div>
-          <p>Report {row['report_date']} · release state <b>{html.escape(row['release_status'])}</b> · price since actionable date {format_value(row['price_change_since_release_pct'], 2, '%')}.</p>
+          <p>Report {row['report_date']} · {html.escape(str(row.get('secondary_report')))} + Legacy · release <b>{html.escape(str(row['release_status']))}</b> · price since actionable date {format_value(row['price_change_since_release_pct'], 2, '%')}.</p>
         </article>""")
         tactical_rows = "".join(
-            f"<tr><td>{html.escape(item['label'])}</td><td>{format_value(item['rank_score'])}</td><td>{format_value(item['contribution'])}</td></tr>"
+            f"<tr><td>{html.escape(str(item['label']))}</td><td>{format_value(item['rank_score'])}</td><td>{format_value(item['contribution'])}</td></tr>"
             for item in row.get("tactical_components") or []
         ) or "<tr><td colspan='3'>No tactical contribution</td></tr>"
-        reasons = "".join(f"<li>{html.escape(reason)}</li>" for reason in row.get("reasons") or [])
+        reasons = "".join(f"<li>{html.escape(str(reason))}</li>" for reason in row.get("reasons") or [])
         alerts = ", ".join(row.get("macro_severe_alerts") or []) or "None"
+        conviction_label = html.escape(str(row.get("conviction_group_label") or "Crowding group"))
         panels.append(f"""
         <section class="panel">
-          <div class="panel-head"><div><div class="kicker">{html.escape(row['market_label'])}</div><h3>Decision evidence</h3></div><span class="badge">{html.escape(row['model_version'])}</span></div>
+          <div class="panel-head"><div><div class="kicker">{html.escape(str(row['market_label']))}</div><h3>Decision evidence</h3></div><span class="badge">{html.escape(str(row['model_version']))}</span></div>
           <div class="evidence-grid">
             <div><span>NC percentile</span><strong>{format_value(row['noncommercial_percentile'], 1, '%')}</strong></div>
-            <div><span>AM percentile</span><strong>{format_value(row['asset_manager_percentile'], 1, '%')}</strong></div>
+            <div><span>{conviction_label} percentile</span><strong>{format_value(row['asset_manager_percentile'], 1, '%')}</strong></div>
             <div><span>Liquidity plumbing</span><strong>{format_value(row['liquidity_plumbing_score'], 0, '/100')}</strong></div>
             <div><span>Transmission</span><strong>{format_value(row['market_transmission_score'], 0, '/100')}</strong></div>
             <div><span>Supply pressure</span><strong>{format_value(row['supply_pressure_score'], 0, '/100')}</strong></div>
             <div><span>Macro regime</span><strong>{format_value(row['macro_regime_score'], 0, '/100')}</strong></div>
           </div>
           <div class="columns"><div><h4>Reason chain</h4><ul>{reasons}</ul><p>Severe macro alerts: {html.escape(alerts)}</p></div><div><h4>Tactical contributions</h4><table><thead><tr><th>Input</th><th>Rank</th><th>Contribution</th></tr></thead><tbody>{tactical_rows}</tbody></table></div></div>
-          <p class="note">Legacy Non-commercials set direction. TFF changes conviction only. Asset Managers and macro change size. Price controls execution. First-observed timestamps are local evidence, not official CFTC publication timestamps.</p>
+          <p class="note">Legacy Non-commercials set structural direction. {html.escape(str(row.get('secondary_report')))} changes conviction only. {conviction_label} and macro change size. Price controls execution. Contract selection: {html.escape(str(row.get('contract_selection_note') or 'n/a'))}</p>
         </section>""")
 
     validation_rows = "".join(
@@ -318,8 +379,8 @@ def render_html(decisions: list[dict[str, Any]], validation: list[dict[str, Any]
     )
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Directional COT Report</title>
 <style>
-:root{{--bg:#07111f;--panel:#0e1b2d;--panel2:#14243a;--text:#f5f7fb;--muted:#9fb0c6;--line:#263b55;--pos:#37d391;--neg:#ff6b75;--accent:#6aa8ff;--warn:#ffba55}}*{{box-sizing:border-box}}body{{margin:0;background:linear-gradient(160deg,#07111f,#0b1627 55%,#07111f);color:var(--text);font:15px/1.55 Inter,system-ui,sans-serif}}main{{max-width:1180px;margin:auto;padding:32px 20px 60px}}header{{display:flex;justify-content:space-between;gap:24px;align-items:flex-end;margin-bottom:24px}}h1{{font-size:clamp(30px,5vw,54px);line-height:1;margin:5px 0 10px}}h2{{font-size:28px;margin:8px 0}}h3{{font-size:22px;margin:4px 0}}h4{{margin:0 0 10px}}p,li{{color:var(--muted)}}a{{color:#9ec5ff}}.kicker{{text-transform:uppercase;letter-spacing:.13em;color:#82a8d6;font-size:12px;font-weight:700}}.actions a{{display:inline-block;border:1px solid var(--line);padding:9px 13px;border-radius:10px;text-decoration:none;background:var(--panel)}}.decision-grid{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}}.decision-card,.panel{{background:linear-gradient(145deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 18px 50px rgba(0,0,0,.18)}}.decision-card.positive{{border-color:rgba(55,211,145,.6)}}.decision-card.negative{{border-color:rgba(255,107,117,.6)}}.decision-card.warning{{border-color:var(--warn)}}.bias{{font-weight:700;color:var(--accent)}}.metric-grid,.evidence-grid{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:20px 0}}.metric-grid div,.evidence-grid div{{background:rgba(5,12,22,.45);border:1px solid var(--line);border-radius:12px;padding:12px}}span{{display:block;color:var(--muted);font-size:12px}}strong{{font-size:18px}}.panel{{margin-top:18px}}.panel-head{{display:flex;justify-content:space-between;align-items:center}}.badge{{border:1px solid var(--line);border-radius:999px;padding:6px 10px}}.columns{{display:grid;grid-template-columns:1fr 1.5fr;gap:24px}}table{{width:100%;border-collapse:collapse}}th,td{{padding:9px;border-bottom:1px solid var(--line);text-align:left}}th{{color:var(--muted);font-size:12px}}.note{{border-left:3px solid var(--accent);padding-left:12px}}footer{{margin-top:26px;color:var(--muted)}}@media(max-width:760px){{header{{display:block}}.actions{{margin-top:16px}}.decision-grid,.columns{{grid-template-columns:1fr}}.metric-grid,.evidence-grid{{grid-template-columns:repeat(2,1fr)}}}}
-</style></head><body><main><header><div><div class="kicker">COT direction · macro risk · price execution</div><h1>Directional COT Report</h1><p>One decision hierarchy for S&amp;P 500 and Nasdaq-100.</p></div><div class="actions"><a href="interactive_cot_dashboard.html">Open full macro dashboard</a></div></header><div class="decision-grid">{''.join(cards)}</div>{''.join(panels)}<section class="panel"><div class="panel-head"><div><div class="kicker">Release-aligned history</div><h3>Exploratory model validation</h3></div></div><p>These diagnostics use Friday-aligned price bases. They are an audit aid, not a sealed out-of-sample result.</p><table><thead><tr><th>Market</th><th>Horizon</th><th>N</th><th>Spearman</th><th>Bullish − bearish</th></tr></thead><tbody>{validation_rows}</tbody></table></section><footer>Generated {html.escape(generated)}. Research decision aid; not personalized financial advice.</footer></main></body></html>"""
+:root{{--bg:#07111f;--panel:#0e1b2d;--panel2:#14243a;--text:#f5f7fb;--muted:#9fb0c6;--line:#263b55;--pos:#37d391;--neg:#ff6b75;--accent:#6aa8ff;--warn:#ffba55}}*{{box-sizing:border-box}}body{{margin:0;background:linear-gradient(160deg,#07111f,#0b1627 55%,#07111f);color:var(--text);font:15px/1.55 Inter,system-ui,sans-serif}}main{{max-width:1320px;margin:auto;padding:32px 20px 60px}}header{{display:flex;justify-content:space-between;gap:24px;align-items:flex-end;margin-bottom:24px}}h1{{font-size:clamp(30px,5vw,54px);line-height:1;margin:5px 0 10px}}h2{{font-size:25px;margin:8px 0}}h3{{font-size:22px;margin:4px 0}}h4{{margin:0 0 10px}}p,li{{color:var(--muted)}}a{{color:#9ec5ff}}.kicker{{text-transform:uppercase;letter-spacing:.13em;color:#82a8d6;font-size:12px;font-weight:700}}.actions a{{display:inline-block;border:1px solid var(--line);padding:9px 13px;border-radius:10px;text-decoration:none;background:var(--panel)}}.decision-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}}.decision-card,.panel{{background:linear-gradient(145deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 18px 50px rgba(0,0,0,.18)}}.decision-card.positive{{border-color:rgba(55,211,145,.6)}}.decision-card.negative{{border-color:rgba(255,107,117,.6)}}.decision-card.warning{{border-color:var(--warn)}}.bias{{font-weight:700;color:var(--accent)}}.metric-grid,.evidence-grid{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:20px 0}}.metric-grid div,.evidence-grid div{{background:rgba(5,12,22,.45);border:1px solid var(--line);border-radius:12px;padding:12px}}span{{display:block;color:var(--muted);font-size:12px}}strong{{font-size:18px}}.panel{{margin-top:18px}}.panel-head{{display:flex;justify-content:space-between;align-items:center}}.badge{{border:1px solid var(--line);border-radius:999px;padding:6px 10px}}.columns{{display:grid;grid-template-columns:1fr 1.5fr;gap:24px}}table{{width:100%;border-collapse:collapse}}th,td{{padding:9px;border-bottom:1px solid var(--line);text-align:left}}th{{color:var(--muted);font-size:12px}}.note{{border-left:3px solid var(--accent);padding-left:12px}}footer{{margin-top:26px;color:var(--muted)}}@media(max-width:760px){{header{{display:block}}.actions{{margin-top:16px}}.columns{{grid-template-columns:1fr}}.metric-grid,.evidence-grid{{grid-template-columns:repeat(2,1fr)}}}}
+</style></head><body><main><header><div><div class="kicker">COT direction · macro risk · price execution</div><h1>Directional COT Report</h1><p>One governed decision hierarchy across S&amp;P 500, Nasdaq-100, Russell 2000, Dow Jones, and Gold.</p></div><div class="actions"><a href="interactive_cot_dashboard.html">Open full macro dashboard</a></div></header><div class="decision-grid">{''.join(cards)}</div>{''.join(panels)}<section class="panel"><div class="panel-head"><div><div class="kicker">Release-aligned history</div><h3>Exploratory model validation</h3></div></div><p>Diagnostics use Friday-aligned price bases. They are an audit aid, not a sealed out-of-sample result.</p><div style="overflow:auto"><table><thead><tr><th>Market</th><th>Horizon</th><th>N</th><th>Spearman</th><th>Bullish − bearish</th></tr></thead><tbody>{validation_rows}</tbody></table></div></section><footer>Generated {html.escape(generated)}. Research decision aid; not personalized financial advice.</footer></main></body></html>"""
 
 
 def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -327,7 +388,7 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     if not rows:
         path.write_text("", encoding="utf-8")
         return
-    flattened = [{key: value for key, value in row.items() if not isinstance(value, (list, dict))} for row in rows]
+    flattened = [{key: value for key, value in row.items() if not isinstance(value, (list, dict, tuple))} for row in rows]
     fields = sorted({key for row in flattened for key in row})
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
@@ -344,10 +405,10 @@ def main() -> None:
 
     decisions: list[dict[str, Any]] = []
     history: list[dict[str, Any]] = []
-    for market in ("sp500", "nq"):
-        legacy, tff, prices = load_market_inputs(market)
-        decisions.append(build_latest_market_decision(market, legacy, tff, prices, macro_context, config))
-        history.extend(build_history_for_market(market, legacy, tff, prices, config))
+    for market in DIRECTIONAL_MARKETS:
+        legacy, secondary, prices = load_market_inputs(market)
+        decisions.append(build_latest_market_decision(market, legacy, secondary, prices, macro_context, config))
+        history.extend(build_history_for_market(market, legacy, secondary, prices, config))
     validation = build_validation_summary(history)
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Refresh data, validate inputs/model, build outputs, and integrate the dashboard."""
+"""Refresh data, validate inputs/model, build outputs, and integrate dashboard UX."""
 from __future__ import annotations
 
 import argparse
@@ -44,7 +44,6 @@ def write_status(status: str, message: str, refresh_ok: bool | None = None) -> N
 
 
 def run_model_tests() -> None:
-    """Run every test module so future tests cannot be silently omitted."""
     run("-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py", "-v")
 
 
@@ -53,49 +52,38 @@ def main() -> None:
     parser.add_argument("--start", type=int, default=2016)
     parser.add_argument("--end", type=int, default=datetime.now(UTC).year)
     parser.add_argument("--skip-public-refresh", action="store_true")
-    parser.add_argument(
-        "--strict-refresh",
-        action="store_true",
-        help="Stop when public-data refresh fails instead of using validated cached files.",
-    )
+    parser.add_argument("--strict-refresh", action="store_true", help="Stop when public-data refresh fails instead of using validated cached files.")
     parser.add_argument("--open", action="store_true")
     args = parser.parse_args()
 
-    write_status("running", "Directional COT and macro-liquidity refresh is in progress.")
+    write_status("running", "Five-market directional COT and macro-liquidity refresh is in progress.")
     refresh_ok: bool | None = None
     try:
         if not args.skip_public_refresh:
-            refresh_ok = run(
+            base_ok = run(
                 "serve_interactive_cot_dashboard.py",
                 "--refresh-only",
-                "--start",
-                str(args.start),
-                "--end",
-                str(args.end),
+                "--start", str(args.start),
+                "--end", str(args.end),
                 allow_failure=not args.strict_refresh,
             )
+            extended_ok = run(
+                "refresh_extended_cot_markets.py",
+                "--start", str(args.start),
+                "--end", str(args.end),
+                allow_failure=not args.strict_refresh,
+            )
+            refresh_ok = base_ok and extended_ok
             if not refresh_ok:
-                print(
-                    "WARNING: public-data refresh failed; continuing only with existing validated local outputs.",
-                    file=sys.stderr,
-                )
+                print("WARNING: at least one public-data refresh failed; continuing only with validated cached files.", file=sys.stderr)
 
-        # Validate raw inputs and code invariants before replacing generated artifacts.
         run("validate_directional_inputs.py")
         run_model_tests()
-
-        # Build the source-backed macro control room from the refreshed base dashboard.
-        # OFR and Treasury failures remain explicit stale/unavailable statuses.
         run("macro_liquidity_expansion_v12.py")
-
-        # Build deterministic evidence before the live decision.
         run("rebuild_directional_history.py")
         run("enrich_directional_history_context.py")
         run("compare_directional_models_v11.py")
         run("grade_directional_model_evidence.py")
-
-        # Build and guard the live decision in strict priority order. The expanded
-        # plumbing guard can block exposure but never changes structural direction.
         run("build_latest_directional_decisions.py")
         run("align_observed_release_price.py")
         run("price_execution_adapter.py")
@@ -103,12 +91,7 @@ def main() -> None:
         run("macro_liquidity_extension_guard.py")
         run("model_evidence_actionability_guard.py")
         run("release_actionability_guard.py")
-
-        # Add transparent week-over-week positioning changes without changing direction.
         run("weekly_position_change.py")
-
-        # Render the governed outputs, then add current-state, funding-capacity,
-        # daily fiscal cash-path, auction absorption, playbook, and source-health UX.
         run("inject_model_comparison_report_v11.py")
         run("inject_directional_dashboard_v11.py")
         run("inject_macro_liquidity_ux.py")
@@ -120,12 +103,9 @@ def main() -> None:
         write_status("failed", str(exc), refresh_ok)
         raise
 
-    message = "Directional report and integrated macro-liquidity dashboard rebuilt and validated successfully."
+    message = "Five-market directional report and integrated macro-liquidity dashboard rebuilt and validated successfully."
     if refresh_ok is False:
-        message += (
-            " Public-data refresh failed, so cached inputs were used; release and source-freshness "
-            "guards remain active."
-        )
+        message += " Public-data refresh was incomplete, so validated cached inputs were used; release and source-freshness guards remain active."
     write_status("ok", message, refresh_ok)
     print(message)
     if args.open:

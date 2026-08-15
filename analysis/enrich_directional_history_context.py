@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
-"""Enrich canonical COT history with release-time macro and price context.
-
-The historical full-decision score uses only information available by the Friday
-signal close:
-- adjusted COT score;
-- Asset Manager crowding multiplier;
-- last available unified macro score and red-alert thresholds;
-- trailing 20-business-day price trend.
-
-It deliberately does not backfill post-release confirmation using future prices.
-"""
-
+"""Enrich canonical multi-market COT history with release-time macro/price context."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -38,28 +27,19 @@ def finite(value: Any) -> float | None:
 def load_macro_records(path: Path = DASHBOARD) -> pd.DataFrame:
     if not path.exists():
         raise FileNotFoundError(f"Missing macro dashboard {path}")
-    source = path.read_text(encoding="utf-8", errors="replace")
-    payload = extract_js_object(source, "MACRO_MONITOR") or {}
+    payload = extract_js_object(path.read_text(encoding="utf-8", errors="replace"), "MACRO_MONITOR") or {}
     rows = payload.get("records") or []
     if not rows:
         raise ValueError("MACRO_MONITOR has no historical records")
     frame = pd.DataFrame(rows)
-    required = {
-        "date",
-        "liquidity_score",
-        "net_liquidity_4w_change",
-        "bank_reserves_4w_change",
-        "sofr_iorb_spread",
-        "hy_oas_4w_change",
-    }
+    required = {"date", "liquidity_score", "net_liquidity_4w_change", "bank_reserves_4w_change", "sofr_iorb_spread", "hy_oas_4w_change"}
     missing = sorted(required - set(frame.columns))
     if missing:
         raise KeyError(f"Historical macro records missing {missing}")
     frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
     for column in frame.columns:
-        if column == "date" or column == "regime_label":
-            continue
-        frame[column] = pd.to_numeric(frame[column], errors="coerce")
+        if column not in {"date", "regime_label"}:
+            frame[column] = pd.to_numeric(frame[column], errors="coerce")
     return frame.dropna(subset=["date"]).sort_values("date").drop_duplicates("date", keep="last")
 
 
@@ -84,37 +64,23 @@ def historical_red_alert_count(current: pd.Series, previous: pd.Series | None) -
     return len(alerts), alerts
 
 
-def price_trend_at_signal(
-    prices: pd.DataFrame,
-    signal_date: pd.Timestamp,
-    periods: int = 20,
-) -> float | None:
+def price_trend_at_signal(prices: pd.DataFrame, signal_date: pd.Timestamp, periods: int = 20) -> float | None:
     eligible = prices.loc[prices["date"] <= signal_date].copy()
     if len(eligible) <= periods:
         return None
     latest = float(eligible.iloc[-1]["price"])
     prior = float(eligible.iloc[-1 - periods]["price"])
-    if latest <= 0 or prior <= 0:
-        return None
-    return (latest / prior - 1.0) * 100.0
+    return (latest / prior - 1.0) * 100.0 if latest > 0 and prior > 0 else None
 
 
-def historical_price_multiplier(
-    adjusted_score: float | None,
-    trend_20d_pct: float | None,
-    market: str,
-    config: dict[str, Any],
-) -> tuple[float, str]:
+def historical_price_multiplier(adjusted_score: float | None, trend_20d_pct: float | None, market: str, config: dict[str, Any]) -> tuple[float, str]:
     if adjusted_score is None or abs(adjusted_score) < 0.25:
         return 0.0, "No structural signal"
     if trend_20d_pct is None:
         return 0.0, "Unavailable"
     sign = 1.0 if adjusted_score > 0 else -1.0
     signed_trend = sign * trend_20d_pct
-    execution = config["execution"]
-    invalidation = float(
-        execution["nq_invalidation_pct"] if market == "nq" else execution["sp500_invalidation_pct"]
-    )
+    invalidation = float(MARKETS[market].get("invalidation_pct") or config["execution"]["sp500_invalidation_pct"])
     if signed_trend <= -invalidation:
         return 0.0, "Invalidated"
     if signed_trend > WAITING_BAND_PCT:
@@ -139,43 +105,23 @@ def align_macro(history: pd.DataFrame, macro: pd.DataFrame) -> pd.DataFrame:
     return aligned.sort_values(["market", "report_date"]).reset_index(drop=True)
 
 
-def enrich_history(
-    history: pd.DataFrame,
-    macro: pd.DataFrame,
-    config: dict[str, Any],
-) -> pd.DataFrame:
+def enrich_history(history: pd.DataFrame, macro: pd.DataFrame, config: dict[str, Any]) -> pd.DataFrame:
     aligned = align_macro(history, macro)
-    price_frames = {
-        market: read_prices(meta["price_path"], meta["price_col"])
-        for market, meta in MARKETS.items()
-        if market in {"sp500", "nq"}
-    }
+    price_frames = {market: read_prices(meta["price_path"], meta["price_col"]) for market, meta in MARKETS.items()}
     macro_sorted = macro.reset_index(drop=True)
-    macro_index_by_date = {
-        pd.Timestamp(value): index for index, value in enumerate(macro_sorted["date"])
-    }
-
+    macro_index_by_date = {pd.Timestamp(value): index for index, value in enumerate(macro_sorted["date"])}
     rows: list[dict[str, Any]] = []
     for _, raw in aligned.iterrows():
         row = raw.to_dict()
         market = str(row["market"])
         adjusted = finite(row.get("adjusted_cot_score"))
-        am_percentile = finite(row.get("asset_manager_percentile"))
+        crowding_percentile = finite(row.get("asset_manager_percentile"))
         macro_score = finite(row.get("liquidity_score"))
         signal_date = pd.to_datetime(row.get("signal_price_date"), errors="coerce")
-        trend_20d = (
-            price_trend_at_signal(price_frames[market], pd.Timestamp(signal_date))
-            if pd.notna(signal_date)
-            else None
-        )
-        am_mult, am_state = asset_manager_multiplier(am_percentile, config)
+        trend_20d = price_trend_at_signal(price_frames[market], pd.Timestamp(signal_date)) if pd.notna(signal_date) else None
+        crowding_mult, crowding_state = asset_manager_multiplier(crowding_percentile, config)
         macro_mult, macro_state = macro_multiplier(macro_score, config)
-        price_mult, price_state = historical_price_multiplier(
-            adjusted,
-            trend_20d,
-            market,
-            config,
-        )
+        price_mult, price_state = historical_price_multiplier(adjusted, trend_20d, market, config)
 
         macro_date = pd.to_datetime(row.get("historical_macro_date"), errors="coerce")
         current_macro: pd.Series | None = None
@@ -185,25 +131,22 @@ def enrich_history(
             if macro_position is not None:
                 current_macro = macro_sorted.iloc[macro_position]
                 previous_macro = macro_sorted.iloc[macro_position - 1] if macro_position >= 1 else None
-        red_count, red_alerts = (
-            historical_red_alert_count(current_macro, previous_macro)
-            if current_macro is not None
-            else (0, [])
-        )
+        red_count, red_alerts = historical_red_alert_count(current_macro, previous_macro) if current_macro is not None else (0, [])
         hard_override = red_count >= 2
         if adjusted is None or abs(adjusted) < 0.25 or macro_score is None or trend_20d is None:
             full_score = None
         elif hard_override:
             full_score = 0.0
         else:
-            full_score = clamp(adjusted * am_mult * macro_mult * price_mult, -1.25, 1.25)
+            full_score = clamp(adjusted * crowding_mult * macro_mult * price_mult, -1.25, 1.25)
 
         row.update({
             "historical_macro_score": macro_score,
             "historical_macro_state": macro_state,
             "historical_macro_multiplier": macro_mult,
-            "historical_asset_manager_state": am_state,
-            "historical_asset_manager_multiplier": am_mult,
+            "historical_asset_manager_state": crowding_state,
+            "historical_asset_manager_multiplier": crowding_mult,
+            "historical_conviction_group_label": MARKETS[market]["conviction_group_label"],
             "historical_price_trend_20d_pct": trend_20d,
             "historical_price_state": price_state,
             "historical_price_multiplier": price_mult,
@@ -211,7 +154,7 @@ def enrich_history(
             "historical_red_alerts": " | ".join(red_alerts),
             "historical_macro_override": hard_override,
             "release_decision_score": full_score,
-            "release_decision_definition": "Friday COT + AM size + as-of macro + 20d trend; no future post-release confirmation",
+            "release_decision_definition": "Friday COT + crowding size + as-of macro + 20d trend; no future post-release confirmation",
         })
         rows.append(row)
     return pd.DataFrame(rows)
@@ -222,8 +165,7 @@ def main() -> None:
         raise FileNotFoundError(f"Missing {HISTORY_OUT}; run rebuild_directional_history.py first")
     history = pd.read_csv(HISTORY_OUT)
     config = load_config(ROOT / "config" / "cot_direction_model_v1.json")
-    enriched = enrich_history(history, load_macro_records(), config)
-    enriched.to_csv(HISTORY_OUT, index=False)
+    enrich_history(history, load_macro_records(), config).to_csv(HISTORY_OUT, index=False)
     print(f"Enriched {HISTORY_OUT} with historical macro and price context")
 
 
