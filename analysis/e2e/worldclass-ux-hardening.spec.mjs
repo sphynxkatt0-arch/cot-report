@@ -13,6 +13,7 @@ test('latest COT changes expose complete table semantics', async ({ page }) => {
 
   const table = page.locator('.decision-cot-change-table');
   await expect(table).toHaveAttribute('role', 'table');
+  await expect(table).toHaveAttribute('aria-colcount', '7');
   const headers = table.locator('.decision-cot-change-head > *');
   await expect(headers).toHaveCount(7);
   for (let index = 0; index < 7; index += 1) {
@@ -33,6 +34,7 @@ test('important expiries are generated from the calendar instead of a frozen dat
   await expect(strip).toContainText('Next index OPEX');
   await expect(strip).toContainText('Next quarterly OPEX');
   await expect(strip).toContainText('Next VIX settlement');
+  await expect(strip).toContainText('Calendar-standard dates');
   await expect(strip.locator('.ux-expiry-item')).toHaveCount(3);
 
   const key = await strip.getAttribute('data-ux-expiry-key');
