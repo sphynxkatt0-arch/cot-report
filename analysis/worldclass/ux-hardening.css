@@ -1,0 +1,111 @@
+/* Final decision-terminal UX hardening: readable density, accessible targets and strong focus states. */
+.current-edge-command,
+.current-edge-command button,
+.current-edge-command summary{font-synthesis:none}
+
+.decision-nav button{min-height:34px;padding:7px 11px;font-size:11px;line-height:1.2}
+.decision-horizons button{min-height:32px;padding:6px 8px;font-size:10px}
+.decision-kicker{font-size:10px;line-height:1.35}
+.decision-title-row p,
+.decision-view-panel p,
+.decision-strongest p,
+.decision-latest-cot p{font-size:11px;line-height:1.55}
+.decision-grade>span,
+.decision-semantic>span,
+.decision-driver-strip span,
+.decision-edge-metrics span,
+.decision-edge-row>div>span,
+.decision-watch>div>span,
+.decision-live-summary span,
+.decision-forward-grid span,
+.decision-biggest-move span,
+.decision-cot-score-bridge span,
+.decision-research-meta span{font-size:9px;line-height:1.35}
+.decision-grade small,
+.decision-biggest-move small,
+.decision-cot-score-bridge small,
+.decision-semantic small,
+.decision-driver-strip small,
+.decision-edge-row>div>small,
+.decision-watch small,
+.decision-forward-grid small,
+.decision-week-path small{font-size:10px;line-height:1.45}
+.decision-cot-change-head{font-size:9px;line-height:1.35}
+.decision-cot-change-row{min-height:46px}
+.decision-cot-change-row>div>strong{font-size:11px;line-height:1.3}
+.decision-cot-change-row>div>small{font-size:10px;line-height:1.4}
+.decision-cot-change-row>strong,
+.decision-cot-change-row>span{font-size:11px;line-height:1.3}
+.decision-scanner-list button{min-height:38px}
+.decision-scanner-list span,
+.decision-scanner-list strong{font-size:11px}
+.decision-scanner-list small{font-size:10px}
+.decision-why summary,
+.decision-context>summary{min-height:34px;display:flex;align-items:center;font-size:10px;line-height:1.4}
+.decision-why-grid span{font-size:9px;line-height:1.35}
+.decision-why-grid strong{font-size:10px;line-height:1.4}
+.decision-condition-label,
+.decision-evidence-badge{font-size:9px}
+.decision-invalidation span{font-size:10px}
+
+.current-edge-command button:focus-visible,
+.current-edge-command summary:focus-visible,
+.instrument-tabs button:focus-visible,
+.topbar-actions button:focus-visible{
+  outline:3px solid color-mix(in srgb,var(--cyan,#35baf2) 80%,white);
+  outline-offset:2px;
+}
+
+.decision-expiries.ux-expiry-calendar{display:grid!important;grid-template-columns:auto minmax(0,1fr);align-items:start;gap:14px}
+.ux-expiry-items{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;width:100%}
+.ux-expiry-item{display:grid;gap:3px;padding:1px 12px;border-left:1px solid var(--border,rgba(148,163,184,.14))}
+.ux-expiry-item:first-child{border-left:0;padding-left:0}
+.ux-expiry-item span{font-size:9px!important;font-weight:850;letter-spacing:.05em;text-transform:uppercase;color:var(--muted,#8fa2b7)!important}
+.ux-expiry-item b{font-size:11px;line-height:1.35;color:var(--text,#f3f7fb)}
+.ux-expiry-item small{font-size:10px;line-height:1.35;color:var(--muted,#9fb0c3)}
+
+@media (max-width:700px){
+  .instrument-tabs button,
+  .decision-nav button,
+  .decision-horizons button,
+  .decision-model-family button,
+  .decision-scanner-list button,
+  .decision-why summary,
+  .decision-context>summary{min-height:44px}
+  .decision-title-row p,
+  .decision-view-panel p,
+  .decision-strongest p,
+  .decision-latest-cot p{font-size:12px}
+  .decision-cot-change-row{gap:10px;padding:13px 2px}
+  .decision-cot-change-row>strong,
+  .decision-cot-change-row>span{font-size:11px}
+  .decision-cot-change-row>strong::before,
+  .decision-cot-change-row>span::before{font-size:8px;line-height:1.3}
+  .decision-expiries.ux-expiry-calendar{grid-template-columns:1fr;gap:8px}
+  .ux-expiry-items{grid-template-columns:1fr}
+  .ux-expiry-item,
+  .ux-expiry-item:first-child{padding:8px 0;border-left:0;border-top:1px solid var(--border,rgba(148,163,184,.12))}
+  .ux-expiry-item:first-child{border-top:0}
+  .ux-expiry-item span{font-size:10px!important}
+  .ux-expiry-item b{font-size:12px}
+  .ux-expiry-item small{font-size:11px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  html:focus-within{scroll-behavior:auto}
+  .current-edge-command *,
+  .instrument-tabs *,
+  .topbar-actions *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+
+@media (forced-colors:active){
+  .current-edge-command button:focus-visible,
+  .current-edge-command summary:focus-visible,
+  .instrument-tabs button:focus-visible,
+  .topbar-actions button:focus-visible{outline:3px solid Highlight}
+  .decision-current,
+  .decision-strongest,
+  .decision-scanner,
+  .decision-view-panel,
+  .decision-latest-cot{border:1px solid CanvasText}
+}
