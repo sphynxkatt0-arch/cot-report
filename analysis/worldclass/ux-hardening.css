@@ -63,6 +63,7 @@
 .ux-expiry-item span{font-size:9px!important;font-weight:850;letter-spacing:.05em;text-transform:uppercase;color:var(--muted,#8fa2b7)!important}
 .ux-expiry-item b{font-size:11px;line-height:1.35;color:var(--text,#f3f7fb)}
 .ux-expiry-item small{font-size:10px;line-height:1.35;color:var(--muted,#9fb0c3)}
+.ux-expiry-note{grid-column:1/-1;margin-top:7px;font-size:9px;line-height:1.4;color:var(--muted,#8fa2b7)}
 
 @media (max-width:700px){
   .instrument-tabs button,
@@ -71,7 +72,9 @@
   .decision-model-family button,
   .decision-scanner-list button,
   .decision-why summary,
-  .decision-context>summary{min-height:44px}
+  .decision-context>summary,
+  .topbar-actions button{min-height:44px}
+  .topbar-actions button{min-width:44px}
   .decision-title-row p,
   .decision-view-panel p,
   .decision-strongest p,
@@ -89,6 +92,7 @@
   .ux-expiry-item span{font-size:10px!important}
   .ux-expiry-item b{font-size:12px}
   .ux-expiry-item small{font-size:11px}
+  .ux-expiry-note{margin-top:5px;font-size:10px}
 }
 
 @media (prefers-reduced-motion:reduce){
