@@ -6,6 +6,7 @@ on:
       - "analysis/worldclass_dashboard.html"
       - "analysis/worldclass/**"
       - "analysis/e2e/**"
+      - "analysis/install_cot_intelligence_shell.py"
       - "analysis/config/model_spec.json"
       - "analysis/build_worldclass_bundle.py"
       - "analysis/model_spec.py"
@@ -28,8 +29,11 @@ jobs:
       - name: Rebuild production runtime contract
         run: |
           python3 analysis/build_worldclass_bundle.py
+          python3 analysis/install_cot_intelligence_shell.py
           test -s analysis/worldclass/base.json
           test -s analysis/worldclass/model-spec.json
+          grep -q 'data-cot-intelligence-asset="current-edge-js"' analysis/worldclass_dashboard.html
+          grep -q 'data-cot-intelligence-asset="ux-hardening-js"' analysis/worldclass_dashboard.html
 
       - name: Install pinned test dependencies
         working-directory: analysis/e2e
