@@ -4,6 +4,7 @@
   const FINANCIAL_MARKETS = new Set(["sp500", "nq", "vix", "rty", "dow"]);
   const METALS_MARKETS = new Set(["gold", "silver"]);
   const originalFetch = window.fetch.bind(window);
+  let selectorFrame = 0;
 
   function requestedFinancialDataset() {
     const params = new URL(window.location.href).searchParams;
@@ -22,16 +23,14 @@
   function inferDataset(row, fallback = null) {
     const explicit = String(row?.dataset || row?.cot_dataset || row?.report_type || "").toLowerCase();
     if (["tff", "legacy", "disaggregated"].includes(explicit)) return explicit;
-    const series = String(row?.series || fallback || "");
-    const prefix = series.split(":")[0]?.toLowerCase();
+    const prefix = String(row?.series || fallback || "").split(":")[0]?.toLowerCase();
     return ["tff", "legacy", "disaggregated"].includes(prefix) ? prefix : null;
   }
 
   function inferMarket(row, fallback = null) {
     const explicit = String(row?.market || "").toLowerCase();
     if (FINANCIAL_MARKETS.has(explicit) || METALS_MARKETS.has(explicit)) return explicit;
-    const series = String(row?.series || fallback || "");
-    const parts = series.split(":");
+    const parts = String(row?.series || fallback || "").split(":");
     return parts.length > 1 ? String(parts[1]).toLowerCase() : String(fallback || "").toLowerCase();
   }
 
@@ -47,11 +46,7 @@
   }
 
   function selectionMeta() {
-    return {
-      financial_report: financialDataset,
-      metals_report: "disaggregated",
-      filtered_for_presentation: true
-    };
+    return { financial_report: financialDataset, metals_report: "disaggregated", filtered_for_presentation: true };
   }
 
   function transformCurrent(payload) {
@@ -79,9 +74,9 @@
   function transformRegistry(payload) {
     if (!payload || typeof payload !== "object") return payload;
     const edges = payload.threshold_edges;
-    let thresholdEdges = edges;
-    if (Array.isArray(edges)) thresholdEdges = edges.filter(row => matchesSelection(row));
-    else if (edges && typeof edges === "object") thresholdEdges = filterKeyedObject(edges);
+    const thresholdEdges = Array.isArray(edges)
+      ? edges.filter(row => matchesSelection(row))
+      : edges && typeof edges === "object" ? filterKeyedObject(edges) : edges;
     return { ...payload, threshold_edges: thresholdEdges, presentation_selection: selectionMeta() };
   }
 
@@ -91,11 +86,7 @@
       const datasets = block?.datasets || {};
       const selected = datasetForMarket(market);
       if (FINANCIAL_MARKETS.has(market) && datasets[selected]) {
-        return [market, {
-          ...block,
-          datasets: { ...datasets, tff: datasets[selected] },
-          presentation_dataset: selected
-        }];
+        return [market, { ...block, datasets: { ...datasets, tff: datasets[selected] }, presentation_dataset: selected }];
       }
       return [market, { ...block, presentation_dataset: selected }];
     }));
@@ -108,9 +99,6 @@
     const selected = datasetForMarket(market);
     const dataset = inferDataset(row);
     if (dataset) return dataset === selected;
-    // Existing production live records predate explicit dataset tagging. They are
-    // TFF for financial futures and Disaggregated for metals; never relabel them
-    // as Legacy.
     return METALS_MARKETS.has(market) || selected === "tff";
   }
 
@@ -146,11 +134,7 @@
     headers.set("Content-Type", "application/json; charset=utf-8");
     headers.delete("Content-Length");
     headers.delete("Content-Encoding");
-    return new Response(JSON.stringify(payload), {
-      status: response.status,
-      statusText: response.statusText,
-      headers
-    });
+    return new Response(JSON.stringify(payload), { status: response.status, statusText: response.statusText, headers });
   }
 
   window.fetch = async (input, init) => {
@@ -182,9 +166,9 @@
   };
 
   function activeMarket() {
-    const fromModel = window.__COT_CURRENT_EDGE_MODEL__?.state?.market;
+    const fromModel = String(window.__COT_CURRENT_EDGE_MODEL__?.state?.market || "").toLowerCase();
     if (FINANCIAL_MARKETS.has(fromModel) || METALS_MARKETS.has(fromModel)) return fromModel;
-    const fromUrl = new URL(window.location.href).searchParams.get("market");
+    const fromUrl = String(new URL(window.location.href).searchParams.get("market") || "").toLowerCase();
     if (FINANCIAL_MARKETS.has(fromUrl) || METALS_MARKETS.has(fromUrl)) return fromUrl;
     return document.querySelector("#instrumentTabs [data-market].active")?.dataset?.market || "sp500";
   }
@@ -201,24 +185,42 @@
     const nav = document.querySelector(".decision-nav");
     if (!nav) return;
     const market = activeMarket();
+    const mode = METALS_MARKETS.has(market) ? "disaggregated" : financialDataset;
+    const renderKey = `${market}|${mode}`;
     let control = document.getElementById("reportTaxonomyControl");
+
     if (!control) {
       control = document.createElement("div");
       control.id = "reportTaxonomyControl";
       control.className = "report-taxonomy-control";
       control.setAttribute("aria-label", "COT report type");
       nav.insertBefore(control, nav.querySelector(".decision-horizons") || null);
+    } else if (control.parentElement !== nav) {
+      nav.insertBefore(control, nav.querySelector(".decision-horizons") || null);
     }
 
+    if (control.dataset.renderKey === renderKey) return;
+    control.dataset.renderKey = renderKey;
+
     if (METALS_MARKETS.has(market)) {
-      control.innerHTML = `<span class="report-taxonomy-label">Report type</span><span class="report-taxonomy-locked" title="Gold and Silver use CFTC Disaggregated Futures Only">Disaggregated</span>`;
       control.dataset.marketType = "metals";
+      control.innerHTML = '<span class="report-taxonomy-label">Report type</span><span class="report-taxonomy-locked" title="Gold and Silver use CFTC Disaggregated Futures Only">Disaggregated</span>';
       return;
     }
 
     control.dataset.marketType = "financial";
     control.innerHTML = `<span class="report-taxonomy-label">Report type</span><div class="report-taxonomy-buttons" role="group" aria-label="Financial futures COT report type"><button type="button" data-report-dataset="tff" class="${financialDataset === "tff" ? "active" : ""}" aria-pressed="${financialDataset === "tff"}">TFF</button><button type="button" data-report-dataset="legacy" class="${financialDataset === "legacy" ? "active" : ""}" aria-pressed="${financialDataset === "legacy"}">Legacy</button></div>`;
-    control.querySelectorAll("[data-report-dataset]").forEach(button => button.addEventListener("click", () => chooseDataset(button.dataset.reportDataset)));
+    control.querySelectorAll("[data-report-dataset]").forEach(button => {
+      button.addEventListener("click", () => chooseDataset(button.dataset.reportDataset));
+    });
+  }
+
+  function scheduleSelector() {
+    if (selectorFrame) return;
+    selectorFrame = requestAnimationFrame(() => {
+      selectorFrame = 0;
+      renderSelector();
+    });
   }
 
   function canonicalizeQuery() {
@@ -231,19 +233,14 @@
 
   function bootSelector() {
     canonicalizeQuery();
-    renderSelector();
-    const observer = new MutationObserver(renderSelector);
-    observer.observe(document.querySelector("main") || document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["class", "aria-pressed"] });
-    window.addEventListener("popstate", renderSelector);
+    scheduleSelector();
+    const observer = new MutationObserver(scheduleSelector);
+    observer.observe(document.querySelector("main") || document.body, { subtree: true, childList: true });
+    window.addEventListener("popstate", scheduleSelector);
+    window.addEventListener("cot:market-change", scheduleSelector);
   }
 
-  window.__COT_REPORT_TAXONOMY__ = {
-    financialDataset,
-    datasetForMarket,
-    inferDataset,
-    inferMarket,
-    matchesSelection
-  };
+  window.__COT_REPORT_TAXONOMY__ = { financialDataset, datasetForMarket, inferDataset, inferMarket, matchesSelection };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootSelector, { once: true });
   else bootSelector();
