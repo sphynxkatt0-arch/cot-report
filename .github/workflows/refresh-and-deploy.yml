@@ -4,9 +4,6 @@ name: Refresh and Deploy
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
-    types: [closed]
   workflow_dispatch:
   schedule:
     - cron: '35 19 * * 5'
@@ -32,10 +29,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = 'pull_request' ]; then
-            if [ "${{ github.event.pull_request.merged }}" = 'true' ]; then echo 'run=true' >> "$GITHUB_OUTPUT"; else echo 'run=false' >> "$GITHUB_OUTPUT"; fi
-            exit 0
-          fi
           if [ "${{ github.event_name }}" != 'schedule' ]; then echo 'run=true' >> "$GITHUB_OUTPUT"; exit 0; fi
           utc_day="$(date -u +%F)"
           case '${{ github.event.schedule }}' in
@@ -78,7 +71,7 @@ jobs:
           node --check analysis/worldclass/current-edge-model.js
           node --check analysis/worldclass/cot-intelligence.js
       - name: '[VALIDATING] governed macro and regime sampling contract'
-        run: python -m unittest analysis.tests.test_governed_cot_contract
+        run: python analysis/tests/test_governed_cot_contract.py
       - name: '[VALIDATING] materialize immutable v2 research snapshot'
         shell: bash
         run: |
@@ -91,14 +84,13 @@ jobs:
           python analysis/test_live_ledger_v2.py
           python analysis/test_actor_edge_live_ledger.py
       - name: '[WAITING_FOR_CFTC] refresh raw normalized source layer'
-        if: github.event_name != 'pull_request'
         id: refresh
         continue-on-error: true
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: python analysis/serve_interactive_cot_dashboard_v2.py --refresh-only
       - name: Warn if source refresh failed
-        if: github.event_name != 'pull_request' && steps.refresh.outcome == 'failure'
+        if: steps.refresh.outcome == 'failure'
         run: echo '::warning::Raw source refresh failed; deployment will retain last-valid normalized source where available.'
       - name: Build compact browser data bundle
         run: python analysis/build_worldclass_bundle.py
@@ -117,7 +109,6 @@ jobs:
           [ ! -s /tmp/macro.json ] || cp /tmp/macro.json analysis/model_output/macro_liquidity_expansion.json
           [ ! -s /tmp/sentiment.json ] || cp /tmp/sentiment.json analysis/worldclass/market-sentiment.json
       - name: '[CFTC_AVAILABLE] refresh Gold and Silver COT'
-        if: github.event_name != 'pull_request'
         id: metals
         continue-on-error: true
         run: python analysis/build_worldclass_metals.py
