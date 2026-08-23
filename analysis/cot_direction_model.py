@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 """Transparent, release-aligned COT direction model for equity indices.
 
-Legacy Non-commercial positioning determines structural direction. TFF data may
-strengthen or weaken an already actionable structural signal but cannot create
-or reverse it. Asset Managers and macro conditions modify size. Price controls
-execution.
+The production contract is deliberately tri-partite:
+
+* COT = directional thesis. Legacy Non-commercial positioning supplies the
+  structural direction; TFF data may strengthen/weaken an existing thesis but
+  cannot create or reverse it.
+* Price = execution. Price confirms, contradicts, waits, or invalidates an
+  already-formed COT thesis.
+* Macro = context/risk budget. Aggregate macro is not vintage-safe enough to
+  resize or reverse the directional thesis, so its production multiplier is
+  fixed at 1.0. Independent hard-risk overrides remain active.
 """
 
 from __future__ import annotations
@@ -19,6 +25,7 @@ import numpy as np
 import pandas as pd
 
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent / "config" / "cot_direction_model_v1.json"
+MACRO_PRODUCTION_MULTIPLIER = 1.0
 
 
 def clamp(value: float, low: float, high: float) -> float:
@@ -34,7 +41,17 @@ def finite(value: Any) -> float | None:
 
 
 def validate_config(config: dict[str, Any]) -> None:
-    required = {"schema_version", "model_version", "minimum_history_weeks", "structural", "tactical", "asset_manager_size", "macro_size", "execution", "confidence"}
+    required = {
+        "schema_version",
+        "model_version",
+        "minimum_history_weeks",
+        "structural",
+        "tactical",
+        "asset_manager_size",
+        "macro_size",
+        "execution",
+        "confidence",
+    }
     missing = sorted(required - set(config))
     if missing:
         raise ValueError(f"Direction model config missing sections: {missing}")
@@ -87,8 +104,12 @@ def validate_config(config: dict[str, Any]) -> None:
         "defensive_multiplier",
         "risk_off_multiplier",
     ):
-        if not 0 <= float(macro[key]) <= 1.25:
-            raise ValueError(f"{key} must be inside 0..1.25")
+        value = float(macro[key])
+        if abs(value - MACRO_PRODUCTION_MULTIPLIER) > 1e-12:
+            raise ValueError(
+                f"{key} must remain neutral at {MACRO_PRODUCTION_MULTIPLIER:.1f}; "
+                "macro is context-only until vintage-safe evidence exists"
+            )
 
     execution = config["execution"]
     if float(execution["waiting_band_pct"]) < 0:
@@ -227,19 +248,22 @@ def asset_manager_multiplier(percentile: float | None, config: dict[str, Any]) -
 
 
 def macro_multiplier(score: float | None, config: dict[str, Any]) -> tuple[float, str]:
+    """Return macro context label with a governed neutral production multiplier."""
     if score is None:
-        return 1.0, "Unavailable"
+        return MACRO_PRODUCTION_MULTIPLIER, "Unavailable"
     cfg = config["macro_size"]
     s = clamp(float(score), 0.0, 100.0)
     if s >= float(cfg["strong_risk_on_min"]):
-        return float(cfg["strong_risk_on_multiplier"]), "Strong supportive"
-    if s >= float(cfg["supportive_min"]):
-        return float(cfg["supportive_multiplier"]), "Supportive"
-    if s >= float(cfg["neutral_min"]):
-        return float(cfg["neutral_multiplier"]), "Neutral"
-    if s >= float(cfg["defensive_min"]):
-        return float(cfg["defensive_multiplier"]), "Defensive"
-    return float(cfg["risk_off_multiplier"]), "Risk-off"
+        state = "Strong supportive"
+    elif s >= float(cfg["supportive_min"]):
+        state = "Supportive"
+    elif s >= float(cfg["neutral_min"]):
+        state = "Neutral"
+    elif s >= float(cfg["defensive_min"]):
+        state = "Defensive"
+    else:
+        state = "Risk-off"
+    return MACRO_PRODUCTION_MULTIPLIER, state
 
 
 def execution_state(
@@ -284,8 +308,10 @@ def confidence_score(
     score = base * (0.55 + 0.45 * magnitude)
     if not has_tff:
         score -= float(cfg["missing_tff_penalty"])
+    # Macro completeness can be shown in the context layer, but must not alter
+    # directional confidence while macro evidence is governed context-only.
     if not has_macro:
-        score -= float(cfg["missing_macro_penalty"])
+        score -= float(cfg.get("missing_macro_penalty", 0.0))
     if not has_price:
         score -= float(cfg["missing_price_penalty"])
     if release_date_source != "actual":
@@ -415,7 +441,14 @@ def build_decision(
     confidence = confidence_score(
         market,
         structural,
-        has_tff=any(value is not None for value in (asset_manager_percentile_value, other_reportable_trend13_rank, nonreportable_trend13_rank)),
+        has_tff=any(
+            value is not None
+            for value in (
+                asset_manager_percentile_value,
+                other_reportable_trend13_rank,
+                nonreportable_trend13_rank,
+            )
+        ),
         has_macro=macro_score_value is not None,
         has_price=finite(signal_price) is not None and finite(latest_price) is not None,
         release_date_source=release_date_source,
@@ -428,12 +461,16 @@ def build_decision(
         else "Tactical layer inactive because Legacy structure is neutral/weak or TFF inputs are unavailable"
     )
     reasons = [
-        f"Legacy Non-commercial percentile {noncommercial_percentile:.1f}%" if noncommercial_percentile is not None else "Legacy Non-commercial percentile unavailable",
+        f"Legacy Non-commercial percentile {noncommercial_percentile:.1f}%"
+        if noncommercial_percentile is not None
+        else "Legacy Non-commercial percentile unavailable",
         tactical_reason,
         f"Asset Manager crowding {am_state}; size x{am_mult:.2f}",
-        f"Macro {macro_state}; size x{macro_mult:.2f}",
+        f"Macro {macro_state}; context only, production size x{macro_mult:.2f}",
         f"Price execution {execution}",
     ]
+    if macro_override:
+        reasons.append("Independent macro hard-risk override active")
     return DirectionDecision(
         model_version=str(cfg["model_version"]),
         market=market,

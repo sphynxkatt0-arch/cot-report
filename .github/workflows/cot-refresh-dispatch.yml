@@ -1,8 +1,6 @@
-name: Ensure COT Refresh Dispatch
+name: Ensure COT Refresh Retry
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
   schedule:
     # Retry the canonical Friday refresh one hour after the expected 15:35 ET run.
