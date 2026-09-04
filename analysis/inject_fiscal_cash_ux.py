@@ -42,13 +42,20 @@ def tone(state: Any) -> str:
     return "warning"
 
 
+def category_label(value: Any) -> str:
+    label = str(value or "").strip()
+    if not label or label.lower() in {"null", "none", "n/a", "-"}:
+        return "Other"
+    return label
+
+
 def top_categories(context: dict[str, Any]) -> str:
     rows = []
     for item in context.get("top_cash_flow_categories_5d") or []:
         effect = finite(item.get("private_cash_effect_bn"))
         state = "Injection" if effect is not None and effect > 0 else "Drain"
         rows.append(
-            f'<tr><td>{html.escape(str(item.get("category") or "Other"))}</td>'
+            f'<tr><td>{html.escape(category_label(item.get("category")))}</td>'
             f'<td>{fmt(effect, 1, " bn")}</td><td class="{tone(state)}">{state}</td></tr>'
         )
     return "".join(rows) or '<tr><td colspan="3">Category detail unavailable</td></tr>'

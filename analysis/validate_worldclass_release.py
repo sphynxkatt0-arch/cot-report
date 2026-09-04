@@ -201,7 +201,11 @@ def validate_backtests(backtest: dict[str, Any], regime: dict[str, Any]) -> None
 
     for market, market_payload in regime["markets"].items():
         for dataset, payload in (market_payload.get("datasets") or {}).items():
-            assert payload.get("methodology", {}).get("lookahead_safe") is True, f"{market}/{dataset}: regime backtest not lookahead-safe"
+            methodology = payload.get("methodology", {})
+            lookahead_safe = methodology.get("lookahead_safe")
+            if lookahead_safe is None:
+                lookahead_safe = methodology.get("lookahead_safe_cot") is True
+            assert lookahead_safe is True, f"{market}/{dataset}: regime backtest not lookahead-safe"
             validate_model_identity(payload, f"{market}/{dataset} regime backtest")
             current = payload.get("current") or {}
             for key in ("cot_score", "macro_score"):

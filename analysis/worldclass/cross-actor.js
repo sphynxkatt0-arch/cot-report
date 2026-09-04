@@ -29,7 +29,7 @@
   function signed(value, digits = 1, suffix = "") {
     const n = finite(value);
     if (n === null) return "n/a";
-    const body = Math.abs(n).toLocaleString(undefined, {
+    const body = Math.abs(n).toLocaleString("en-US", {
       minimumFractionDigits: digits,
       maximumFractionDigits: digits
     });
@@ -169,7 +169,7 @@
     const n = finite(rank);
     if (n === null) return "Current percentile unavailable";
     if (n <= 10) return `ACTIVE · ${n.toFixed(1)}th percentile`;
-    return `Not active · ${n.toFixed(1)}th percentile now`;
+    return `Not active · current percentile ${n.toFixed(1)}`;
   }
 
   function researchCards(base) {
@@ -262,8 +262,9 @@
       section.id = "wcCrossActorPanel";
       section.className = "wc-cross-actor";
       section.setAttribute("aria-label", "Cross-instrument actor positioning comparison");
+      const decision = $("#currentEdgeCommand");
       const command = $("#wcCommandCenter");
-      const anchor = command || $(".instrument-bar");
+      const anchor = decision || command || $(".instrument-bar");
       if (!anchor) return;
       anchor.insertAdjacentElement("afterend", section);
     }

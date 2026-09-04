@@ -190,28 +190,49 @@ jobs:
           wc=Path('analysis/worldclass');prov=json.loads((wc/'cot-research-provenance.json').read_text());assert prov['research_generation']=='release-corrected-v2';assert prov['historical_research_frozen'] is True
           for name in ('cot-edge-registry.json','cot-active-edges.json','cot-cross-market.json'):assert json.loads((wc/name).read_text())['research_generation']=='release-corrected-v2',name
           PY
-      - name: '[BUILDING] prepare production index'
-        run: cp analysis/worldclass_dashboard.html analysis/index.html
+      - name: '[BUILDING] materialize atomic immutable Pages release'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/cot-pages-current /tmp/cot-pages-next
+
+          if git fetch origin gh-pages:refs/remotes/origin/gh-pages --force; then
+            git worktree add --detach /tmp/cot-pages-current origin/gh-pages
+            python analysis/build_atomic_release.py \
+              --previous-root /tmp/cot-pages-current \
+              --output /tmp/cot-pages-next
+          else
+            python analysis/build_atomic_release.py \
+              --output /tmp/cot-pages-next
+          fi
+
+          python analysis/build_atomic_release.py \
+            --verify /tmp/cot-pages-next
+
       - name: '[DEPLOYING] publish validated site to gh-pages'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./analysis
+          publish_dir: /tmp/cot-pages-next
           force_orphan: true
       - name: '[LIVE] verify published gh-pages v2 contract'
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin gh-pages:refs/remotes/origin/gh-pages --force
-          git show origin/gh-pages:worldclass/cot-research-provenance.json > /tmp/prov.json
-          git show origin/gh-pages:worldclass/cot-edge-registry.json > /tmp/reg.json
-          git show origin/gh-pages:worldclass/cot-active-edges.json > /tmp/active.json
-          git show origin/gh-pages:worldclass/cot-cross-market.json > /tmp/cross.json
           python - <<'PY'
-          import json
-          p=json.load(open('/tmp/prov.json'));r=json.load(open('/tmp/reg.json'));a=json.load(open('/tmp/active.json'));c=json.load(open('/tmp/cross.json'))
+          import json, subprocess
+          manifest_raw = subprocess.check_output(['git', 'show', 'origin/gh-pages:release-manifest.json'], text=True)
+          pointer = json.loads(manifest_raw)
+          release_id = pointer['current']['release_id']
+          def read_file(rel):
+              return json.loads(subprocess.check_output(['git', 'show', f'origin/gh-pages:releases/{release_id}/{rel}'], text=True))
+          p = read_file('worldclass/cot-research-provenance.json')
+          r = read_file('worldclass/cot-edge-registry.json')
+          a = read_file('worldclass/cot-active-edges.json')
+          c = read_file('worldclass/cot-cross-market.json')
           assert p['research_generation']=='release-corrected-v2' and p['historical_research_frozen'] is True
           assert r['research_generation']==a['research_generation']==c['research_generation']=='release-corrected-v2'
           assert r['automatic_promotion_allowed'] is False and a['automatic_promotion_allowed'] is False
-          print('Published gh-pages release-corrected v2 contract PASS')
+          print('Published gh-pages immutable release contract PASS:', release_id)
           PY

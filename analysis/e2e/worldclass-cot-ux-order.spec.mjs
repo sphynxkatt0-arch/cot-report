@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 async function open(page, query = '?market=nq&view=overview') {
   await page.goto(`/worldclass_dashboard.html${query}`);
-  await page.waitForFunction(() => document.documentElement.classList.contains('cot-worldclass-ux-ready'));
+  await page.waitForFunction(() => document.documentElement.classList.contains('decision-first-ready'));
   await expect(page.locator('#currentEdgeCommand')).toBeVisible();
   await expect(page.locator('.instrument-bar')).toBeVisible();
+  await expect(page.locator('#loadingOverlay')).toBeHidden();
 }
 
 test('desktop first viewport is decision-first and defaults to governed 1W read', async ({ page }) => {
@@ -113,9 +115,55 @@ test('market, horizon, model family and view persist in URL and synchronize the 
 
   await page.locator('[data-decision-view="research"]').click();
   await expect(page).toHaveURL(/view=research/);
-  await expect(page.locator('#cotIntelligence')).toBeVisible();
-  await expect(page.locator('#cotIntelligence .cot-ux-market-switcher')).toHaveCount(0);
-  await expect(page.locator('#cotIntelligence #cotIntelMarket')).toContainText(/Gold/i);
+  await expect(page).toHaveURL(/research=matrix/);
+  await expect(page.locator('#cotIntelligence')).toBeHidden();
+  await expect(page.locator('.workbench-panel')).toBeHidden();
+  await expect(page.locator('.controls-surface')).toBeHidden();
+  const research = page.locator('.decision-view-panel[data-decision-surface="research"]');
+  await expect(research).toBeVisible();
+  await expect(research).toContainText(/DEEP RESEARCH MATRIX · Gold/i);
+
+  await page.locator('[data-research-section="positioning"]').click();
+  await expect(page).toHaveURL(/research=positioning/);
+  await expect(page.locator('#cotIntelligence')).toBeHidden();
+  await expect(page.locator('#weeklyChangePanel')).toBeVisible();
+  await expect(page.locator('.workbench-panel')).toBeHidden();
+  await expect(page.locator('.instrument-bar')).toBeVisible();
+  await expect(page.locator('.decision-research-shell')).toBeVisible();
+
+  await page.locator('[data-research-section="chart"]').click();
+  await expect(page).toHaveURL(/research=chart/);
+  await expect(page.locator('.workbench-panel')).toBeVisible();
+  await expect(page.locator('.controls-surface')).toBeVisible();
+  await expect(page.locator('#cotIntelligence')).toBeHidden();
+});
+
+test('macro research separates current liquidity state from predictive effectiveness', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await open(page, '?market=sp500&view=research&research=macro&dataset=tff');
+
+  const panel = page.locator('.macro-research');
+  await expect(panel).toBeVisible();
+  await expect(panel).toContainText('CURRENT LIQUIDITY SCORE');
+  await expect(panel).toContainText('SOURCE COVERAGE');
+  await expect(panel).toContainText('PREDICTIVE VALIDITY');
+  await expect(panel).toContainText('NOT_VALIDATED');
+  await expect(panel).toContainText('PRODUCTION DIRECTIONAL WEIGHT');
+  await expect(panel).toContainText('0%');
+  await expect(panel).toContainText('Does a higher liquidity score predict higher future returns?');
+  await expect(panel.locator('.macro-effectiveness-table').first().locator('tbody tr')).toHaveCount(5);
+  await expect(panel).toContainText('FACTOR-LEVEL RESEARCH');
+  await expect(panel).toContainText(/VIX|HY OAS|Net liquidity/i);
+  await expect(page.locator('#wcMacroControl')).toBeHidden();
+
+  const accessibility = await new AxeBuilder({ page })
+    .include('.macro-research')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    .analyze();
+  expect(accessibility.violations).toEqual([]);
+
+  await page.locator('[data-decision-view="overview"]').click();
+  await expect(page.locator('.decision-driver-strip')).toContainText('0% directional weight');
 });
 
 test('active edges prioritize directional actors and coming edges remain explicitly conditional', async ({ page }) => {
@@ -162,8 +210,17 @@ test('important index and VIX option expiries are visible in overview', async ({
 test('mobile has no page-level horizontal overflow and strongest edge needs no table scroll', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page);
+  await page.waitForFunction(() => document.documentElement.dataset.mobileUxReady === 'true');
+  await expect(page.locator('.hero')).toBeHidden();
   let overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
+
+  const touchHeights = await page.locator('.decision-nav button, #themeToggle, .instrument-tab').evaluateAll(nodes => nodes
+    .map(node => node.getBoundingClientRect())
+    .filter(rect => rect.width > 0 && rect.height > 0)
+    .map(rect => rect.height));
+  expect(touchHeights.length).toBeGreaterThan(0);
+  expect(Math.min(...touchHeights)).toBeGreaterThanOrEqual(44);
 
   await page.locator('[data-decision-view="edges"]').click();
   overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -174,6 +231,70 @@ test('mobile has no page-level horizontal overflow and strongest edge needs no t
     const box = await firstRow.boundingBox();
     expect(box.width).toBeLessThanOrEqual(390);
   }
+});
+
+test('desktop makes the primary COT taxonomy explicit and keeps actor tables taxonomy-pure', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await open(page, '?market=sp500&view=overview');
+
+  await expect(page.locator('#instrumentTabs [data-market="sp500"]')).toContainText('TFF');
+  await expect(page.locator('#instrumentTabs [data-market="gold"]')).toContainText('DISAGG');
+  await expect(page.locator('.decision-title-row')).toContainText('TFF');
+  await expect(page.locator('.decision-title-row')).toContainText(/Asset Manager \+ Leveraged Funds|Financial-futures taxonomy/i);
+
+  const actorRows = page.locator('.decision-actor-table tbody tr');
+  expect(await actorRows.count()).toBeGreaterThan(0);
+  const actorTaxonomies = await actorRows.locator('td:first-child small').allTextContents();
+  expect(actorTaxonomies.every(text => text.includes('TFF'))).toBeTruthy();
+
+  const strongest = page.locator('.decision-strongest');
+  if ((await strongest.innerText()).includes('Non-Commercial')) {
+    await expect(strongest).toContainText('LEGACY');
+    await expect(page.locator('.decision-taxonomy-note')).toContainText(/supplemental edge/i);
+  }
+
+  await page.locator('#instrumentTabs [data-market="gold"]').click();
+  await expect(page.locator('.decision-title-row')).toContainText('DISAGG');
+  const goldTaxonomies = await page.locator('.decision-actor-table tbody tr td:first-child small').allTextContents();
+  expect(goldTaxonomies.length).toBeGreaterThan(0);
+  expect(goldTaxonomies.every(text => text.includes('DISAGGREGATED'))).toBeTruthy();
+});
+
+test('desktop taxonomy control switches S&P between TFF and Legacy without repeating report dates in every asset tab', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await open(page, '?market=sp500&view=overview&dataset=tff');
+
+  const tabsText = await page.locator('#instrumentTabs').innerText();
+  expect(tabsText).not.toMatch(/2026-\d{2}-\d{2}/);
+  await expect(page.locator('#freshnessPill')).toBeHidden();
+
+  const legacy = page.locator('[data-decision-dataset="legacy"]');
+  await expect(legacy).toBeVisible();
+  await legacy.click();
+  await expect(page).toHaveURL(/dataset=legacy/);
+  await expect(page.locator('.decision-title-row')).toContainText('LEGACY');
+  await expect(page.locator('#instrumentTabs [data-market="sp500"]')).toContainText('LEGACY');
+
+  const legacyRows = await page.locator('.decision-actor-table tbody tr td:first-child small').allTextContents();
+  expect(legacyRows.length).toBeGreaterThan(0);
+  expect(legacyRows.every(text => text.includes('LEGACY'))).toBeTruthy();
+
+  await page.locator('[data-decision-dataset="tff"]').click();
+  await expect(page).toHaveURL(/dataset=tff/);
+  await expect(page.locator('.decision-title-row')).toContainText('TFF');
+
+  await open(page, '?market=sp500&view=overview&dataset=legacy');
+  await expect(page.locator('[data-decision-dataset="legacy"]')).toHaveClass(/active/);
+  await expect(page.locator('#instrumentTabs [data-market="sp500"]')).toContainText('LEGACY');
+});
+
+test('decision-first surface passes automated WCAG A/AA checks', async ({ page }) => {
+  await open(page, '?market=nq&horizon=1w&view=overview');
+  const results = await new AxeBuilder({ page })
+    .include('#currentEdgeCommand')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    .analyze();
+  expect(results.violations).toEqual([]);
 });
 
 test('light and dark themes retain readable decision surfaces', async ({ page }) => {

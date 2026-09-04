@@ -2,9 +2,10 @@ import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 async function openDashboard(page) {
-  await page.goto('/worldclass_dashboard.html');
+  await page.goto('/worldclass_dashboard.html?view=research&research=positioning');
   await expect(page.getByRole('heading', { name: 'COT Intelligence' })).toBeVisible();
   await page.waitForFunction(() => Boolean(window.__COT_WORLDCLASS_BASE__?.MODEL_SPEC));
+  await page.waitForFunction(() => document.documentElement.dataset.cotDecisionView === 'research');
   await expect(page.locator('#wcCrossActorPanel')).toBeVisible();
 }
 
@@ -45,11 +46,13 @@ test('keeps instrument-specific bottom-decile evidence separate from cross-marke
   await expect(panel).toContainText('NQ · Other Reportable bottom 10%');
   await expect(panel).toContainText('13W +8.43% · 26W +16.45% · 52W +31.89%');
 
-  // Current 2026-08-04 readings are not bottom-decile triggers. The UI must
-  // not mislabel a historical edge as an active live signal.
-  await expect(panel).toContainText('Not active · 90.6th percentile now');
-  await expect(panel).toContainText('Not active · 83.9th percentile now');
-  await expect(panel).toContainText('Not active · 85.5th percentile now');
+  // Current readings are not bottom-decile triggers. The exact percentile is
+  // live data, so assert the semantic state rather than freezing an old week.
+  const resetCards = panel.locator('.wc-cross-research-card');
+  await expect(resetCards).toHaveCount(3);
+  for (let i = 0; i < 3; i += 1) {
+    await expect(resetCards.nth(i)).toContainText(/Not active · current percentile \d+(?:\.\d+)?/);
+  }
 });
 
 test('cross-actor panel passes automated WCAG A/AA checks', async ({ page }) => {

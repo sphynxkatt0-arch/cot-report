@@ -30,49 +30,39 @@ async function mockCommandEvidence(page, release = liveRelease, track = healthyT
 
 async function openDashboard(page, release = liveRelease, track = healthyTrack) {
   await mockCommandEvidence(page, release, track);
-  await page.goto('/worldclass_dashboard.html');
-  await expect(page.getByRole('heading', { name: 'COT Intelligence' })).toBeVisible();
+  await page.goto('/worldclass_dashboard.html?market=sp500&view=overview');
   await page.waitForFunction(() => Boolean(window.__COT_WORLDCLASS_BASE__?.MODEL_SPEC));
-  await expect(page.locator('#wcCommandCenter')).toBeVisible();
-  await expect(page.locator('#wcCommandCenter .wc-v3-integrity')).toBeVisible();
+  await page.waitForFunction(() => document.documentElement.classList.contains('decision-first-ready'));
+  await expect(page.locator('#currentEdgeCommand')).toBeVisible();
 }
 
-test('command center renders every market and follows the canonical model spec', async ({ page }) => {
+test('decision-first scanner renders every market and follows the canonical model spec', async ({ page }) => {
   await openDashboard(page);
 
-  const commandCenter = page.locator('#wcCommandCenter');
-  await expect(commandCenter.locator('.wc-v3-market-grid [data-wc-v3-market]')).toHaveCount(7);
-  await expect(commandCenter).toContainText('GLOBAL POSITIONING COMMAND CENTER');
-  await expect(commandCenter).toContainText('PRODUCTION HEALTH');
-  await expect(commandCenter).toContainText('DISLOCATION RADAR');
-  await expect(commandCenter).toContainText('WHY NOW');
-  await expect(commandCenter).toContainText('CONFIRMATION');
-  await expect(commandCenter).toContainText('INVALIDATION');
-  await expect(commandCenter).toContainText('FORWARD TESTING');
+  await expect(page.locator('.decision-scanner-list [data-decision-market]')).toHaveCount(7);
+  await expect(page.locator('#wcCommandCenter')).toBeHidden();
 
   const weights = await page.evaluate(() => window.__COT_WORLDCLASS_BASE__.MODEL_SPEC.score_models);
   expect(weights.tff.category_weights.other_reportable).toBe(0);
   expect(weights.tff.category_weights.non_reportable).toBe(0);
   expect(weights.legacy.category_weights.commercial).toBe(0);
   expect(weights.disaggregated.category_weights.producer_merchant).toBe(0);
-
-  const oldDecision = page.locator('#wcDecisionLayer');
-  if (await oldDecision.count()) await expect(oldDecision).toBeHidden();
 });
 
-test('command center market selection synchronizes with the research workbench', async ({ page }) => {
+test('decision-layer market selection synchronizes with instrument tabs and deep links', async ({ page }) => {
   await openDashboard(page);
 
-  await page.locator('#wcCommandCenter .wc-v3-market-grid [data-wc-v3-market="nq"]').click();
+  await page.locator('[data-decision-market="nq"]').click();
   await expect(page.locator('#instrumentTabs [data-market="nq"]')).toHaveClass(/active/);
-  await expect(page.locator('#wcCommandCenter .wc-v3-verdict h3')).toContainText('Nasdaq-100');
+  await expect(page).toHaveURL(/market=nq/);
+  await expect(page.locator('.decision-current')).toContainText(/NASDAQ-100/i);
 
-  await page.keyboard.press('6');
-  await expect(page.locator('#instrumentTabs [data-market="gold"]')).toHaveClass(/active/);
-  await expect(page.locator('#wcCommandCenter .wc-v3-verdict h3')).toContainText('Gold');
+  await page.locator('#instrumentTabs [data-market="gold"]').click();
+  await expect(page).toHaveURL(/market=gold/);
+  await expect(page.locator('.decision-current')).toContainText(/GOLD/i);
 });
 
-test('command center never hides delayed release health behind a neutral score', async ({ page }) => {
+test('delayed CFTC health is preserved in diagnostics and surfaced as a check state', async ({ page }) => {
   const delayed = {
     ...liveRelease,
     state: 'DELAYED',
@@ -83,12 +73,9 @@ test('command center never hides delayed release health behind a neutral score',
   };
   await openDashboard(page, delayed, healthyTrack);
 
-  const commandCenter = page.locator('#wcCommandCenter');
-  const nqCard = commandCenter.locator('.wc-v3-market-grid [data-wc-v3-market="nq"]');
-  await expect(commandCenter.locator('.wc-v3-integrity')).toContainText('DELAYED');
-  await expect(nqCard).toContainText('DELAYED');
-  await nqCard.click();
-  await expect(commandCenter.locator('.wc-v3-verdict-meta')).toContainText('Evidence quality');
+  await expect(page.locator('#wcCommandCenter .wc-v3-integrity')).toContainText('DELAYED');
+  await expect(page.locator('#wcCommandCenter')).toBeHidden();
+  await expect(page.locator('#wcDataHealthButton')).toContainText(/CHECK|FRESH/, { timeout: 10000 });
 });
 
 test('shared metals payload performs one physical request during initial render', async ({ page }) => {
@@ -101,10 +88,10 @@ test('shared metals payload performs one physical request during initial render'
   expect(metalsRequests).toBe(1);
 });
 
-test('command center passes automated WCAG A/AA checks', async ({ page }) => {
+test('decision-first command surface passes automated WCAG A/AA checks', async ({ page }) => {
   await openDashboard(page);
   const results = await new AxeBuilder({ page })
-    .include('#wcCommandCenter')
+    .include('#currentEdgeCommand')
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     .analyze();
   expect(results.violations).toEqual([]);

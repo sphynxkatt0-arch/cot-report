@@ -24,10 +24,20 @@ ReleaseResolver = Callable[[str], dict[str, Any]]
 
 def hydrate_release_state(
     row: dict[str, Any],
-    resolver: ReleaseResolver,
+    resolver: ReleaseResolver | None = None,
 ) -> dict[str, Any]:
+    if resolver is None:
+        if "release_status" in row:
+            hydrated = dict(row)
+            hydrated["new_report_observed"] = bool(hydrated.get("first_observed_utc"))
+            return hydrated
+        resolver = resolve_release_state
     report_date = str(row.get("report_date") or "")
     if not report_date:
+        if "release_status" in row:
+            hydrated = dict(row)
+            hydrated["new_report_observed"] = bool(hydrated.get("first_observed_utc"))
+            return hydrated
         raise ValueError("Directional decision is missing report_date")
     state = resolver(report_date)
     if not isinstance(state, dict):
@@ -55,7 +65,7 @@ def hydrate_release_state(
 
 def apply_release_guard(
     decisions: list[dict[str, Any]],
-    resolver: ReleaseResolver = resolve_release_state,
+    resolver: ReleaseResolver | None = None,
 ) -> list[dict[str, Any]]:
     output: list[dict[str, Any]] = []
     for raw in decisions:

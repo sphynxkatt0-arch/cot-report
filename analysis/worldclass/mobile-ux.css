@@ -1,5 +1,11 @@
 /* Mobile decision UX override. Loaded after base/terminal/current-edge styles. */
 @media (max-width: 720px) {
+  /* Decision-first is canonical on every viewport. Later-loaded terminal CSS
+     must never resurrect the retired marketing hero on phones. */
+  .hero {
+    display: none !important;
+  }
+
   #currentEdgeCommand,
   #wcCommandCenter,
   #cotIntelligence {
@@ -30,16 +36,17 @@
   }
 
   .instrument-tabs {
-    display: grid !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    display: flex !important;
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
-    gap: 0 !important;
-    overflow: visible !important;
-    overscroll-behavior-inline: auto !important;
+    gap: 4px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    overscroll-behavior-inline: contain !important;
+    scroll-snap-type: x proximity;
     scrollbar-width: none;
-    padding: 0 !important;
+    padding: 4px !important;
     margin: 0 !important;
     background: var(--surface) !important;
   }
@@ -50,27 +57,30 @@
 
   .instrument-tab {
     display: flex !important;
+    flex: 0 0 auto !important;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-width: 0 !important;
-    width: 100% !important;
+    min-width: 94px !important;
+    width: auto !important;
     min-height: 44px;
-    padding: 0 2px !important;
+    padding: 6px 8px !important;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    border-right: 1px solid var(--line) !important;
-    border-bottom: 1px solid var(--line) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 8px !important;
     text-align: center;
     background: var(--surface) !important;
+    scroll-snap-align: start;
   }
 
   .instrument-tab:nth-child(4n) {
-    border-right: 0 !important;
+    border-right: 1px solid var(--line) !important;
   }
 
   .instrument-tab:nth-child(n + 5) {
-    border-bottom: 0 !important;
+    border-bottom: 1px solid var(--line) !important;
   }
 
   .instrument-tab.active {
@@ -741,6 +751,6 @@
   #cotIntelligence button,
   #currentEdgeCommand button,
   #wcCommandCenter button {
-    min-height: 34px;
+    min-height: 44px;
   }
 }

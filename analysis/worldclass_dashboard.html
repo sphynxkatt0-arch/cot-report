@@ -9,8 +9,13 @@
   <link rel="stylesheet" href="worldclass/styles.css?v=20260809-cache-safe-runtime-v1">
   <link rel="stylesheet" href="worldclass/live-track-record-panel.css?v=20260809-cache-safe-runtime-v1">
   <!-- Runtime JS is loaded below with the current release timestamp as a cache key. -->
+  <link rel="stylesheet" href="worldclass/cot-intelligence.css?v=e5052672ff8f" data-cot-intelligence-asset="css">
+  <link rel="stylesheet" href="worldclass/cot-intelligence-light.css?v=41fe1a53c612" data-cot-intelligence-asset="light-css">
+  <link rel="stylesheet" href="worldclass/current-edge-command.css?v=7488a86b1530" data-cot-intelligence-asset="current-edge-css">
+  <link rel="stylesheet" href="worldclass/mobile-ux.css?v=b6c84df7da08" data-cot-intelligence-asset="mobile-ux-css">
 </head>
 <body>
+  <a class="skip-link" href="#mainContent">Skip to market analysis</a>
   <div class="app-frame">
     <header class="topbar">
       <div class="brand-lockup">
@@ -22,11 +27,13 @@
       </div>
       <div class="topbar-actions">
         <div id="freshnessPill" class="status-pill"><span class="status-dot"></span><span>Loading data</span></div>
-        <button id="themeToggle" class="icon-button" type="button" aria-label="Toggle theme">☾</button>
+        <button id="themeToggle" class="icon-button" type="button" aria-label="Switch to light theme" title="Switch to light theme">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg>
+        </button>
       </div>
     </header>
 
-    <main>
+    <main id="mainContent" tabindex="-1">
       <section class="hero">
         <div>
           <div class="eyebrow">WEEKLY POSITIONING TERMINAL</div>
@@ -70,7 +77,7 @@
         <div id="mainChart" class="main-chart"></div>
       </section>
 
-      <section class="section-heading">
+      <section id="weeklySectionHeading" class="section-heading">
         <div>
           <div class="section-number">01</div>
           <div>
@@ -80,7 +87,7 @@
         </div>
       </section>
 
-      <section class="panel">
+      <section id="weeklyChangePanel" class="panel">
         <div id="weeklyOverview" class="weekly-overview"></div>
         <div class="table-wrap">
           <table class="data-table">
@@ -94,7 +101,7 @@
         </div>
       </section>
 
-      <section class="two-column">
+      <section id="positioningColumns" class="two-column">
         <section class="panel">
           <div class="panel-head compact">
             <div><div class="panel-kicker">POSITIONING REGIME</div><h3>Historical extremes & score contribution</h3></div>
@@ -108,13 +115,13 @@
         </section>
       </section>
 
-      <section class="section-heading">
+      <section id="macroSectionHeading" class="section-heading">
         <div><div class="section-number">02</div><div><h2>Macro liquidity</h2><p>Liquidity plumbing, funding stress, real rates, credit, dollar and volatility.</p></div></div>
       </section>
 
       <section id="macroCards" class="macro-grid"></section>
 
-      <section class="two-column macro-columns">
+      <section id="macroColumns" class="two-column macro-columns">
         <section class="panel">
           <div class="panel-head compact"><div><div class="panel-kicker">LIQUIDITY TREND</div><h3>Unified macro score</h3></div><div class="panel-meta">0 = restrictive · 100 = supportive</div></div>
           <div id="macroChart" class="macro-chart"></div>
@@ -125,11 +132,11 @@
         </section>
       </section>
 
-      <section class="section-heading">
+      <section id="methodologySectionHeading" class="section-heading">
         <div><div class="section-number">03</div><div><h2>Data integrity & methodology</h2><p>Every score stays tied to the underlying weekly report, governed model version and source taxonomy.</p></div></div>
       </section>
 
-      <section class="panel methodology">
+      <section id="methodologyPanel" class="panel methodology">
         <div class="method-card">
           <strong>TFF directional score · v1.3</strong>
           <p>Index-futures direction is driven only by Asset Manager / Institutional and Leveraged Funds. Dealer / Intermediary, Other Reportables and Nonreportables remain visible as context but carry zero directional weight.</p>
@@ -177,15 +184,8 @@
           console.warn("Could not resolve current release version; using one-shot cache bypass.", error);
         }
 
-        if (releaseVersion) {
-          const url = new URL(window.location.href);
-          if (url.searchParams.get("release") !== releaseVersion) {
-            url.searchParams.set("release", releaseVersion);
-            window.location.replace(url.toString());
-            return;
-          }
-        }
-
+        // The release version is only a cache key for runtime assets; it must not rewrite
+        // the address bar or force a full-page reload on every visit.
         const runtimeVersion = releaseVersion || String(Date.now());
         window.__COT_RUNTIME_VERSION__ = runtimeVersion;
         const bootstrap = addScript(versioned("worldclass/bootstrap.js", runtimeVersion));
@@ -203,5 +203,10 @@
       startCurrentRelease();
     })();
   </script>
+  <script defer src="worldclass/cot-intelligence.js?v=c8d9b62583c7" data-cot-intelligence-asset="js"></script>
+  <script defer src="worldclass/current-edge-model.js?v=b2e95a3db189" data-cot-intelligence-asset="current-edge-model"></script>
+  <script defer src="worldclass/current-edge-command.js?v=dba338a528d5" data-cot-intelligence-asset="current-edge-js"></script>
+  <script defer src="worldclass/mobile-ux-runtime.js?v=326825e3127f" data-cot-intelligence-asset="mobile-ux-runtime"></script>
+  <script defer src="worldclass/cot-intelligence-v2-copy.js?v=ed66f5d5873f" data-cot-intelligence-asset="v2-copy-js"></script>
 </body>
 </html>

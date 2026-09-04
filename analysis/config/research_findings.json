@@ -1,38 +1,38 @@
 {
   "nq": {
     "same_week": {
-      "asset_mgr": 0.288,
+      "asset_mgr": 0.287,
       "lev_money": -0.251,
       "other_reportable": 0.108,
-      "non_reportable": -0.271
+      "non_reportable": -0.272
     },
     "forward": {
       "asset_mgr": {
-        "1w": -0.015,
-        "4w": -0.006,
-        "13w": -0.01,
-        "26w": 0.062,
+        "1w": -0.016,
+        "4w": -0.005,
+        "13w": -0.013,
+        "26w": 0.066,
         "52w": 0.178
       },
       "lev_money": {
-        "1w": -0.011,
+        "1w": -0.007,
         "4w": 0.001,
-        "13w": 0.003,
+        "13w": 0.007,
         "26w": 0.037,
         "52w": 0.038
       },
       "other_reportable": {
-        "1w": -0.035,
+        "1w": -0.036,
         "4w": -0.061,
-        "13w": -0.125,
-        "26w": -0.149,
-        "52w": -0.082
+        "13w": -0.126,
+        "26w": -0.147,
+        "52w": -0.081
       },
       "non_reportable": {
-        "1w": -0.01,
-        "4w": 0.013,
-        "13w": 0.078,
-        "26w": 0.102,
+        "1w": -0.013,
+        "4w": 0.014,
+        "13w": 0.074,
+        "26w": 0.105,
         "52w": 0.042
       }
     },
@@ -58,7 +58,7 @@
           "signal": "Asset Manager top 10% net/OI",
           "category": "asset_mgr",
           "side": "top",
-          "13w": 5.36,
+          "13w": 5.24,
           "26w": 12.03,
           "52w": 20.74
         },
@@ -84,9 +84,9 @@
           "signal": "Leveraged Money bottom 10% net/OI",
           "category": "lev_money",
           "side": "bottom",
-          "13w": 2.9,
-          "26w": 7.8,
-          "52w": 18.5
+          "13w": 2.57,
+          "26w": 7.67,
+          "52w": 18.09
         },
         {
           "signal": "Other Reportable top 10% net/OI",
@@ -100,20 +100,20 @@
     },
     "current": {
       "asset_mgr": {
-        "net_oi_pct": 19.49,
-        "percentile": 62.7
+        "net_oi_pct": 23.04,
+        "percentile": 73.2
       },
       "lev_money": {
-        "net_oi_pct": -30.06,
-        "percentile": 0.4
+        "net_oi_pct": -13.75,
+        "percentile": 27.2
       },
       "other_reportable": {
-        "net_oi_pct": 1.75,
-        "percentile": 85.5
+        "net_oi_pct": 1.28,
+        "percentile": 82.2
       },
       "non_reportable": {
-        "net_oi_pct": 3.26,
-        "percentile": 83.9
+        "net_oi_pct": 6.4,
+        "percentile": 97.8
       }
     },
     "takeaways": [
@@ -124,48 +124,48 @@
     ],
     "bottom_line": "For NQ, do not treat high Asset Manager exposure as bearish by itself. Watch Other Reportable extremes and Leveraged Money underexposure.",
     "_meta": {
-      "generated_at_utc": "2026-08-07T19:48:25Z",
+      "generated_at_utc": "2026-08-29T00:48:26Z",
       "sample_start": "2016-01-05",
-      "sample_end": "2026-08-04",
-      "rows": 553,
+      "sample_end": "2026-08-25",
+      "rows": 556,
       "source": "auto-generated from current TFF exact consolidated records"
     }
   },
   "sp500": {
     "same_week": {
-      "asset_mgr": 0.326,
-      "lev_money": -0.506,
-      "other_reportable": -0.282,
+      "asset_mgr": 0.325,
+      "lev_money": -0.504,
+      "other_reportable": -0.281,
       "non_reportable": 0.015
     },
     "forward": {
       "asset_mgr": {
-        "1w": -0.0,
-        "4w": -0.039,
-        "13w": -0.033,
-        "26w": -0.006,
-        "52w": -0.072
+        "1w": -0.002,
+        "4w": -0.035,
+        "13w": -0.032,
+        "26w": 0.0,
+        "52w": -0.067
       },
       "lev_money": {
         "1w": 0.004,
-        "4w": 0.025,
+        "4w": 0.023,
         "13w": -0.04,
-        "26w": -0.155,
-        "52w": -0.349
+        "26w": -0.16,
+        "52w": -0.35
       },
       "other_reportable": {
-        "1w": -0.004,
-        "4w": 0.004,
+        "1w": -0.005,
+        "4w": 0.006,
         "13w": 0.084,
-        "26w": 0.182,
-        "52w": 0.199
+        "26w": 0.186,
+        "52w": 0.201
       },
       "non_reportable": {
-        "1w": -0.033,
-        "4w": -0.075,
-        "13w": -0.092,
-        "26w": -0.083,
-        "52w": -0.163
+        "1w": -0.036,
+        "4w": -0.069,
+        "13w": -0.091,
+        "26w": -0.075,
+        "52w": -0.158
       }
     },
     "extremes": {
@@ -183,8 +183,8 @@
           "category": "other_reportable",
           "side": "top",
           "13w": 5.29,
-          "26w": 9.43,
-          "52w": 21.15
+          "26w": 9.47,
+          "52w": 20.99
         },
         {
           "signal": "Asset Manager bottom 10% net/OI",
@@ -208,9 +208,9 @@
           "signal": "Non-reportable top 10% net/OI",
           "category": "non_reportable",
           "side": "top",
-          "13w": 0.39,
-          "26w": 6.11,
-          "52w": 14.1
+          "13w": 0.05,
+          "26w": 6.46,
+          "52w": 14.37
         },
         {
           "signal": "Leveraged Money top 10% net/OI",
@@ -224,28 +224,28 @@
           "signal": "Asset Manager top 10% net/OI",
           "category": "asset_mgr",
           "side": "top",
-          "13w": 2.76,
-          "26w": 2.71,
+          "13w": 2.82,
+          "26w": 3.42,
           "52w": 14.66
         }
       ]
     },
     "current": {
       "asset_mgr": {
-        "net_oi_pct": 43.86,
-        "percentile": 83.6
+        "net_oi_pct": 46.02,
+        "percentile": 89.1
       },
       "lev_money": {
-        "net_oi_pct": -15.56,
-        "percentile": 23.4
+        "net_oi_pct": -15.83,
+        "percentile": 22.1
       },
       "other_reportable": {
-        "net_oi_pct": -0.08,
-        "percentile": 78.3
+        "net_oi_pct": -0.44,
+        "percentile": 75.5
       },
       "non_reportable": {
-        "net_oi_pct": 4.91,
-        "percentile": 90.6
+        "net_oi_pct": 6.13,
+        "percentile": 97.2
       }
     },
     "takeaways": [
@@ -255,10 +255,10 @@
     ],
     "bottom_line": "For S&P 500, Asset Manager crowding is more meaningful. Current reward/risk weakens when price action starts diverging from crowded positioning.",
     "_meta": {
-      "generated_at_utc": "2026-08-07T19:48:25Z",
+      "generated_at_utc": "2026-08-29T00:48:26Z",
       "sample_start": "2016-06-07",
-      "sample_end": "2026-08-04",
-      "rows": 531,
+      "sample_end": "2026-08-25",
+      "rows": 534,
       "source": "auto-generated from current TFF exact consolidated records"
     }
   }

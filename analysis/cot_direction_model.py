@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""Transparent, release-aligned COT direction model for equity indices.
-
-Legacy Non-commercial positioning determines structural direction. TFF data may
-strengthen or weaken an already actionable structural signal but cannot create
-or reverse it. Asset Managers and macro conditions modify size. Price controls
-execution.
-"""
+"""Transparent, release-aligned COT direction model for equity indices."""
 
 from __future__ import annotations
 
@@ -18,7 +12,9 @@ from typing import Any, Iterable
 import numpy as np
 import pandas as pd
 
-DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent / "config" / "cot_direction_model_v1.json"
+DEFAULT_CONFIG_PATH = (
+    Path(__file__).resolve().parent / "config" / "cot_direction_model_v1.json"
+)
 
 
 def clamp(value: float, low: float, high: float) -> float:
@@ -34,7 +30,17 @@ def finite(value: Any) -> float | None:
 
 
 def validate_config(config: dict[str, Any]) -> None:
-    required = {"schema_version", "model_version", "minimum_history_weeks", "structural", "tactical", "asset_manager_size", "macro_size", "execution", "confidence"}
+    required = {
+        "schema_version",
+        "model_version",
+        "minimum_history_weeks",
+        "structural",
+        "tactical",
+        "asset_manager_size",
+        "macro_size",
+        "execution",
+        "confidence",
+    }
     missing = sorted(required - set(config))
     if missing:
         raise ValueError(f"Direction model config missing sections: {missing}")
@@ -80,15 +86,6 @@ def validate_config(config: dict[str, Any]) -> None:
     ]
     if thresholds != sorted(thresholds, reverse=True):
         raise ValueError("Macro regime thresholds must be descending")
-    for key in (
-        "strong_risk_on_multiplier",
-        "supportive_multiplier",
-        "neutral_multiplier",
-        "defensive_multiplier",
-        "risk_off_multiplier",
-    ):
-        if not 0 <= float(macro[key]) <= 1.25:
-            raise ValueError(f"{key} must be inside 0..1.25")
 
     execution = config["execution"]
     if float(execution["waiting_band_pct"]) < 0:
@@ -96,7 +93,12 @@ def validate_config(config: dict[str, Any]) -> None:
     for key in ("sp500_invalidation_pct", "nq_invalidation_pct"):
         if float(execution[key]) <= 0:
             raise ValueError(f"{key} must be positive")
-    for key in ("confirmed_multiplier", "waiting_multiplier", "contradicted_multiplier", "invalidated_multiplier"):
+    for key in (
+        "confirmed_multiplier",
+        "waiting_multiplier",
+        "contradicted_multiplier",
+        "invalidated_multiplier",
+    ):
         if not 0 <= float(execution[key]) <= 1.25:
             raise ValueError(f"{key} must be inside 0..1.25")
 
@@ -113,12 +115,13 @@ def load_config(path: Path | str = DEFAULT_CONFIG_PATH) -> dict[str, Any]:
 
 
 def scheduled_release_date(report_date: str | date | pd.Timestamp) -> date:
-    """Return the first Friday on or after the COT as-of date."""
     day = pd.Timestamp(report_date).date()
     return day + timedelta(days=(4 - day.weekday()) % 7)
 
 
-def percentile_rank_prior(history: Iterable[Any], value: Any, minimum: int = 26) -> float | None:
+def percentile_rank_prior(
+    history: Iterable[Any], value: Any, minimum: int = 26
+) -> float | None:
     clean = pd.to_numeric(pd.Series(list(history), dtype="object"), errors="coerce").dropna()
     current = finite(value)
     if current is None or len(clean) < minimum:
@@ -134,8 +137,9 @@ def rank_score(percentile: float | None) -> float | None:
     return clamp(float(percentile) / 50.0 - 1.0, -1.0, 1.0)
 
 
-def structural_score_from_percentile(percentile: float | None, config: dict[str, Any]) -> float | None:
-    """Contrarian equity-index score: low NC percentile is bullish."""
+def structural_score_from_percentile(
+    percentile: float | None, config: dict[str, Any]
+) -> float | None:
     if percentile is None:
         return None
     cfg = config["structural"]
@@ -158,7 +162,6 @@ def tactical_modifier(
     noncommercial_flow4_rank: float | None,
     config: dict[str, Any],
 ) -> tuple[float, list[dict[str, Any]]]:
-    """Return a capped conviction modifier for an already actionable structure."""
     if structural_score is None:
         return 0.0, []
     cfg = config["tactical"]
@@ -184,23 +187,9 @@ def tactical_modifier(
         return contribution
 
     raw = 0.0
-    raw += add(
-        "Other Reportables 13w trend",
-        other_reportable_trend13_rank,
-        float(cfg["other_reportable_trend13_weight"]),
-        invert=True,
-    )
-    raw += add(
-        "Nonreportable 13w trend",
-        nonreportable_trend13_rank,
-        float(cfg["nonreportable_trend13_weight"]),
-        invert=True,
-    )
-    raw += add(
-        "Non-commercial 4w flow alignment",
-        noncommercial_flow4_rank,
-        float(cfg["noncommercial_flow4_alignment_weight"]),
-    )
+    raw += add("Other Reportables 13w trend", other_reportable_trend13_rank, float(cfg["other_reportable_trend13_weight"]), invert=True)
+    raw += add("Nonreportable 13w trend", nonreportable_trend13_rank, float(cfg["nonreportable_trend13_weight"]), invert=True)
+    raw += add("Non-commercial 4w flow alignment", noncommercial_flow4_rank, float(cfg["noncommercial_flow4_alignment_weight"]))
     return clamp(raw, -float(cfg["modifier_cap"]), float(cfg["modifier_cap"])), components
 
 
@@ -226,20 +215,24 @@ def asset_manager_multiplier(percentile: float | None, config: dict[str, Any]) -
     return float(cfg["extreme_multiplier"]), "High"
 
 
-def macro_multiplier(score: float | None, config: dict[str, Any]) -> tuple[float, str]:
+def macro_state_label(score: float | None, config: dict[str, Any]) -> str:
     if score is None:
-        return 1.0, "Unavailable"
+        return "Unavailable"
     cfg = config["macro_size"]
     s = clamp(float(score), 0.0, 100.0)
     if s >= float(cfg["strong_risk_on_min"]):
-        return float(cfg["strong_risk_on_multiplier"]), "Strong supportive"
+        return "Strong supportive"
     if s >= float(cfg["supportive_min"]):
-        return float(cfg["supportive_multiplier"]), "Supportive"
+        return "Supportive"
     if s >= float(cfg["neutral_min"]):
-        return float(cfg["neutral_multiplier"]), "Neutral"
+        return "Neutral"
     if s >= float(cfg["defensive_min"]):
-        return float(cfg["defensive_multiplier"]), "Defensive"
-    return float(cfg["risk_off_multiplier"]), "Risk-off"
+        return "Defensive"
+    return "Risk-off"
+
+
+def macro_multiplier(score: float | None, config: dict[str, Any]) -> tuple[float, str]:
+    return 1.0, macro_state_label(score, config)
 
 
 def execution_state(
@@ -273,10 +266,10 @@ def confidence_score(
     market: str,
     structural_score: float | None,
     has_tff: bool,
-    has_macro: bool,
     has_price: bool,
     release_date_source: str,
     config: dict[str, Any],
+    has_macro: bool | None = None,
 ) -> float:
     cfg = config["confidence"]
     base = float(cfg["nq_structural_base"] if market == "nq" else cfg["sp500_structural_base"])
@@ -284,8 +277,6 @@ def confidence_score(
     score = base * (0.55 + 0.45 * magnitude)
     if not has_tff:
         score -= float(cfg["missing_tff_penalty"])
-    if not has_macro:
-        score -= float(cfg["missing_macro_penalty"])
     if not has_price:
         score -= float(cfg["missing_price_penalty"])
     if release_date_source != "actual":
@@ -311,11 +302,11 @@ def final_action(
     macro_override: bool,
     config: dict[str, Any],
 ) -> str:
+    if macro_override:
+        return "Hedge / Risk Override"
     if adjusted_cot_score is None or abs(adjusted_cot_score) < 0.25:
         return "No COT Trade"
     side = "Long" if adjusted_cot_score > 0 else "Short"
-    if macro_override:
-        return "Hedge / Risk Override"
     if execution in {"Invalidated", "Unavailable"}:
         return "No Trade"
     if execution in {"Waiting", "Contradicted"}:
@@ -350,6 +341,10 @@ class DirectionDecision:
     macro_score: float | None
     macro_state: str
     macro_multiplier: float
+    macro_directional_weight: float
+    macro_risk_budget_multiplier: float
+    macro_risk_budget_state: str
+    macro_directional_edges_status: str
     macro_override: bool
     execution_state: str
     price_change_since_release_pct: float | None
@@ -379,6 +374,40 @@ def structural_bias_label(score: float | None) -> str:
     return "Neutral"
 
 
+def _macro_context_score(
+    macro_context: dict[str, Any] | None,
+    fallback: float | None,
+) -> float | None:
+    if isinstance(macro_context, dict):
+        for key in ("effective_score", "observed_score", "macro_regime_score"):
+            value = finite(macro_context.get(key))
+            if value is not None:
+                return clamp(value, 0.0, 100.0)
+    value = finite(fallback)
+    return clamp(value, 0.0, 100.0) if value is not None else None
+
+
+def _macro_risk_budget(
+    macro_risk_budget: dict[str, Any] | None,
+    macro_override: bool,
+) -> tuple[float, str, bool]:
+    budget = macro_risk_budget if isinstance(macro_risk_budget, dict) else {}
+    multiplier = finite(budget.get("multiplier"))
+    if multiplier is None:
+        multiplier = 1.0
+    multiplier = clamp(multiplier, 0.0, 1.25)
+    cap = finite(budget.get("exposure_cap"))
+    if cap is not None:
+        multiplier = min(multiplier, clamp(cap, 0.0, 1.25))
+    state = str(budget.get("status") or "NEUTRAL")
+    override = bool(macro_override or budget.get("hard_override_applied"))
+    if override:
+        multiplier = 0.0
+        if state == "NEUTRAL":
+            state = "HARD_OVERRIDE"
+    return multiplier, state, override
+
+
 def build_decision(
     *,
     market: str,
@@ -394,7 +423,10 @@ def build_decision(
     nonreportable_trend13_rank: float | None,
     noncommercial_flow4_rank: float | None,
     asset_manager_percentile_value: float | None,
-    macro_score_value: float | None,
+    macro_context: dict[str, Any] | None = None,
+    macro_risk_budget: dict[str, Any] | None = None,
+    macro_directional_edges: dict[str, Any] | None = None,
+    macro_score_value: float | None = None,
     macro_override: bool = False,
     config: dict[str, Any] | None = None,
 ) -> DirectionDecision:
@@ -409,31 +441,57 @@ def build_decision(
     )
     adjusted = preserve_structural_sign(structural, tactical)
     am_mult, am_state = asset_manager_multiplier(asset_manager_percentile_value, cfg)
-    macro_mult, macro_state = macro_multiplier(macro_score_value, cfg)
-    execution, execution_mult, price_change = execution_state(market, adjusted, signal_price, latest_price, cfg)
-    exposure = clamp(abs(float(adjusted or 0.0)) * am_mult * macro_mult * execution_mult, 0.0, 1.25)
+
+    context_score = _macro_context_score(macro_context, macro_score_value)
+    macro_mult, macro_state = macro_multiplier(context_score, cfg)
+    risk_mult, risk_state, effective_override = _macro_risk_budget(macro_risk_budget, macro_override)
+    edges = macro_directional_edges if isinstance(macro_directional_edges, dict) else {}
+    edges_status = str(edges.get("status") or "RESEARCH_ONLY_NOT_VINTAGE_SAFE")
+
+    execution, execution_mult, price_change = execution_state(
+        market, adjusted, signal_price, latest_price, cfg
+    )
+    exposure = clamp(
+        abs(float(adjusted or 0.0)) * am_mult * risk_mult * execution_mult,
+        0.0,
+        1.25,
+    )
     confidence = confidence_score(
         market,
         structural,
-        has_tff=any(value is not None for value in (asset_manager_percentile_value, other_reportable_trend13_rank, nonreportable_trend13_rank)),
-        has_macro=macro_score_value is not None,
+        has_tff=any(
+            value is not None
+            for value in (
+                asset_manager_percentile_value,
+                other_reportable_trend13_rank,
+                nonreportable_trend13_rank,
+            )
+        ),
         has_price=finite(signal_price) is not None and finite(latest_price) is not None,
         release_date_source=release_date_source,
         config=cfg,
     )
-    action = final_action(adjusted, execution, exposure, confidence, macro_override, cfg)
+    action = final_action(
+        adjusted, execution, exposure, confidence, effective_override, cfg
+    )
+
     tactical_reason = (
         f"Tactical modifier {tactical:+.2f}"
         if components
         else "Tactical layer inactive because Legacy structure is neutral/weak or TFF inputs are unavailable"
     )
     reasons = [
-        f"Legacy Non-commercial percentile {noncommercial_percentile:.1f}%" if noncommercial_percentile is not None else "Legacy Non-commercial percentile unavailable",
+        f"Legacy Non-commercial percentile {noncommercial_percentile:.1f}%"
+        if noncommercial_percentile is not None
+        else "Legacy Non-commercial percentile unavailable",
         tactical_reason,
-        f"Asset Manager crowding {am_state}; size x{am_mult:.2f}",
-        f"Macro {macro_state}; size x{macro_mult:.2f}",
+        f"Asset Manager crowding {am_state}; COT-side size x{am_mult:.2f}",
+        f"Macro context {macro_state}; aggregate directional weight 0.00 and multiplier x{macro_mult:.2f}",
+        f"Macro risk budget {risk_state}; exposure cap x{risk_mult:.2f}",
+        f"Macro directional edges {edges_status}; production weight 0.00",
         f"Price execution {execution}",
     ]
+
     return DirectionDecision(
         model_version=str(cfg["model_version"]),
         market=market,
@@ -451,10 +509,14 @@ def build_decision(
         asset_manager_percentile=round(asset_manager_percentile_value, 2) if asset_manager_percentile_value is not None else None,
         asset_manager_state=am_state,
         asset_manager_multiplier=round(am_mult, 3),
-        macro_score=round(macro_score_value, 2) if macro_score_value is not None else None,
+        macro_score=round(context_score, 2) if context_score is not None else None,
         macro_state=macro_state,
-        macro_multiplier=round(macro_mult, 3),
-        macro_override=bool(macro_override),
+        macro_multiplier=1.0,
+        macro_directional_weight=0.0,
+        macro_risk_budget_multiplier=round(risk_mult, 3),
+        macro_risk_budget_state=risk_state,
+        macro_directional_edges_status=edges_status,
+        macro_override=effective_override,
         execution_state=execution,
         price_change_since_release_pct=round(price_change, 3) if price_change is not None else None,
         execution_multiplier=round(execution_mult, 3),

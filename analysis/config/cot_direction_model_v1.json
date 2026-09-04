@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "model_version": "cot-direction-v1.1",
+  "model_version": "cot-direction-v1.2",
   "minimum_history_weeks": 104,
   "structural": {
     "neutral_percentile_low": 40.0,
@@ -26,11 +26,12 @@
     "supportive_min": 55.0,
     "neutral_min": 45.0,
     "defensive_min": 30.0,
-    "strong_risk_on_multiplier": 1.05,
-    "supportive_multiplier": 1.00,
-    "neutral_multiplier": 0.90,
-    "defensive_multiplier": 0.75,
-    "risk_off_multiplier": 0.50
+    "directional_weight": 0.0,
+    "strong_risk_on_multiplier": 1.0,
+    "supportive_multiplier": 1.0,
+    "neutral_multiplier": 1.0,
+    "defensive_multiplier": 1.0,
+    "risk_off_multiplier": 1.0
   },
   "execution": {
     "waiting_band_pct": 0.25,
@@ -45,7 +46,7 @@
     "nq_structural_base": 0.80,
     "sp500_structural_base": 0.65,
     "minimum_actionable": 0.45,
-    "missing_macro_penalty": 0.08,
+    "missing_macro_penalty": 0.0,
     "missing_tff_penalty": 0.12,
     "missing_price_penalty": 0.15,
     "scheduled_release_assumption_penalty": 0.05

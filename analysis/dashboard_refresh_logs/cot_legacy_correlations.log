@@ -12,32 +12,32 @@ Loaded CFTC Legacy Futures Only 2026
 Loaded current CFTC Legacy Futures Only weekly top-up
 
 === NASDAQ-100 Consolidated - CHICAGO MERCANTILE EXCHANGE ===
-Using local FRED file: A:\work\trading\cot report\data\NASDAQ100.csv
+Using local FRED file: A:\work\trading\cot-report-main\data\NASDAQ100.csv
 
 Latest exact legacy row:
-date: 2026-08-04
-CFTC source latest date: 2026-08-04
-price: 29,733.16
-open_interest: 334,748
-Noncommercial net: -35,006 (-10.46% of OI)
-Commercial net: 24,076 (7.19% of OI)
-Total Reportable net: -10,930 (-3.27% of OI)
-Nonreportable net: 10,929 (3.26% of OI)
+date: 2026-08-11
+CFTC source latest date: 2026-08-11
+price: 29,525.48
+open_interest: 302,340
+Noncommercial net: -42,905 (-14.19% of OI)
+Commercial net: 24,931 (8.25% of OI)
+Total Reportable net: -17,975 (-5.95% of OI)
+Nonreportable net: 17,974 (5.94% of OI)
 
 Strongest absolute correlations:
         category                                                           relationship                      position_metric  pearson_r  observations      return_metric
-total_reportable    weekly change in total reportable net/OI pct vs weekly price return   total_reportable_net_oi_pct_change     0.2715           552                NaN
-   nonreportable       weekly change in nonreportable net/OI pct vs weekly price return      nonreportable_net_oi_pct_change    -0.2715           552                NaN
-total_reportable weekly change in total reportable net contracts vs weekly price return          total_reportable_net_change     0.2434           552                NaN
-   nonreportable    weekly change in nonreportable net contracts vs weekly price return             nonreportable_net_change    -0.2434           552                NaN
-total_reportable   weekly change in total reportable long/OI pct vs weekly price return  total_reportable_long_oi_pct_change     0.1777           552                NaN
-   nonreportable      weekly change in nonreportable long/OI pct vs weekly price return     nonreportable_long_oi_pct_change    -0.1777           552                NaN
-   noncommercial                 noncommercial short/OI pct vs forward 52w price return           noncommercial_short_oi_pct    -0.1601           501 forward_return_52w
-   nonreportable     weekly change in nonreportable short/OI pct vs weekly price return    nonreportable_short_oi_pct_change     0.1457           552                NaN
-total_reportable  weekly change in total reportable short/OI pct vs weekly price return total_reportable_short_oi_pct_change    -0.1457           552                NaN
-      commercial       weekly change in commercial net contracts vs weekly price return                commercial_net_change     0.1417           552                NaN
-   noncommercial                noncommercial net contracts vs forward 52w price return                    noncommercial_net     0.1279           501 forward_return_52w
-      commercial                      commercial net/OI pct vs forward 52w price return                commercial_net_oi_pct    -0.1210           501 forward_return_52w
+total_reportable    weekly change in total reportable net/OI pct vs weekly price return   total_reportable_net_oi_pct_change     0.2719           553                NaN
+   nonreportable       weekly change in nonreportable net/OI pct vs weekly price return      nonreportable_net_oi_pct_change    -0.2719           553                NaN
+total_reportable weekly change in total reportable net contracts vs weekly price return          total_reportable_net_change     0.2435           553                NaN
+   nonreportable    weekly change in nonreportable net contracts vs weekly price return             nonreportable_net_change    -0.2435           553                NaN
+total_reportable   weekly change in total reportable long/OI pct vs weekly price return  total_reportable_long_oi_pct_change     0.1780           553                NaN
+   nonreportable      weekly change in nonreportable long/OI pct vs weekly price return     nonreportable_long_oi_pct_change    -0.1779           553                NaN
+   noncommercial                 noncommercial short/OI pct vs forward 52w price return           noncommercial_short_oi_pct    -0.1601           502 forward_return_52w
+   nonreportable     weekly change in nonreportable short/OI pct vs weekly price return    nonreportable_short_oi_pct_change     0.1465           553                NaN
+total_reportable  weekly change in total reportable short/OI pct vs weekly price return total_reportable_short_oi_pct_change    -0.1465           553                NaN
+      commercial       weekly change in commercial net contracts vs weekly price return                commercial_net_change     0.1416           553                NaN
+   noncommercial                noncommercial net contracts vs forward 52w price return                    noncommercial_net     0.1268           502 forward_return_52w
+      commercial                      commercial net/OI pct vs forward 52w price return                commercial_net_oi_pct    -0.1211           502 forward_return_52w
 
 Saved:
 cot_legacy_output\nq_legacy_data_2016_2026.csv
@@ -47,32 +47,32 @@ cot_legacy_output\nq_legacy_net_oi_overlay_2016_2026.png
 cot_legacy_output\nq_legacy_forward_corr_heatmap_2016_2026.png
 
 === S&P 500 Consolidated - CHICAGO MERCANTILE EXCHANGE ===
-Using local FRED file: A:\work\trading\cot report\data\SP500.csv
+Using local FRED file: A:\work\trading\cot-report-main\data\SP500.csv
 
 Latest exact legacy row:
-date: 2026-08-04
-CFTC source latest date: 2026-08-04
-price: 7,736.52
-open_interest: 2,140,892
-Noncommercial net: -28,007 (-1.31% of OI)
-Commercial net: -77,105 (-3.60% of OI)
-Total Reportable net: -105,112 (-4.91% of OI)
-Nonreportable net: 105,112 (4.91% of OI)
+date: 2026-08-11
+CFTC source latest date: 2026-08-11
+price: 7,728.20
+open_interest: 2,146,778
+Noncommercial net: 7,433 (0.35% of OI)
+Commercial net: -133,696 (-6.23% of OI)
+Total Reportable net: -126,262 (-5.88% of OI)
+Nonreportable net: 126,262 (5.88% of OI)
 
 Strongest absolute correlations:
      category                                                       relationship                   position_metric  pearson_r  observations      return_metric
-noncommercial              noncommercial long/OI pct vs forward 52w price return         noncommercial_long_oi_pct    -0.4473           479 forward_return_52w
-   commercial                  commercial net/OI pct vs forward 52w price return             commercial_net_oi_pct     0.4356           479 forward_return_52w
-noncommercial               noncommercial net/OI pct vs forward 52w price return          noncommercial_net_oi_pct    -0.4228           479 forward_return_52w
-noncommercial   weekly change in noncommercial net/OI pct vs weekly price return   noncommercial_net_oi_pct_change    -0.3769           530                NaN
-   commercial                commercial short/OI pct vs forward 52w price return           commercial_short_oi_pct    -0.3728           479 forward_return_52w
-   commercial      weekly change in commercial net/OI pct vs weekly price return      commercial_net_oi_pct_change     0.3410           530                NaN
-noncommercial              noncommercial long/OI pct vs forward 26w price return         noncommercial_long_oi_pct    -0.3355           505 forward_return_26w
-noncommercial            noncommercial net contracts vs forward 52w price return                 noncommercial_net    -0.3288           479 forward_return_52w
-   commercial                 commercial long/OI pct vs forward 52w price return            commercial_long_oi_pct     0.3261           479 forward_return_52w
-   commercial               commercial net contracts vs forward 52w price return                    commercial_net     0.3083           479 forward_return_52w
-noncommercial             noncommercial short/OI pct vs forward 52w price return        noncommercial_short_oi_pct     0.3080           479 forward_return_52w
-noncommercial weekly change in noncommercial short/OI pct vs weekly price return noncommercial_short_oi_pct_change     0.2827           530                NaN
+noncommercial              noncommercial long/OI pct vs forward 52w price return         noncommercial_long_oi_pct    -0.4477           480 forward_return_52w
+   commercial                  commercial net/OI pct vs forward 52w price return             commercial_net_oi_pct     0.4359           480 forward_return_52w
+noncommercial               noncommercial net/OI pct vs forward 52w price return          noncommercial_net_oi_pct    -0.4230           480 forward_return_52w
+noncommercial   weekly change in noncommercial net/OI pct vs weekly price return   noncommercial_net_oi_pct_change    -0.3769           531                NaN
+   commercial                commercial short/OI pct vs forward 52w price return           commercial_short_oi_pct    -0.3732           480 forward_return_52w
+   commercial      weekly change in commercial net/OI pct vs weekly price return      commercial_net_oi_pct_change     0.3408           531                NaN
+noncommercial              noncommercial long/OI pct vs forward 26w price return         noncommercial_long_oi_pct    -0.3358           506 forward_return_26w
+noncommercial            noncommercial net contracts vs forward 52w price return                 noncommercial_net    -0.3290           480 forward_return_52w
+   commercial                 commercial long/OI pct vs forward 52w price return            commercial_long_oi_pct     0.3267           480 forward_return_52w
+   commercial               commercial net contracts vs forward 52w price return                    commercial_net     0.3089           480 forward_return_52w
+noncommercial             noncommercial short/OI pct vs forward 52w price return        noncommercial_short_oi_pct     0.3085           480 forward_return_52w
+noncommercial weekly change in noncommercial short/OI pct vs weekly price return noncommercial_short_oi_pct_change     0.2828           531                NaN
 
 Saved:
 cot_legacy_output\sp500_legacy_data_2016_2026.csv
@@ -82,32 +82,32 @@ cot_legacy_output\sp500_legacy_net_oi_overlay_2016_2026.png
 cot_legacy_output\sp500_legacy_forward_corr_heatmap_2016_2026.png
 
 === VIX FUTURES - CBOE FUTURES EXCHANGE ===
-Using local FRED file: A:\work\trading\cot report\data\VIXCLS.csv
+Using local FRED file: A:\work\trading\cot-report-main\data\VIXCLS.csv
 
 Latest exact legacy row:
-date: 2026-08-04
-CFTC source latest date: 2026-08-04
-price: 16.50
-open_interest: 369,655
-Noncommercial net: -61,109 (-16.53% of OI)
-Commercial net: 65,590 (17.74% of OI)
-Total Reportable net: 4,481 (1.21% of OI)
-Nonreportable net: -4,481 (-1.21% of OI)
+date: 2026-08-11
+CFTC source latest date: 2026-08-11
+price: 15.28
+open_interest: 382,010
+Noncommercial net: -74,934 (-19.62% of OI)
+Commercial net: 77,297 (20.23% of OI)
+Total Reportable net: 2,363 (0.62% of OI)
+Nonreportable net: -2,363 (-0.62% of OI)
 
 Strongest absolute correlations:
      category                                            relationship            position_metric  pearson_r  observations      return_metric
-noncommercial noncommercial net contracts vs forward 52w price return          noncommercial_net    -0.4545           501 forward_return_52w
-   commercial    commercial net contracts vs forward 52w price return             commercial_net     0.4458           501 forward_return_52w
-   commercial    commercial net contracts vs forward 26w price return             commercial_net     0.4043           527 forward_return_26w
-noncommercial noncommercial net contracts vs forward 26w price return          noncommercial_net    -0.4023           527 forward_return_26w
-   commercial     commercial short/OI pct vs forward 52w price return    commercial_short_oi_pct    -0.3968           501 forward_return_52w
-   commercial    commercial net contracts vs forward 13w price return             commercial_net     0.3833           540 forward_return_13w
-noncommercial noncommercial net contracts vs forward 13w price return          noncommercial_net    -0.3801           540 forward_return_13w
-noncommercial  noncommercial short/OI pct vs forward 52w price return noncommercial_short_oi_pct     0.3754           501 forward_return_52w
-noncommercial    noncommercial net/OI pct vs forward 52w price return   noncommercial_net_oi_pct    -0.3320           501 forward_return_52w
-   commercial       commercial net/OI pct vs forward 52w price return      commercial_net_oi_pct     0.3140           501 forward_return_52w
-   commercial     commercial short/OI pct vs forward 13w price return    commercial_short_oi_pct    -0.3065           540 forward_return_13w
-noncommercial    noncommercial net/OI pct vs forward 13w price return   noncommercial_net_oi_pct    -0.3055           540 forward_return_13w
+noncommercial noncommercial net contracts vs forward 52w price return          noncommercial_net    -0.4543           502 forward_return_52w
+   commercial    commercial net contracts vs forward 52w price return             commercial_net     0.4458           502 forward_return_52w
+   commercial    commercial net contracts vs forward 26w price return             commercial_net     0.4044           528 forward_return_26w
+noncommercial noncommercial net contracts vs forward 26w price return          noncommercial_net    -0.4023           528 forward_return_26w
+   commercial     commercial short/OI pct vs forward 52w price return    commercial_short_oi_pct    -0.3967           502 forward_return_52w
+   commercial    commercial net contracts vs forward 13w price return             commercial_net     0.3835           541 forward_return_13w
+noncommercial noncommercial net contracts vs forward 13w price return          noncommercial_net    -0.3803           541 forward_return_13w
+noncommercial  noncommercial short/OI pct vs forward 52w price return noncommercial_short_oi_pct     0.3755           502 forward_return_52w
+noncommercial    noncommercial net/OI pct vs forward 52w price return   noncommercial_net_oi_pct    -0.3320           502 forward_return_52w
+   commercial       commercial net/OI pct vs forward 52w price return      commercial_net_oi_pct     0.3141           502 forward_return_52w
+   commercial     commercial short/OI pct vs forward 13w price return    commercial_short_oi_pct    -0.3067           541 forward_return_13w
+noncommercial    noncommercial net/OI pct vs forward 13w price return   noncommercial_net_oi_pct    -0.3057           541 forward_return_13w
 
 Saved:
 cot_legacy_output\vix_legacy_data_2016_2026.csv
@@ -117,32 +117,32 @@ cot_legacy_output\vix_legacy_net_oi_overlay_2016_2026.png
 cot_legacy_output\vix_legacy_forward_corr_heatmap_2016_2026.png
 
 === RUSSELL E-MINI - CHICAGO MERCANTILE EXCHANGE ===
-Refreshing Yahoo price cache: A:\work\trading\cot report\data\RUT.csv
+Refreshing Yahoo price cache: A:\work\trading\cot-report-main\data\RUT.csv
 
 Latest exact legacy row:
-date: 2026-08-04
-CFTC source latest date: 2026-08-04
-price: 3,036.98
-open_interest: 417,259
-Noncommercial net: -34,727 (-8.32% of OI)
-Commercial net: 24,309 (5.83% of OI)
-Total Reportable net: -10,418 (-2.50% of OI)
-Nonreportable net: 10,418 (2.50% of OI)
+date: 2026-08-11
+CFTC source latest date: 2026-08-11
+price: 3,027.12
+open_interest: 419,222
+Noncommercial net: -42,304 (-10.09% of OI)
+Commercial net: 34,430 (8.21% of OI)
+Total Reportable net: -7,874 (-1.88% of OI)
+Nonreportable net: 7,874 (1.88% of OI)
 
 Strongest absolute correlations:
         category                                              relationship               position_metric  pearson_r  observations      return_metric
-      commercial       commercial short/OI pct vs forward 26w price return       commercial_short_oi_pct    -0.4241           209 forward_return_26w
-   nonreportable    nonreportable short/OI pct vs forward 52w price return    nonreportable_short_oi_pct     0.3907           183 forward_return_52w
-total_reportable total reportable short/OI pct vs forward 52w price return total_reportable_short_oi_pct    -0.3907           183 forward_return_52w
-total_reportable total reportable short/OI pct vs forward 13w price return total_reportable_short_oi_pct    -0.3622           222 forward_return_13w
-   nonreportable    nonreportable short/OI pct vs forward 13w price return    nonreportable_short_oi_pct     0.3622           222 forward_return_13w
-total_reportable total reportable short/OI pct vs forward 26w price return total_reportable_short_oi_pct    -0.3487           209 forward_return_26w
-   nonreportable    nonreportable short/OI pct vs forward 26w price return    nonreportable_short_oi_pct     0.3487           209 forward_return_26w
-      commercial        commercial long/OI pct vs forward 52w price return        commercial_long_oi_pct    -0.3345           183 forward_return_52w
-      commercial       commercial short/OI pct vs forward 13w price return       commercial_short_oi_pct    -0.3019           222 forward_return_13w
-   noncommercial    noncommercial short/OI pct vs forward 26w price return    noncommercial_short_oi_pct     0.2900           209 forward_return_26w
-   noncommercial     noncommercial long/OI pct vs forward 52w price return     noncommercial_long_oi_pct     0.2885           183 forward_return_52w
-   noncommercial     noncommercial long/OI pct vs forward 13w price return     noncommercial_long_oi_pct     0.2848           222 forward_return_13w
+      commercial       commercial short/OI pct vs forward 26w price return       commercial_short_oi_pct    -0.4238           210 forward_return_26w
+   nonreportable    nonreportable short/OI pct vs forward 52w price return    nonreportable_short_oi_pct     0.3964           184 forward_return_52w
+total_reportable total reportable short/OI pct vs forward 52w price return total_reportable_short_oi_pct    -0.3964           184 forward_return_52w
+total_reportable total reportable short/OI pct vs forward 13w price return total_reportable_short_oi_pct    -0.3629           223 forward_return_13w
+   nonreportable    nonreportable short/OI pct vs forward 13w price return    nonreportable_short_oi_pct     0.3629           223 forward_return_13w
+total_reportable total reportable short/OI pct vs forward 26w price return total_reportable_short_oi_pct    -0.3499           210 forward_return_26w
+   nonreportable    nonreportable short/OI pct vs forward 26w price return    nonreportable_short_oi_pct     0.3499           210 forward_return_26w
+      commercial        commercial long/OI pct vs forward 52w price return        commercial_long_oi_pct    -0.3328           184 forward_return_52w
+      commercial       commercial short/OI pct vs forward 13w price return       commercial_short_oi_pct    -0.3029           223 forward_return_13w
+   noncommercial    noncommercial short/OI pct vs forward 26w price return    noncommercial_short_oi_pct     0.2885           210 forward_return_26w
+   noncommercial     noncommercial long/OI pct vs forward 52w price return     noncommercial_long_oi_pct     0.2874           184 forward_return_52w
+   noncommercial     noncommercial long/OI pct vs forward 13w price return     noncommercial_long_oi_pct     0.2858           223 forward_return_13w
 
 Saved:
 cot_legacy_output\rty_legacy_data_2016_2026.csv
@@ -152,32 +152,32 @@ cot_legacy_output\rty_legacy_net_oi_overlay_2016_2026.png
 cot_legacy_output\rty_legacy_forward_corr_heatmap_2016_2026.png
 
 === DJIA Consolidated - CHICAGO BOARD OF TRADE ===
-Refreshing Yahoo price cache: A:\work\trading\cot report\data\DJIA.csv
+Refreshing Yahoo price cache: A:\work\trading\cot-report-main\data\DJIA.csv
 
 Latest exact legacy row:
-date: 2026-08-04
-CFTC source latest date: 2026-08-04
-price: 54,085.88
-open_interest: 98,005
-Noncommercial net: 24,912 (25.42% of OI)
-Commercial net: -28,828 (-29.41% of OI)
-Total Reportable net: -3,915 (-3.99% of OI)
-Nonreportable net: 3,915 (3.99% of OI)
+date: 2026-08-11
+CFTC source latest date: 2026-08-11
+price: 53,791.85
+open_interest: 89,844
+Noncommercial net: 18,475 (20.56% of OI)
+Commercial net: -24,810 (-27.61% of OI)
+Total Reportable net: -6,335 (-7.05% of OI)
+Nonreportable net: 6,335 (7.05% of OI)
 
 Strongest absolute correlations:
         category                                                        relationship                    position_metric  pearson_r  observations      return_metric
-   nonreportable                nonreportable net/OI pct vs forward 52w price return           nonreportable_net_oi_pct    -0.3581           501 forward_return_52w
-total_reportable             total reportable net/OI pct vs forward 52w price return        total_reportable_net_oi_pct     0.3581           501 forward_return_52w
-   nonreportable             nonreportable net contracts vs forward 52w price return                  nonreportable_net    -0.3578           501 forward_return_52w
-total_reportable          total reportable net contracts vs forward 52w price return               total_reportable_net     0.3578           501 forward_return_52w
-   nonreportable               nonreportable long/OI pct vs forward 52w price return          nonreportable_long_oi_pct    -0.2821           501 forward_return_52w
-total_reportable            total reportable long/OI pct vs forward 52w price return       total_reportable_long_oi_pct     0.2821           501 forward_return_52w
-   noncommercial weekly change in noncommercial net contracts vs weekly price return           noncommercial_net_change     0.2468           552                NaN
-total_reportable           total reportable short/OI pct vs forward 52w price return      total_reportable_short_oi_pct    -0.2335           501 forward_return_52w
-   nonreportable              nonreportable short/OI pct vs forward 52w price return         nonreportable_short_oi_pct     0.2335           501 forward_return_52w
-   nonreportable    weekly change in nonreportable net/OI pct vs weekly price return    nonreportable_net_oi_pct_change    -0.2264           552                NaN
-total_reportable weekly change in total reportable net/OI pct vs weekly price return total_reportable_net_oi_pct_change     0.2263           552                NaN
-   noncommercial    weekly change in noncommercial net/OI pct vs weekly price return    noncommercial_net_oi_pct_change     0.2099           552                NaN
+   nonreportable                nonreportable net/OI pct vs forward 52w price return           nonreportable_net_oi_pct    -0.3575           502 forward_return_52w
+total_reportable             total reportable net/OI pct vs forward 52w price return        total_reportable_net_oi_pct     0.3575           502 forward_return_52w
+   nonreportable             nonreportable net contracts vs forward 52w price return                  nonreportable_net    -0.3569           502 forward_return_52w
+total_reportable          total reportable net contracts vs forward 52w price return               total_reportable_net     0.3569           502 forward_return_52w
+   nonreportable               nonreportable long/OI pct vs forward 52w price return          nonreportable_long_oi_pct    -0.2831           502 forward_return_52w
+total_reportable            total reportable long/OI pct vs forward 52w price return       total_reportable_long_oi_pct     0.2831           502 forward_return_52w
+   noncommercial weekly change in noncommercial net contracts vs weekly price return           noncommercial_net_change     0.2473           553                NaN
+total_reportable           total reportable short/OI pct vs forward 52w price return      total_reportable_short_oi_pct    -0.2318           502 forward_return_52w
+   nonreportable              nonreportable short/OI pct vs forward 52w price return         nonreportable_short_oi_pct     0.2318           502 forward_return_52w
+   nonreportable    weekly change in nonreportable net/OI pct vs weekly price return    nonreportable_net_oi_pct_change    -0.2269           553                NaN
+total_reportable weekly change in total reportable net/OI pct vs weekly price return total_reportable_net_oi_pct_change     0.2269           553                NaN
+   noncommercial    weekly change in noncommercial net/OI pct vs weekly price return    noncommercial_net_oi_pct_change     0.2103           553                NaN
 
 Saved:
 cot_legacy_output\dow_legacy_data_2016_2026.csv
@@ -187,32 +187,32 @@ cot_legacy_output\dow_legacy_net_oi_overlay_2016_2026.png
 cot_legacy_output\dow_legacy_forward_corr_heatmap_2016_2026.png
 
 === GOLD - COMMODITY EXCHANGE INC. ===
-Refreshing Yahoo price cache: A:\work\trading\cot report\data\GOLD.csv
+Refreshing Yahoo price cache: A:\work\trading\cot-report-main\data\GOLD.csv
 
 Latest exact legacy row:
-date: 2026-08-04
-CFTC source latest date: 2026-08-04
-price: 4,095.40
-open_interest: 371,551
-Noncommercial net: 197,634 (53.19% of OI)
-Commercial net: -226,491 (-60.96% of OI)
-Total Reportable net: -28,857 (-7.77% of OI)
-Nonreportable net: 28,857 (7.77% of OI)
+date: 2026-08-11
+CFTC source latest date: 2026-08-11
+price: 4,383.00
+open_interest: 400,309
+Noncommercial net: 217,940 (54.44% of OI)
+Commercial net: -252,640 (-63.11% of OI)
+Total Reportable net: -34,700 (-8.67% of OI)
+Nonreportable net: 34,700 (8.67% of OI)
 
 Strongest absolute correlations:
         category                                                        relationship                   position_metric  pearson_r  observations      return_metric
-      commercial    weekly change in commercial net contracts vs weekly price return             commercial_net_change    -0.5522           552                NaN
-   noncommercial weekly change in noncommercial net contracts vs weekly price return          noncommercial_net_change     0.5472           552                NaN
-   noncommercial    weekly change in noncommercial net/OI pct vs weekly price return   noncommercial_net_oi_pct_change     0.4114           552                NaN
-      commercial       weekly change in commercial net/OI pct vs weekly price return      commercial_net_oi_pct_change    -0.3962           552                NaN
-      commercial      weekly change in commercial long/OI pct vs weekly price return     commercial_long_oi_pct_change    -0.3453           552                NaN
-   noncommercial  weekly change in noncommercial short/OI pct vs weekly price return noncommercial_short_oi_pct_change    -0.3453           552                NaN
-   noncommercial   weekly change in noncommercial long/OI pct vs weekly price return  noncommercial_long_oi_pct_change     0.3010           552                NaN
-      commercial     weekly change in commercial short/OI pct vs weekly price return    commercial_short_oi_pct_change     0.2862           552                NaN
-      commercial                  commercial long/OI pct vs forward 52w price return            commercial_long_oi_pct    -0.2121           501 forward_return_52w
-   nonreportable              nonreportable short/OI pct vs forward 26w price return        nonreportable_short_oi_pct     0.2097           527 forward_return_26w
-total_reportable           total reportable short/OI pct vs forward 26w price return     total_reportable_short_oi_pct    -0.2097           527 forward_return_26w
-   nonreportable              nonreportable short/OI pct vs forward 13w price return        nonreportable_short_oi_pct     0.1875           540 forward_return_13w
+      commercial    weekly change in commercial net contracts vs weekly price return             commercial_net_change    -0.5541           553                NaN
+   noncommercial weekly change in noncommercial net contracts vs weekly price return          noncommercial_net_change     0.5478           553                NaN
+   noncommercial    weekly change in noncommercial net/OI pct vs weekly price return   noncommercial_net_oi_pct_change     0.4098           553                NaN
+      commercial       weekly change in commercial net/OI pct vs weekly price return      commercial_net_oi_pct_change    -0.3961           553                NaN
+      commercial      weekly change in commercial long/OI pct vs weekly price return     commercial_long_oi_pct_change    -0.3484           553                NaN
+   noncommercial  weekly change in noncommercial short/OI pct vs weekly price return noncommercial_short_oi_pct_change    -0.3413           553                NaN
+   noncommercial   weekly change in noncommercial long/OI pct vs weekly price return  noncommercial_long_oi_pct_change     0.3020           553                NaN
+      commercial     weekly change in commercial short/OI pct vs weekly price return    commercial_short_oi_pct_change     0.2840           553                NaN
+      commercial                  commercial long/OI pct vs forward 52w price return            commercial_long_oi_pct    -0.2143           502 forward_return_52w
+   nonreportable              nonreportable short/OI pct vs forward 26w price return        nonreportable_short_oi_pct     0.2127           528 forward_return_26w
+total_reportable           total reportable short/OI pct vs forward 26w price return     total_reportable_short_oi_pct    -0.2127           528 forward_return_26w
+   nonreportable              nonreportable short/OI pct vs forward 13w price return        nonreportable_short_oi_pct     0.1909           541 forward_return_13w
 
 Saved:
 cot_legacy_output\gold_legacy_data_2016_2026.csv

@@ -837,7 +837,7 @@
         y: labels,
         marker: { color: series.color },
         customdata: ordered.map(player => [player.short_term_bias, player.divergence]),
-          hovertemplate: `%{y}<br>${series.name}: %{x:+.2f}bn<br>Bias: %{customdata[0]}<br>%{customdata[1]}<extra></extra>`
+          hovertemplate: `%{y}<br>${series.name}: %{x:.2f}bn<br>Bias: %{customdata[0]}<br>%{customdata[1]}<extra></extra>`
       }));
       const totalTrace = {
         type: "scatter",
@@ -852,7 +852,7 @@
           symbol: "diamond"
         },
         customdata: ordered.map(player => [player.risk_flow_1w_direction, player.latest_change_from_date, player.latest_change_to_date]),
-        hovertemplate: "%{y}<br>Risk-on exposure change: %{x:+.2f}bn<br>Direction: %{customdata[0]}<br>Week: %{customdata[1]} to %{customdata[2]}<extra></extra>"
+        hovertemplate: "%{y}<br>Risk-on exposure change: %{x:.2f}bn<br>Direction: %{customdata[0]}<br>Week: %{customdata[1]} to %{customdata[2]}<extra></extra>"
       };
       const t = themeTokens();
       Plotly.react(chart, [...barTraces, totalTrace], {
@@ -866,7 +866,7 @@
           title: "1-week futures-equivalent notional flow ($bn); positive = risk-on contribution",
           gridcolor: t.grid,
           zerolinecolor: t.zero,
-          tickformat: "+.1f"
+          tickformat: ".1f"
         },
         yaxis: { automargin: true },
         hovermode: "closest"
@@ -884,14 +884,14 @@
           color: "#2563eb",
           values: ordered.map(player => Number(player.risk_flow_1w_notional_usd || 0) / 1e9),
           customdata: ordered.map(player => [player.risk_flow_1w_direction, player.latest_change_from_date, player.latest_change_to_date]),
-          hovertemplate: "%{y}<br>Latest week change: %{x:+.2f}bn<br>Direction: %{customdata[0]}<br>Week: %{customdata[1]} to %{customdata[2]}<extra></extra>"
+          hovertemplate: "%{y}<br>Latest week change: %{x:.2f}bn<br>Direction: %{customdata[0]}<br>Week: %{customdata[1]} to %{customdata[2]}<extra></extra>"
         },
         {
           name: "13w trend",
           color: "#d97706",
           values: ordered.map(player => Number(player.risk_net_13w_change_notional_usd || 0) / 1e9),
           customdata: ordered.map(player => [player.risk_trend_13w_direction]),
-          hovertemplate: "%{y}<br>13w risk-on exposure net change: %{x:+.2f}bn<br>Direction: %{customdata[0]}<extra></extra>"
+          hovertemplate: "%{y}<br>13w risk-on exposure net change: %{x:.2f}bn<br>Direction: %{customdata[0]}<extra></extra>"
         }
       ].map(trace => ({
         type: "bar",
@@ -915,7 +915,7 @@
           title: "Risk-on exposure notional change ($bn); positive = bullish risk contribution",
           gridcolor: t.grid,
           zerolinecolor: t.zero,
-          tickformat: "+.1f"
+          tickformat: ".1f"
         },
         yaxis: { automargin: true },
         hovermode: "closest"
@@ -936,7 +936,7 @@
           x: history.map(row => row.date),
           y: history.map(row => Number(row.risk_net_notional_usd) / 1e9),
           line: { color: COLORS[player.key] || "#667085", width: 2 },
-          hovertemplate: `%{x}<br>${player.label}<br>Risk-on exposure net: %{y:+.1f}bn<extra></extra>`
+          hovertemplate: `%{x}<br>${player.label}<br>Risk-on exposure net: %{y:,.1f} bn<extra></extra>`
         };
       });
       Plotly.react(chart, traces, {
@@ -962,8 +962,8 @@
           zerolinecolor: t.zero,
           zerolinewidth: 1,
           fixedrange: false,
-          tickformat: "+.0f",
-          hoverformat: "+.1f",
+          tickformat: ".0f",
+          hoverformat: ".1f",
           tickfont: { color: t.muted, size: compactPlot ? 10 : 11 },
           titlefont: { color: t.text }
         },
@@ -1047,7 +1047,7 @@
           player.divergence || "n/a",
           metric.description
         ]),
-        hovertemplate: `%{y}<br>${metric.name}: %{x:+.2f}bn<br>Direction: %{customdata[0]}<br>%{customdata[2]}<br>%{customdata[1]}<extra></extra>`
+        hovertemplate: `%{y}<br>${metric.name}: %{x:.2f}bn<br>Direction: %{customdata[0]}<br>%{customdata[2]}<br>%{customdata[1]}<extra></extra>`
       }));
       const t = themeTokens();
       Plotly.react(chart, traces, {
@@ -1061,7 +1061,7 @@
           title: "Risk-on exposure ($bn); positive = bullish contribution",
           gridcolor: t.grid,
           zerolinecolor: t.zero,
-          tickformat: "+.1f"
+          tickformat: ".1f"
         },
         yaxis: { automargin: true },
         hovermode: "closest"

@@ -42,12 +42,13 @@
     important(bar, "width", "100vw");
     important(bar, "max-width", "100vw");
     const tabs = document.querySelector(".instrument-tabs");
-    important(tabs, "display", "grid");
-    important(tabs, "grid-template-columns", "repeat(4, minmax(0, 1fr))");
+    important(tabs, "display", "flex");
+    important(tabs, "grid-template-columns", "none");
     important(tabs, "width", "100%");
     important(tabs, "max-width", "100%");
-    important(tabs, "overflow", "visible");
-    document.querySelectorAll(".instrument-tab").forEach(tab => important(tab, "min-width", "0"));
+    important(tabs, "overflow-x", "auto");
+    important(tabs, "overflow-y", "hidden");
+    document.querySelectorAll(".instrument-tab").forEach(tab => important(tab, "min-width", "94px"));
   }
 
   function schedulePromotion() {

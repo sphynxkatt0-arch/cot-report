@@ -163,7 +163,7 @@ def build_validation_summary(history: list[dict[str, Any]]) -> list[dict[str, An
                 "horizon": horizon,
                 "observations": int(len(paired)),
                 "pearson_r": float(paired["score"].corr(paired["return"])) if len(paired) >= 3 else None,
-                "spearman_r": float(paired["score"].corr(paired["return"], method="spearman")) if len(paired) >= 3 else None,
+                "spearman_r": float(paired["score"].rank().corr(paired["return"].rank())) if len(paired) >= 3 else None,
                 "bullish_n": int(len(bullish)),
                 "bullish_avg_return": float(bullish.mean()) if len(bullish) else None,
                 "bearish_n": int(len(bearish)),
@@ -208,13 +208,16 @@ def build_latest_market_decision(
         nonreportable_trend13_rank=snapshot["nonreportable_trend13_rank"],
         noncommercial_flow4_rank=snapshot["noncommercial_flow4_rank"],
         asset_manager_percentile_value=snapshot["asset_manager_percentile"],
+        macro_context=macro.get("macro_context"),
+        macro_risk_budget=macro.get("macro_risk_budget"),
+        macro_directional_edges=macro.get("macro_directional_edges"),
         macro_score_value=macro.get("macro_regime_score"),
         macro_override=bool(macro.get("hard_override")),
         config=config,
     ).to_dict()
 
     availability = float(macro.get("availability_ratio") or 0.0)
-    adjusted_confidence = float(decision["confidence_score"]) * (0.70 + 0.30 * availability)
+    adjusted_confidence = float(decision["confidence_score"])
     if release["is_delayed"]:
         adjusted_confidence *= 0.55
     adjusted_confidence = clamp(adjusted_confidence, 0.0, 1.0)
@@ -271,6 +274,13 @@ def format_value(value: Any, digits: int = 2, suffix: str = "") -> str:
         return html.escape(str(value))
 
 
+def execution_label(row: dict[str, Any]) -> str:
+    state = str(row.get("execution_state") or "")
+    if state == "Unavailable":
+        return f"{row['structural_bias']} · price execution unavailable"
+    return f"{row['structural_bias']} · {state}"
+
+
 def render_html(decisions: list[dict[str, Any]], validation: list[dict[str, Any]]) -> str:
     generated = pd.Timestamp.now(tz="UTC").isoformat()
     cards: list[str] = []
@@ -282,7 +292,7 @@ def render_html(decisions: list[dict[str, Any]], validation: list[dict[str, Any]
         <article class="decision-card {action_class} {release_class}">
           <div class="kicker">{html.escape(row['market_label'])}</div>
           <h2>{html.escape(row['final_action'])}</h2>
-          <div class="bias">{html.escape(row['structural_bias'])} · {html.escape(row['execution_state'])}</div>
+          <div class="bias">{html.escape(execution_label(row))}</div>
           <div class="metric-grid">
             <div><span>Structural</span><strong>{format_value(row['structural_score'])}</strong></div>
             <div><span>Tactical</span><strong>{format_value(row['tactical_modifier'])}</strong></div>
@@ -313,10 +323,10 @@ def render_html(decisions: list[dict[str, Any]], validation: list[dict[str, Any]
         </section>""")
 
     validation_rows = "".join(
-        f"<tr><td>{html.escape(str(row['market']).upper())}</td><td>{row['horizon']}</td><td>{row['observations']}</td><td>{format_value(row['spearman_r'], 3)}</td><td>{format_value(row['bullish_minus_bearish'], 2, ' pp')}</td></tr>"
+        f"<tr><td>{html.escape(str(row['market']).upper())}</td><td>{row['horizon']}</td><td>{int(row['observations'])}</td><td>{format_value(row['spearman_r'], 3)}</td><td>{format_value(row['bullish_minus_bearish'], 2, ' pp')}</td></tr>"
         for row in validation
     )
-    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Directional COT Report</title>
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Directional COT Report</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Crect width=%2716%27 height=%2716%27 rx=%273%27 fill=%27%2307111f%27/%3E%3Cpath d=%27M3 11l3-4 3 2 4-6%27 stroke=%27%236aa8ff%27 stroke-width=%272%27 fill=%27none%27/%3E%3C/svg%3E">
 <style>
 :root{{--bg:#07111f;--panel:#0e1b2d;--panel2:#14243a;--text:#f5f7fb;--muted:#9fb0c6;--line:#263b55;--pos:#37d391;--neg:#ff6b75;--accent:#6aa8ff;--warn:#ffba55}}*{{box-sizing:border-box}}body{{margin:0;background:linear-gradient(160deg,#07111f,#0b1627 55%,#07111f);color:var(--text);font:15px/1.55 Inter,system-ui,sans-serif}}main{{max-width:1180px;margin:auto;padding:32px 20px 60px}}header{{display:flex;justify-content:space-between;gap:24px;align-items:flex-end;margin-bottom:24px}}h1{{font-size:clamp(30px,5vw,54px);line-height:1;margin:5px 0 10px}}h2{{font-size:28px;margin:8px 0}}h3{{font-size:22px;margin:4px 0}}h4{{margin:0 0 10px}}p,li{{color:var(--muted)}}a{{color:#9ec5ff}}.kicker{{text-transform:uppercase;letter-spacing:.13em;color:#82a8d6;font-size:12px;font-weight:700}}.actions a{{display:inline-block;border:1px solid var(--line);padding:9px 13px;border-radius:10px;text-decoration:none;background:var(--panel)}}.decision-grid{{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}}.decision-card,.panel{{background:linear-gradient(145deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 18px 50px rgba(0,0,0,.18)}}.decision-card.positive{{border-color:rgba(55,211,145,.6)}}.decision-card.negative{{border-color:rgba(255,107,117,.6)}}.decision-card.warning{{border-color:var(--warn)}}.bias{{font-weight:700;color:var(--accent)}}.metric-grid,.evidence-grid{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:20px 0}}.metric-grid div,.evidence-grid div{{background:rgba(5,12,22,.45);border:1px solid var(--line);border-radius:12px;padding:12px}}span{{display:block;color:var(--muted);font-size:12px}}strong{{font-size:18px}}.panel{{margin-top:18px}}.panel-head{{display:flex;justify-content:space-between;align-items:center}}.badge{{border:1px solid var(--line);border-radius:999px;padding:6px 10px}}.columns{{display:grid;grid-template-columns:1fr 1.5fr;gap:24px}}table{{width:100%;border-collapse:collapse}}th,td{{padding:9px;border-bottom:1px solid var(--line);text-align:left}}th{{color:var(--muted);font-size:12px}}.note{{border-left:3px solid var(--accent);padding-left:12px}}footer{{margin-top:26px;color:var(--muted)}}@media(max-width:760px){{header{{display:block}}.actions{{margin-top:16px}}.decision-grid,.columns{{grid-template-columns:1fr}}.metric-grid,.evidence-grid{{grid-template-columns:repeat(2,1fr)}}}}
 </style></head><body><main><header><div><div class="kicker">COT direction · macro risk · price execution</div><h1>Directional COT Report</h1><p>One decision hierarchy for S&amp;P 500 and Nasdaq-100.</p></div><div class="actions"><a href="interactive_cot_dashboard.html">Open full macro dashboard</a></div></header><div class="decision-grid">{''.join(cards)}</div>{''.join(panels)}<section class="panel"><div class="panel-head"><div><div class="kicker">Release-aligned history</div><h3>Exploratory model validation</h3></div></div><p>These diagnostics use Friday-aligned price bases. They are an audit aid, not a sealed out-of-sample result.</p><table><thead><tr><th>Market</th><th>Horizon</th><th>N</th><th>Spearman</th><th>Bullish − bearish</th></tr></thead><tbody>{validation_rows}</tbody></table></section><footer>Generated {html.escape(generated)}. Research decision aid; not personalized financial advice.</footer></main></body></html>"""

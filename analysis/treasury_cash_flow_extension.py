@@ -123,7 +123,9 @@ def treasury_flow_result(rows: list[dict[str, Any]], current: datetime) -> tuple
         if not stamp or amount_mn is None:
             continue
         transaction_type = str(row.get("transaction_type") or row.get("type") or "").lower()
-        category = str(row.get("transaction_catg") or row.get("transaction_category") or row.get("account_type") or "Other")
+        category = str(row.get("transaction_catg") or row.get("transaction_category") or row.get("account_type") or "").strip()
+        if not category or category.lower() in {"null", "none", "n/a", "-"}:
+            category = "Other"
         bucket = by_date.setdefault(
             stamp,
             {"deposits": 0.0, "withdrawals": 0.0, "tax_deposits": 0.0, "categories": {}},

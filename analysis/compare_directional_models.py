@@ -129,7 +129,7 @@ def chronological_stability(
     }).dropna().sort_values("date")
     if len(paired) < MIN_STABILITY_SUBPERIOD_N * 3:
         return {"subperiods": 0, "sign_agreement_pct": None, "min_abs_spearman": None}
-    full = paired["score"].corr(paired["return"], method="spearman")
+    full = paired["score"].rank().corr(paired["return"].rank())
     if pd.isna(full) or abs(float(full)) < 1e-12:
         return {"subperiods": 0, "sign_agreement_pct": None, "min_abs_spearman": None}
     values: list[float] = []
@@ -137,7 +137,7 @@ def chronological_stability(
         part = paired.iloc[indices]
         if len(part) < MIN_STABILITY_SUBPERIOD_N or part["score"].nunique() < 2:
             continue
-        correlation = part["score"].corr(part["return"], method="spearman")
+        correlation = part["score"].rank().corr(part["return"].rank())
         if pd.notna(correlation):
             values.append(float(correlation))
     if not values:
@@ -246,7 +246,7 @@ def model_summary_rows(frame: pd.DataFrame) -> list[dict[str, Any]]:
                     "model": model,
                     "observations": int(len(paired)),
                     "pearson_r": float(paired["score"].corr(paired["return"])) if len(paired) >= 3 else None,
-                    "spearman_r": float(paired["score"].corr(paired["return"], method="spearman")) if len(paired) >= 3 else None,
+                    "spearman_r": float(paired["score"].rank().corr(paired["return"].rank())) if len(paired) >= 3 else None,
                     "hac_lags": lags,
                     "score_slope_pp_per_unit": continuous_hac["slope"],
                     "score_hac_t": continuous_hac["hac_t"],

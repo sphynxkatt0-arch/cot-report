@@ -17,6 +17,12 @@
     disaggregated: "Disaggregated"
   };
 
+  const DATASET_SHORT_LABELS = {
+    tff: "TFF",
+    legacy: "LEGACY",
+    disaggregated: "DISAGG"
+  };
+
   const CATEGORY_COLORS = {
     dealer: "#77869a",
     asset_mgr: "#35baf2",
@@ -238,7 +244,7 @@
   function signed(value, digits = 0, suffix = "") {
     const number = finite(value);
     if (number === null) return "n/a";
-    const formatted = Math.abs(number).toLocaleString(undefined, {
+    const formatted = Math.abs(number).toLocaleString("en-US", {
       minimumFractionDigits: digits,
       maximumFractionDigits: digits
     });
@@ -248,7 +254,7 @@
   function number(value, digits = 0) {
     const n = finite(value);
     if (n === null) return "n/a";
-    return n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    return n.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
   }
 
   function pct(value, digits = 2) {
@@ -433,7 +439,15 @@
   function applyTheme() {
     document.documentElement.dataset.theme = state.theme;
     localStorage.setItem("cot-worldclass-theme", state.theme);
-    $("#themeToggle").textContent = state.theme === "dark" ? "☾" : "☀";
+    const toggle = $("#themeToggle");
+    if (!toggle) return;
+    const toLight = state.theme === "dark";
+    toggle.innerHTML = toLight
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+    const action = toLight ? "Switch to light theme" : "Switch to dark theme";
+    toggle.setAttribute("aria-label", action);
+    toggle.setAttribute("title", action);
   }
 
   function setMarket(market) {
@@ -455,13 +469,12 @@
   function renderInstrumentTabs() {
     $("#instrumentTabs").innerHTML = Object.entries(MARKET_META).map(([key, meta]) => {
       const available = marketAvailable(key);
-      const latestDates = availableDatasets(key)
-        .map(dataset => payloadRecords(db.COT_DATA?.[dataset]?.[key]).at(-1)?.date)
-        .filter(Boolean)
-        .sort();
-      const latest = latestDates.at(-1) || "data pending";
+      const displayedDataset = key === state.market
+        ? chooseDatasetForMarket(key, state.dataset)
+        : chooseDatasetForMarket(key);
       return `<button class="instrument-tab ${state.market === key ? "active" : ""}" data-market="${key}" type="button" ${available ? "" : "disabled"}>
-        ${escapeHtml(meta.short)}<small>${escapeHtml(latest)}</small>
+        <span class="instrument-tab-name">${escapeHtml(meta.short)}</span>
+        <span class="instrument-tab-meta"><b data-dataset="${escapeHtml(displayedDataset)}">${escapeHtml(DATASET_SHORT_LABELS[displayedDataset] || displayedDataset.toUpperCase())}</b></span>
       </button>`;
     }).join("");
   }

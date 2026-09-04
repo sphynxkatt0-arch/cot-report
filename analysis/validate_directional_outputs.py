@@ -88,7 +88,7 @@ def validate_decisions(failures: list[str]) -> None:
     if markets != {"sp500", "nq"}:
         failures.append(f"unexpected latest decision markets: {sorted(markets)}")
     versions = {str(row.get("model_version")) for row in rows}
-    if versions != {"cot-direction-v1.1"}:
+    if versions not in ({"cot-direction-v1.1"}, {"cot-direction-v1.2"}):
         failures.append(f"unexpected model versions: {sorted(versions)}")
 
     for row in rows:

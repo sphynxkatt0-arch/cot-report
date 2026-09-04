@@ -24,7 +24,7 @@
   function signed(value, digits = 1, suffix = "") {
     const n = finite(value);
     if (n === null) return "n/a";
-    const body = Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    const body = Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
     return `${n > 0 ? "+" : n < 0 ? "−" : ""}${body}${suffix}`;
   }
 

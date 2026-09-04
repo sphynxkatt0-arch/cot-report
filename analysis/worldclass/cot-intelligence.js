@@ -7,8 +7,8 @@
   const S={current:null,registry:null,active:null,live:null,cross:null,market:"sp500",tab:"now",metric:"rho",details:new Map(),actor:null};
   const esc=v=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
   const num=v=>{if(v===null||v===undefined||v==="")return null;const n=Number(v);return Number.isFinite(n)?n:null};
-  const signed=(v,d=2,s="")=>{const n=num(v);return n===null?"n/a":`${n>0?"+":n<0?"−":""}${Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d})}${s}`};
-  const int=v=>{const n=num(v);return n===null?"n/a":Math.round(n).toLocaleString()};
+  const signed=(v,d=2,s="")=>{const n=num(v);return n===null?"n/a":`${n>0?"+":n<0?"−":""}${Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d})}${s}`};
+  const int=v=>{const n=num(v);return n===null?"n/a":Math.round(n).toLocaleString("en-US")};
   const pct=v=>{const n=num(v);return n===null?"n/a":`P${Math.round(n)}`};
   const hl=h=>({monday:"MON",tuesday:"TUE",wednesday:"WED",thursday:"THU",friday:"FRI"})[h]||String(h||"").toUpperCase();
   const sl=s=>({GLOBAL_FDR:"GLOBAL FDR",FAMILY_FDR:"FAMILY FDR",OOS_PLUS_OVERLAP:"OOS + OVERLAP",OOS_ONLY:"OOS ONLY",NO_OOS_GAIN:"NO OOS GAIN",INSUFFICIENT_N:"INSUFFICIENT N"})[s]||String(s||"UNKNOWN").replaceAll("_"," ");

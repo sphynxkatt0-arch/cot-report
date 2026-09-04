@@ -138,5 +138,16 @@
     state.current=current;state.active=active;state.live=live||{};state.registry=registry;state.sentiment=sentiment||{};state.market=selectedMarket();return state;
   }
 
-  window.__COT_CURRENT_EDGE_MODEL__={MARKETS,MARKET_ORDER,ROLE_ORDER,ROLE_LABEL,EVIDENCE_ORDER,EVIDENCE_LABEL,FORWARD,state,finite,currentRows,activeRows,metricFor,evidenceStatus,evidenceGrade,sampleLabel,rankedEdges,edgeDirection,edgeExplanation,modelTone,corePrediction,actorLivePredictions,reportDates,directionalRead,summary,bestForwardMetric,marketOpportunities,thresholdWatchlist,macroSnapshot,factorSentiment,sentimentSnapshot,layerAlignment,selectedMarket,load};
+  function edgeGrade(metric){return metric?evidenceGrade(evidenceStatus(null,metric)):null}
+  function liveForecast(market=state.market,horizon="1w"){
+    const rows=(state.live?.current_predictions||[]).filter(row=>row?.market===market),combined=rows.filter(row=>row?.model_family==="combined");
+    const model=(combined.length?combined:rows).at(-1)||null;
+    if(!model)return null;
+    const expected=finite(model[`expected_${horizon}_return_pct`]??model[`expected_${horizon}_return`]??model?.historical_horizons?.[horizon]?.expected_return_pct);
+    const probability=finite(model[`probability_positive_${horizon}`]??model[`probability_positive_${horizon}_pct`]??model?.historical_horizons?.[horizon]?.probability_positive);
+    if(expected===null&&probability===null)return null;
+    return{model,expected,probability,confidence:model.confidence||model?.historical_horizons?.[horizon]?.confidence||"n/a"};
+  }
+
+  window.__COT_CURRENT_EDGE_MODEL__={MARKETS,MARKET_ORDER,ROLE_ORDER,ROLE_LABEL,EVIDENCE_ORDER,EVIDENCE_LABEL,FORWARD,state,finite,currentRows,activeRows,metricFor,evidenceStatus,evidenceGrade,edgeGrade,liveForecast,sampleLabel,rankedEdges,edgeDirection,edgeExplanation,modelTone,corePrediction,actorLivePredictions,reportDates,directionalRead,summary,bestForwardMetric,marketOpportunities,thresholdWatchlist,macroSnapshot,factorSentiment,sentimentSnapshot,layerAlignment,selectedMarket,load};
 })();

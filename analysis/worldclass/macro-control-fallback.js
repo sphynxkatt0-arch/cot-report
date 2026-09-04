@@ -53,7 +53,7 @@
     const number = finite(value);
     if (number === null) return "n/a";
     const sign = number > 0 ? "+" : number < 0 ? "−" : "";
-    return `${sign}${Math.abs(number).toLocaleString(undefined, {
+    return `${sign}${Math.abs(number).toLocaleString("en-US", {
       minimumFractionDigits: digits,
       maximumFractionDigits: digits
     })}${suffix}`;
@@ -62,7 +62,7 @@
   function plain(value, digits = 0, suffix = "") {
     const number = finite(value);
     if (number === null) return "n/a";
-    return `${number.toLocaleString(undefined, {
+    return `${number.toLocaleString("en-US", {
       minimumFractionDigits: digits,
       maximumFractionDigits: digits
     })}${suffix}`;

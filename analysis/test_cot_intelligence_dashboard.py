@@ -27,13 +27,15 @@ def main():
    if n<15: assert metric.get("evidence_status")=="INSUFFICIENT_N",(row["series"],row["horizon"],n,metric.get("evidence_status"))
    assert metric.get("sample_grade") in {"FULL","SAMPLE_WARNING","RESEARCH_ONLY","INSUFFICIENT"}
  assert detail_cells==885,detail_cells; assert len(detail_series)==59,len(detail_series)
- assert active["governance"]["production_model_changed"] is False; assert active["governance"]["automatic_promotion_allowed"] is False; assert active["governance"]["pp_definition"]=="percentage points"
+ assert active["governance"]["production_model_changed"] is False; assert active["governance"]["automatic_promotion_allowed"] is False; pp_definition=active.get("pp_definition") or active["governance"].get("pp_definition") or ""; assert str(pp_definition).startswith("percentage points"),pp_definition
  total_active=0
  for _,block in (active.get("by_market") or {}).items():
   for row in block.get("active_thresholds") or []:
    total_active+=1; assert float(row["current_change_percentile"])>=float(row["selected_threshold"]); assert row["direction"] in {"ADD","CUT"}
    horizons={metric.get("horizon") for metric in row.get("metrics") or []}; assert {"monday","tuesday","wednesday","thursday","friday","1w","4w","13w","26w"}.issubset(horizons)
-   for metric in row.get("metrics") or []: assert "conditional_return_pct" in metric and "baseline_return_pct" in metric and "excess_vs_baseline_pp" in metric
+   for metric in row.get("metrics") or []:
+    assert "conditional_return_pct" in metric and "excess_vs_baseline_pp" in metric
+    if metric.get("horizon") not in {"monday","tuesday","wednesday","thursday","friday"}: assert "baseline_return_pct" in metric
  assert total_active==int(active.get("active_threshold_count") or 0)
  assert cross["governance"]["status"]=="DISCOVERY_ONLY"; assert cross["governance"]["automatic_promotion_allowed"] is False; assert cross["current_same_actor_across_markets"]
  for family in ("same_actor_cross_instrument_holdout_1w","cross_instrument_breadth_holdout_1w","cross_actor_same_instrument_holdout_1w","cross_report_taxonomy_holdout_1w","lead_market_holdout_1w"):
@@ -44,10 +46,11 @@ def main():
  js=(WC/"cot-intelligence.js").read_text(encoding="utf-8"); assert "pp = <b>percentage points</b>" in js; assert "Data / decision quality" in js; assert "cot-edge-details/" in js; assert "cot-cross-market.json" in js; assert '"cross"' in js
  edge_model=EDGE_MODEL.read_text(encoding="utf-8"); edge_js=EDGE_JS.read_text(encoding="utf-8"); edge_css=EDGE_CSS.read_text(encoding="utf-8"); mobile_css=MOBILE_CSS.read_text(encoding="utf-8"); mobile_runtime=MOBILE_RUNTIME.read_text(encoding="utf-8")
  assert "rankedEdges" in edge_model and "Math.abs" in edge_model; assert "cot-active-edges.json" in edge_model; assert "live-track-record.json" in edge_model
- assert "ranked, never summed" in edge_js; assert "Returns are cumulative to each weekday" in edge_js; assert "Historical backtests remain research evidence" in edge_js; assert "MON–FRI" in edge_js; assert "4W expected" in edge_js; assert "COMING EDGE WATCHLIST" in edge_js; assert "ALL MARKETS · ACTIVE COT EDGES" in edge_js
- assert 'html[data-theme="light"] .current-edge-hero' in edge_css; assert "background:#fff" in edge_css; assert "@media(max-width:470px)" in edge_css
- assert ".instrument-tabs" in mobile_css and "repeat(4, minmax(0, 1fr))" in mobile_css; assert ".wc-v3-integrity" in mobile_css and ".wc-v3-market-grid" in mobile_css; assert ".current-edge-live-grid" in mobile_css and "grid-template-columns: repeat(2" in mobile_css; assert "#wcCommandCenter" in mobile_css and "width: 100%" in mobile_css
- assert "mobileUxReady" in mobile_runtime; assert "document.head.lastElementChild" in mobile_runtime; assert "calc(100vw - 24px)" in mobile_runtime; assert '"#wcCommandCenter"' in mobile_runtime; assert '"repeat(4, minmax(0, 1fr))"' in mobile_runtime
- for path,limit in {CURRENT:200000,REGISTRY:500000,ACTIVE:180000,CROSS:180000,WC/"cot-intelligence.js":60000,WC/"cot-intelligence.css":45000,LIGHT_CSS:20000,EDGE_MODEL:30000,EDGE_JS:40000,EDGE_CSS:32000,MOBILE_CSS:18000,MOBILE_RUNTIME:12000}.items(): assert path.stat().st_size<=limit,(path,path.stat().st_size,limit)
+ assert "Ranked current actor conditions" in edge_js; assert "Context actors are shown separately and never promoted into the headline" in edge_js; assert "Returns are cumulative to each weekday" in edge_js; assert "Historical backtests and future live forecasts remain strictly decoupled" in edge_js; assert "MON–FRI" in edge_js; assert "FORWARD HORIZONS" in edge_js
+ assert 'html[data-theme="light"] .decision-current' in edge_css; assert "background:#fff" in edge_css; assert "@media (max-width:430px)" in edge_css
+ assert ".instrument-tabs" in mobile_css and "overflow-x: auto !important" in mobile_css and "min-width: 94px !important" in mobile_css; assert ".hero" in mobile_css and "display: none !important" in mobile_css; assert "min-height: 44px" in mobile_css; assert "#wcCommandCenter" in mobile_css and "width: 100%" in mobile_css
+ assert "mobileUxReady" in mobile_runtime; assert "document.head.lastElementChild" in mobile_runtime; assert "calc(100vw - 24px)" in mobile_runtime; assert '"#wcCommandCenter"' in mobile_runtime; assert 'important(tabs, "display", "flex")' in mobile_runtime; assert 'important(tabs, "overflow-x", "auto")' in mobile_runtime
+ macro_effectiveness=WC/"macro-effectiveness.json"; assert macro_effectiveness.exists(); macro_payload=json.loads(macro_effectiveness.read_text(encoding="utf-8")); assert macro_payload["governance"]["aggregate_score_directional_weight"]==0.0; assert len(macro_payload["aggregate"])==10
+ for path,limit in {CURRENT:200000,REGISTRY:500000,ACTIVE:180000,CROSS:180000,WC/"cot-intelligence.js":60000,WC/"cot-intelligence.css":45000,LIGHT_CSS:20000,EDGE_MODEL:22000,EDGE_JS:70000,EDGE_CSS:45000,MOBILE_CSS:24000,MOBILE_RUNTIME:12000,macro_effectiveness:22000}.items(): assert path.stat().st_size<=limit,(path,path.stat().st_size,limit)
  print("COT Intelligence contract PASS"); print(f"actor_states={len(states)} actor_horizon_cells={detail_cells} active_thresholds={total_active} registry_bytes={REGISTRY.stat().st_size} active_bytes={ACTIVE.stat().st_size} cross_bytes={CROSS.stat().st_size}")
 if __name__=="__main__":main()

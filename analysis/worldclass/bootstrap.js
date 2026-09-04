@@ -112,7 +112,13 @@
 
   function announcePlotlyReady() {
     window.dispatchEvent(new CustomEvent("cot:plotly-ready"));
-    window.setTimeout(() => document.querySelector("#instrumentTabs [data-market].active")?.click(), 0);
+    window.setTimeout(() => {
+      const requestedMarket = new URL(window.location.href).searchParams.get("market");
+      const requestedTab = requestedMarket
+        ? document.querySelector(`#instrumentTabs [data-market="${CSS.escape(requestedMarket)}"]`)
+        : null;
+      (requestedTab || document.querySelector("#instrumentTabs [data-market].active"))?.click();
+    }, 0);
   }
 
   function loadPlotlyFallback() {

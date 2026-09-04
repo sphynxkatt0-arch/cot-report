@@ -171,19 +171,18 @@ test('renders live sentiment and prospective forecast evidence', async ({ page }
   await expect(champion).not.toContainText('0.0%');
 });
 
-test('new evidence panels have no automated WCAG A/AA violations', async ({ page }) => {
+test('canonical evidence surface has no automated WCAG A/AA violations', async ({ page }) => {
   await mockEvidence(page, liveSentiment, liveTrack);
   await openDashboard(page);
-  await expect(page.locator('#marketSentimentPanel')).toBeVisible();
-  await expect(page.locator('#liveTrackRecordPanel')).toBeVisible();
+  await expect(page.locator('#marketSentimentPanel')).toBeHidden();
+  await expect(page.locator('#liveTrackRecordPanel')).toBeHidden();
+  await expect(page.locator('#currentEdgeCommand')).toBeVisible();
 
-  for (const selector of ['#marketSentimentPanel', '#liveTrackRecordPanel']) {
-    const results = await new AxeBuilder({ page })
-      .include(selector)
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-      .analyze();
-    expect(results.violations, `${selector} accessibility violations`).toEqual([]);
-  }
+  const results = await new AxeBuilder({ page })
+    .include('#currentEdgeCommand')
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    .analyze();
+  expect(results.violations, 'canonical decision surface accessibility violations').toEqual([]);
 });
 
 test('macro control room resolves server-backed values without browser cache', async ({ page }) => {

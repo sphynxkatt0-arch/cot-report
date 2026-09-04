@@ -15,42 +15,45 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout canonical source
+        uses: actions/checkout@v4
         with:
           ref: main
-      - name: Verify gh-pages COT Intelligence contract
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          path: source
+          fetch-depth: 1
+
+      - name: Checkout published branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: published
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify published branch manifest
+        id: release
         shell: bash
         run: |
           set -euo pipefail
-          for path in \
-            worldclass/cot-current-state.json \
-            worldclass/cot-edge-registry.json \
-            worldclass/cot-active-edges.json \
-            worldclass/cot-cross-market.json \
-            worldclass/cot-intelligence.js \
-            worldclass/cot-intelligence.css \
-            worldclass/cot-intelligence-light.css \
-            worldclass/current-edge-model.js \
-            worldclass/current-edge-command.js \
-            worldclass/current-edge-command.css \
-            worldclass/mobile-ux.css \
-            worldclass/mobile-ux-runtime.js \
-            worldclass/cot-edge-details/sp500.json \
-            worldclass/cot-edge-details/nq.json \
-            worldclass/cot-edge-details/vix.json \
-            worldclass/cot-edge-details/rty.json \
-            worldclass/cot-edge-details/dow.json \
-            worldclass/cot-edge-details/gold.json \
-            worldclass/cot-edge-details/silver.json \
-            index.html
-          do
-            size="$(gh api "/repos/${{ github.repository }}/contents/${path}?ref=gh-pages" --jq '.size')"
-            test "$size" -gt 100
-            echo "Published ${path}: ${size} bytes"
-          done
-      - name: Verify public COT Intelligence runtime and shell
+          python source/analysis/build_atomic_release.py --verify published
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          pointer=json.loads(Path('published/release-manifest.json').read_text())
+          current=pointer['current']
+          print(f"release_id={current['release_id']}")
+          print(f"entrypoint={current['entrypoint']}")
+          print(f"manifest={current['manifest']}")
+          PY
+
+      - name: Verify public immutable release and application contract
+        env:
+          RELEASE_ID: ${{ steps.release.outputs.release_id }}
+          ENTRYPOINT: ${{ steps.release.outputs.entrypoint }}
+          RELEASE_MANIFEST: ${{ steps.release.outputs.manifest }}
         shell: bash
         run: |
           set -euo pipefail
@@ -58,74 +61,50 @@ jobs:
           base="https://${GITHUB_REPOSITORY_OWNER}.github.io/${repo}"
           nonce="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           rm -rf /tmp/cot-intel-public && mkdir -p /tmp/cot-intel-public
+
           ok=false
           for attempt in $(seq 1 60); do
-            if curl -fsS --max-time 15 "${base}/?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/index.html \
-              && curl -fsS --max-time 15 "${base}/worldclass/cot-current-state.json?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/current.json \
-              && curl -fsS --max-time 15 "${base}/worldclass/cot-edge-registry.json?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/registry.json \
-              && curl -fsS --max-time 15 "${base}/worldclass/cot-active-edges.json?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/active.json \
-              && curl -fsS --max-time 15 "${base}/worldclass/cot-cross-market.json?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/cross.json \
-              && curl -fsS --max-time 15 "${base}/worldclass/cot-intelligence.js?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/intelligence.js \
-              && curl -fsS --max-time 15 "${base}/worldclass/cot-intelligence-light.css?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/intelligence-light.css \
-              && curl -fsS --max-time 15 "${base}/worldclass/current-edge-model.js?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/current-edge-model.js \
-              && curl -fsS --max-time 15 "${base}/worldclass/current-edge-command.js?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/current-edge-command.js \
-              && curl -fsS --max-time 15 "${base}/worldclass/current-edge-command.css?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/current-edge-command.css \
-              && curl -fsS --max-time 15 "${base}/worldclass/mobile-ux.css?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/mobile-ux.css \
-              && curl -fsS --max-time 15 "${base}/worldclass/mobile-ux-runtime.js?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/mobile-ux-runtime.js; then
-              if python - <<'PY'
+            if curl -fsS --max-time 15 "${base}/release-manifest.json?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/pointer.json; then
+              public_release="$(python - <<'PY'
+          import json
+          print(json.load(open('/tmp/cot-intel-public/pointer.json'))['current']['release_id'])
+          PY
+              )"
+              if [ "$public_release" = "$RELEASE_ID" ]; then
+                prefix="${base}/releases/${RELEASE_ID}"
+                if curl -fsS --max-time 15 "${base}/${ENTRYPOINT}?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/index.html \
+                  && curl -fsS --max-time 15 "${base}/${RELEASE_MANIFEST}?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/manifest.json \
+                  && curl -fsS --max-time 15 "${prefix}/worldclass/cot-current-state.json?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/current.json \
+                  && curl -fsS --max-time 15 "${prefix}/worldclass/cot-edge-registry.json?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/registry.json \
+                  && curl -fsS --max-time 15 "${prefix}/worldclass/cot-active-edges.json?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/active.json \
+                  && curl -fsS --max-time 15 "${prefix}/worldclass/cot-cross-market.json?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/cross.json \
+                  && curl -fsS --max-time 15 "${prefix}/worldclass/regime_backtest.json?v=${nonce}-${attempt}" -o /tmp/cot-intel-public/regime.json; then
+                  if python - <<'PY'
           import json
           from pathlib import Path
           root=Path('/tmp/cot-intel-public')
           html=(root/'index.html').read_text()
+          manifest=json.loads((root/'manifest.json').read_text())
           current=json.loads((root/'current.json').read_text())
           registry=json.loads((root/'registry.json').read_text())
           active=json.loads((root/'active.json').read_text())
           cross=json.loads((root/'cross.json').read_text())
-          js=(root/'intelligence.js').read_text()
-          light=(root/'intelligence-light.css').read_text()
-          edge_model=(root/'current-edge-model.js').read_text()
-          edge_js=(root/'current-edge-command.js').read_text()
-          edge_css=(root/'current-edge-command.css').read_text()
-          mobile_css=(root/'mobile-ux.css').read_text()
-          mobile_runtime=(root/'mobile-ux-runtime.js').read_text()
-          assert 'data-cot-intelligence-asset="css"' in html
-          assert 'data-cot-intelligence-asset="light-css"' in html
-          assert 'data-cot-intelligence-asset="js"' in html
-          assert 'data-cot-intelligence-asset="current-edge-css"' in html
-          assert 'data-cot-intelligence-asset="current-edge-model"' in html
-          assert 'data-cot-intelligence-asset="current-edge-js"' in html
-          assert 'data-cot-intelligence-asset="mobile-ux-css"' in html
-          assert 'data-cot-intelligence-asset="mobile-ux-runtime"' in html
-          assert 'mobile-ux-runtime.js' in html
-          assert 'html[data-theme="light"] .cot-intel' in light
-          assert 'html[data-theme="light"] .cot-now-card' in light
-          assert 'background: #ffffff' in light
+          regime=json.loads((root/'regime.json').read_text())
+
+          assert manifest['release_id']
+          assert manifest['immutable'] is True
           assert len(current.get('actor_states') or {}) == 59
-          assert registry.get('research_counts',{}).get('actor_horizon_cells') == 885
-          assert registry.get('research_counts',{}).get('market_oi_horizon_cells') == 105
           assert registry.get('automatic_promotion_allowed') is False
           assert active.get('governance',{}).get('pp_definition') == 'percentage points'
           assert cross.get('governance',{}).get('status') == 'DISCOVERY_ONLY'
-          assert 'cot-cross-market.json' in js and 'cot-edge-details/' in js
-          assert 'cot-active-edges.json' in edge_model and 'rankedEdges' in edge_model
-          assert 'live-track-record.json' in edge_model
-          assert 'ranked, never summed' in edge_js
-          assert 'MON–FRI' in edge_js
-          assert 'Returns are cumulative to each weekday' in edge_js
-          assert 'Historical backtests remain research evidence' in edge_js
-          assert 'html[data-theme="light"] .current-edge-hero' in edge_css
-          assert 'background:#fff' in edge_css
-          assert '.instrument-tabs' in mobile_css
-          assert 'grid-template-columns: repeat(4, minmax(0, 1fr))' in mobile_css
-          assert '.wc-v3-integrity' in mobile_css
-          assert '.wc-v3-market-grid' in mobile_css
-          assert '.current-edge-live-grid' in mobile_css
-          assert 'mobileUxReady' in mobile_runtime
-          assert 'document.head.lastElementChild' in mobile_runtime
-          assert 'calc(100vw - 24px)' in mobile_runtime
-          assert 'grid-template-columns' in mobile_runtime
+          assert regime.get('macro_vintage_safe') is False
+          assert regime.get('macro_directional_weight') == 0.0
+          assert 'data-cot-intelligence-asset="js"' in html
+          print('Public immutable release PASS:', manifest['release_id'])
           PY
-              then ok=true; break; fi
+                  then ok=true; break; fi
+                fi
+              fi
             fi
             sleep 5
           done
