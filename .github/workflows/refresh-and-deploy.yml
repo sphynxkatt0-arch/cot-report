@@ -120,6 +120,7 @@ jobs:
         run: |
           python analysis/build_macro_effectiveness_bundle.py
           python analysis/build_worldclass_research_artifacts.py
+          python analysis/install_release_corrected_runtime_v2.py
           test ! -e analysis/worldclass/.research-base.tmp.json
       - name: '[VALIDATING] release/data/dashboard v2 contracts'
         run: |
