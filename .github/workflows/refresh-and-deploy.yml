@@ -220,3 +220,18 @@ jobs:
           rm -rf /tmp/cot-published
           git worktree add --detach /tmp/cot-published origin/gh-pages
           python analysis/build_release_manifest.py --root /tmp/cot-published --verify
+      - name: '[SYNC_MAIN] sync validated release to main for Vercel auto-deploy'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add analysis/index.html analysis/directional_cot_report.html analysis/worldclass analysis/model_output
+          if ! git diff --cached --quiet; then
+            git commit -m "data(cot): Weekly CFTC data refresh [skip ci]"
+            git push origin HEAD:main
+            echo "Synced release to main branch for Vercel deployment"
+          else
+            echo "No changes to sync to main"
+          fi
+

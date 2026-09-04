@@ -24,29 +24,10 @@ scratch/
 # Duplicate root output directories (canonical outputs are in analysis/)
 cot_exact_output/
 cot_legacy_output/
+# Temporary files
+analysis/.live-ledger-staging/
 
-# Generated dashboard build artifacts
-analysis/index.html
-analysis/directional_cot_report.html
-analysis/model_output/
-analysis/worldclass/backtest.json
-analysis/worldclass/base.json
-analysis/worldclass/cot-active-edges-v2.json
-analysis/worldclass/cot-active-edges.json
-analysis/worldclass/cot-cross-market-v2.json
-analysis/worldclass/cot-cross-market.json
-analysis/worldclass/cot-current-state.json
-analysis/worldclass/cot-edge-details/
-analysis/worldclass/cot-edge-registry-v2.json
-analysis/worldclass/cot-edge-registry.json
-analysis/worldclass/cot-research-provenance.json
-analysis/worldclass/live-track-record.json
-analysis/worldclass/market-sentiment.json
-analysis/worldclass/metals.json
-analysis/worldclass/model-spec.json
-analysis/worldclass/regime_backtest.json
-analysis/worldclass/release-status.json
-analysis/worldclass/research/cot-actor-event-summary.json
-analysis/worldclass/research/directional-validation-v2.json
-analysis/worldclass/research/metals-full.json
-analysis/worldclass/research/snapshots/2026-08-11-release-corrected-v2/
+# Research snapshot downloaded caches (downloaded dynamically in CI)
+analysis/worldclass/research/snapshots/2026-08-11-release-corrected-v2/*
+!analysis/worldclass/research/snapshots/2026-08-11-release-corrected-v2/REMOTE_CERTIFICATION.json
+
