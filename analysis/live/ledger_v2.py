@@ -37,19 +37,21 @@ def within_forecast_window(now_utc:datetime,release_target_date:str|date,*,early
 def within_report_window(now_utc:datetime,report_date:str|date,*,early_minutes:int=5,window_hours:int=4)->bool:
     vintage=release_vintage_for_report_utc(report_date);now=now_utc.astimezone(UTC);return vintage-timedelta(minutes=early_minutes)<=now<=vintage+timedelta(hours=window_hours)
 
+_UNDERLYING_VALIDATE_FORECAST=legacy.validate_forecast
+
 def validate_forecast(forecast:dict[str,Any])->None:
     explicit=forecast.get("information_contract_version")==INFORMATION_CONTRACT_V2
     report=legacy.parse_iso_day(forecast.get("report_date"));release=legacy.parse_iso_day(forecast.get("release_target_date"));canonical=canonical_release_date(report);canonical_created=legacy.iso_utc(release_vintage_for_report_utc(report))
     inferred=release==canonical and forecast.get("created_at_utc")==canonical_created
     if not explicit and not inferred:
-        legacy.validate_forecast(forecast);return
+        _UNDERLYING_VALIDATE_FORECAST(forecast);return
     if release!=canonical:raise legacy.LedgerError(f"forecast release_target_date must match canonical CFTC release {canonical}")
     if forecast.get("created_at_utc")!=canonical_created:raise legacy.LedgerError("v2 forecast created_at_utc must be canonical release +5 minutes")
     meta=release_record(report)
     if explicit and forecast.get("release_calendar_hash")!=meta["release_calendar_hash"]:raise legacy.LedgerError("v2 forecast release_calendar_hash mismatch")
     # Reuse every non-timing invariant from the proven legacy validator by
     # validating a timing-normalized shadow copy. The real forecast stays intact.
-    shim=dict(forecast);naive=report+timedelta(days=3);shim["release_target_date"]=naive.isoformat();shim["created_at_utc"]=legacy.iso_utc(legacy.release_vintage_utc(naive));legacy.validate_forecast(shim)
+    shim=dict(forecast);naive=report+timedelta(days=3);shim["release_target_date"]=naive.isoformat();shim["created_at_utc"]=legacy.iso_utc(legacy.release_vintage_utc(naive));_UNDERLYING_VALIDATE_FORECAST(shim)
 
 def write_immutable_forecast(path,forecast):
     validate_forecast(forecast);data=legacy.canonical_json_bytes(forecast)
