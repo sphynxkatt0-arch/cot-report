@@ -1,6 +1,6 @@
 # COT Regime Score Backtest Report
 
-Generated: 2026-08-29T00:47:39Z
+Generated: 2026-09-04T21:12:32Z
 
 This report is regenerated from the same current Legacy COT inputs used by the dashboard. COT observations are Tuesday report dates; signals start at the first available close on or after Friday publication.
 
@@ -8,78 +8,78 @@ This report is regenerated from the same current Legacy COT inputs used by the d
 
 | Market | Latest COT report | Latest signal close | Latest price | Scored rows |
 | --- | --- | --- | --- | --- |
-| S&P 500 | 2026-08-25 | 2026-08-28 | 2026-08-28 | 431 |
-| NASDAQ-100 | 2026-08-25 | 2026-08-28 | 2026-08-28 | 453 |
-| VIX Futures | 2026-08-25 | 2026-08-28 | 2026-08-28 | 453 |
-| Russell 2000 | 2026-08-25 | 2026-08-28 | 2026-08-28 | 135 |
-| Dow Jones | 2026-08-25 | 2026-08-28 | 2026-08-28 | 453 |
-| Gold | 2026-08-25 | 2026-08-28 | 2026-08-28 | 453 |
+| S&P 500 | 2026-09-01 | 2026-09-04 | 2026-09-04 | 432 |
+| NASDAQ-100 | 2026-09-01 | 2026-09-04 | 2026-09-04 | 454 |
+| VIX Futures | 2026-09-01 | 2026-09-04 | 2026-09-04 | 454 |
+| Russell 2000 | 2026-09-01 | 2026-09-04 | 2026-09-04 | 136 |
+| Dow Jones | 2026-09-01 | 2026-09-04 | 2026-09-04 | 454 |
+| Gold | 2026-09-01 | 2026-09-04 | 2026-09-04 | 454 |
 
 ## Current Tradable COT Signals
 
 | Market | Report date | Signal date | Score | Bucket | Active triggers |
 | --- | --- | --- | --- | --- | --- |
-| S&P 500 | 2026-08-25 | 2026-08-28 | -1.00 | Mixed | nonreportable 97.2% -1.00 Non-reportable contrarian (retail long) |
-| NASDAQ-100 | 2026-08-25 | 2026-08-28 | -1.00 | Mixed | nonreportable 97.8% -1.00 Non-reportable contrarian (retail long) |
-| VIX Futures | 2026-08-25 | 2026-08-28 | +0.00 | Mixed | No active extreme trigger |
-| Russell 2000 | 2026-08-25 | 2026-08-28 | +0.00 | Mixed | No active extreme trigger |
-| Dow Jones | 2026-08-25 | 2026-08-28 | +0.00 | Mixed | No active extreme trigger |
-| Gold | 2026-08-25 | 2026-08-28 | +0.00 | Mixed | No active extreme trigger |
+| S&P 500 | 2026-09-01 | 2026-09-04 | -1.00 | Mixed | nonreportable 91.2% -1.00 Non-reportable contrarian (retail long) |
+| NASDAQ-100 | 2026-09-01 | 2026-09-04 | +0.00 | Mixed | No active extreme trigger |
+| VIX Futures | 2026-09-01 | 2026-09-04 | +0.00 | Mixed | No active extreme trigger |
+| Russell 2000 | 2026-09-01 | 2026-09-04 | +0.00 | Mixed | No active extreme trigger |
+| Dow Jones | 2026-09-01 | 2026-09-04 | +0.00 | Mixed | No active extreme trigger |
+| Gold | 2026-09-01 | 2026-09-04 | +0.00 | Mixed | No active extreme trigger |
 
 ## Forward Returns by Regime Bucket
 
 | Market | Horizon | Bucket | N | Average return | Hit rate | Average drawdown |
 | --- | --- | --- | --- | --- | --- | --- |
-| S&P 500 | 4w | Mixed | 313 | +1.08% | 69.6% | -2.78% |
+| S&P 500 | 4w | Mixed | 314 | +1.08% | 69.4% | -2.78% |
 | S&P 500 | 4w | Caution | 21 | -0.35% | 61.9% | -3.66% |
 | S&P 500 | 4w | Risk-On | 93 | +1.61% | 68.8% | -2.65% |
-| S&P 500 | 13w | Mixed | 304 | +4.13% | 77.0% | -5.27% |
+| S&P 500 | 13w | Mixed | 305 | +4.12% | 77.0% | -5.27% |
 | S&P 500 | 13w | Caution | 21 | -3.58% | 23.8% | -9.41% |
 | S&P 500 | 13w | Risk-On | 92 | +3.27% | 70.7% | -4.62% |
-| S&P 500 | 26w | Mixed | 291 | +7.60% | 76.3% | -7.84% |
+| S&P 500 | 26w | Mixed | 292 | +7.62% | 76.4% | -7.84% |
 | S&P 500 | 26w | Caution | 21 | -3.71% | 28.6% | -15.81% |
 | S&P 500 | 26w | Risk-On | 92 | +8.07% | 84.8% | -5.69% |
 | NASDAQ-100 | 4w | Mixed | 398 | +1.51% | 64.1% | -3.58% |
-| NASDAQ-100 | 4w | Risk-On | 51 | +2.35% | 72.5% | -2.82% |
-| NASDAQ-100 | 13w | Mixed | 391 | +4.76% | 69.6% | -6.53% |
+| NASDAQ-100 | 4w | Risk-On | 52 | +2.30% | 71.2% | -2.81% |
+| NASDAQ-100 | 13w | Mixed | 392 | +4.73% | 69.4% | -6.54% |
 | NASDAQ-100 | 13w | Risk-On | 48 | +8.28% | 95.8% | -4.07% |
-| NASDAQ-100 | 26w | Mixed | 379 | +10.06% | 76.5% | -9.08% |
+| NASDAQ-100 | 26w | Mixed | 380 | +10.08% | 76.6% | -9.08% |
 | NASDAQ-100 | 26w | Risk-On | 47 | +12.12% | 89.4% | -4.44% |
-| VIX Futures | 4w | Mixed | 449 | +6.17% | 50.1% | -13.20% |
-| VIX Futures | 13w | Mixed | 439 | +10.21% | 46.9% | -19.71% |
-| VIX Futures | 26w | Mixed | 426 | +10.57% | 47.2% | -23.19% |
-| Russell 2000 | 4w | Mixed | 131 | +1.57% | 64.9% | -3.08% |
-| Russell 2000 | 13w | Mixed | 121 | +4.76% | 76.0% | -5.60% |
-| Russell 2000 | 26w | Mixed | 108 | +8.81% | 78.7% | -8.27% |
-| Dow Jones | 4w | Mixed | 449 | +0.78% | 65.0% | -2.77% |
-| Dow Jones | 13w | Mixed | 439 | +2.51% | 68.1% | -5.16% |
-| Dow Jones | 26w | Mixed | 426 | +5.00% | 73.7% | -7.43% |
-| Gold | 4w | Mixed | 449 | +1.21% | 58.4% | -2.29% |
-| Gold | 13w | Mixed | 439 | +3.93% | 66.7% | -3.77% |
-| Gold | 26w | Mixed | 426 | +8.71% | 74.6% | -4.58% |
+| VIX Futures | 4w | Mixed | 450 | +6.15% | 50.0% | -13.18% |
+| VIX Futures | 13w | Mixed | 440 | +10.18% | 46.8% | -19.68% |
+| VIX Futures | 26w | Mixed | 427 | +10.50% | 47.1% | -23.20% |
+| Russell 2000 | 4w | Mixed | 132 | +1.54% | 64.4% | -3.09% |
+| Russell 2000 | 13w | Mixed | 122 | +4.73% | 76.2% | -5.58% |
+| Russell 2000 | 26w | Mixed | 109 | +8.84% | 78.9% | -8.27% |
+| Dow Jones | 4w | Mixed | 450 | +0.78% | 64.9% | -2.77% |
+| Dow Jones | 13w | Mixed | 440 | +2.51% | 68.2% | -5.15% |
+| Dow Jones | 26w | Mixed | 427 | +5.01% | 73.8% | -7.43% |
+| Gold | 4w | Mixed | 450 | +1.21% | 58.4% | -2.28% |
+| Gold | 13w | Mixed | 440 | +3.91% | 66.6% | -3.79% |
+| Gold | 26w | Mixed | 427 | +8.65% | 74.5% | -4.62% |
 
 ## Predictivity Diagnostics
 
 | Market | Horizon | N | Score/return r | HAC p | Risk-On minus Caution | Edge HAC p | Drift-adjusted accuracy | Evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| S&P 500 | 4w | 427 | +0.086 | 0.227 | +1.96% | 0.137 | 52.1% | Unclear |
-| S&P 500 | 13w | 417 | +0.103 | 0.368 | +6.85% | 0.003 | 55.8% | Supported |
-| S&P 500 | 26w | 404 | +0.141 | 0.264 | +11.78% | 0.002 | 55.6% | Supported |
-| NASDAQ-100 | 4w | 449 | +0.030 | 0.574 | n/a | n/a | 54.7% | Insufficient |
-| NASDAQ-100 | 13w | 439 | +0.071 | 0.271 | n/a | n/a | 54.1% | Insufficient |
-| NASDAQ-100 | 26w | 426 | -0.013 | 0.857 | n/a | n/a | 52.6% | Insufficient |
-| VIX Futures | 4w | 449 | n/a | n/a | n/a | n/a | n/a | Insufficient |
-| VIX Futures | 13w | 439 | n/a | n/a | n/a | n/a | n/a | Insufficient |
-| VIX Futures | 26w | 426 | n/a | n/a | n/a | n/a | n/a | Insufficient |
-| Russell 2000 | 4w | 131 | n/a | n/a | n/a | n/a | n/a | Insufficient |
-| Russell 2000 | 13w | 121 | n/a | n/a | n/a | n/a | n/a | Insufficient |
-| Russell 2000 | 26w | 108 | n/a | n/a | n/a | n/a | n/a | Insufficient |
-| Dow Jones | 4w | 449 | n/a | n/a | n/a | n/a | n/a | Insufficient |
-| Dow Jones | 13w | 439 | n/a | n/a | n/a | n/a | n/a | Insufficient |
-| Dow Jones | 26w | 426 | n/a | n/a | n/a | n/a | n/a | Insufficient |
-| Gold | 4w | 449 | n/a | n/a | n/a | n/a | n/a | Insufficient |
-| Gold | 13w | 439 | n/a | n/a | n/a | n/a | n/a | Insufficient |
-| Gold | 26w | 426 | n/a | n/a | n/a | n/a | n/a | Insufficient |
+| S&P 500 | 4w | 428 | +0.086 | 0.223 | +1.96% | 0.137 | 52.3% | Unclear |
+| S&P 500 | 13w | 418 | +0.103 | 0.364 | +6.85% | 0.003 | 56.0% | Supported |
+| S&P 500 | 26w | 405 | +0.141 | 0.261 | +11.78% | 0.002 | 55.8% | Supported |
+| NASDAQ-100 | 4w | 450 | +0.028 | 0.597 | n/a | n/a | 54.4% | Insufficient |
+| NASDAQ-100 | 13w | 440 | +0.072 | 0.267 | n/a | n/a | 54.1% | Insufficient |
+| NASDAQ-100 | 26w | 427 | -0.013 | 0.853 | n/a | n/a | 52.6% | Insufficient |
+| VIX Futures | 4w | 450 | n/a | n/a | n/a | n/a | n/a | Insufficient |
+| VIX Futures | 13w | 440 | n/a | n/a | n/a | n/a | n/a | Insufficient |
+| VIX Futures | 26w | 427 | n/a | n/a | n/a | n/a | n/a | Insufficient |
+| Russell 2000 | 4w | 132 | n/a | n/a | n/a | n/a | n/a | Insufficient |
+| Russell 2000 | 13w | 122 | n/a | n/a | n/a | n/a | n/a | Insufficient |
+| Russell 2000 | 26w | 109 | n/a | n/a | n/a | n/a | n/a | Insufficient |
+| Dow Jones | 4w | 450 | n/a | n/a | n/a | n/a | n/a | Insufficient |
+| Dow Jones | 13w | 440 | n/a | n/a | n/a | n/a | n/a | Insufficient |
+| Dow Jones | 26w | 427 | n/a | n/a | n/a | n/a | n/a | Insufficient |
+| Gold | 4w | 450 | n/a | n/a | n/a | n/a | n/a | Insufficient |
+| Gold | 13w | 440 | n/a | n/a | n/a | n/a | n/a | Insufficient |
+| Gold | 26w | 427 | n/a | n/a | n/a | n/a | n/a | Insufficient |
 
 ## Interpretation
 

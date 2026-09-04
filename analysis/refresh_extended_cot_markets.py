@@ -62,6 +62,11 @@ def write_price_series(dest: Path, series_id: str, symbol: str) -> None:
     encoded = urllib.parse.quote(symbol, safe="")
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{encoded}?range=max&interval=1d"
     result = (fetch_url_json(url).get("chart", {}).get("result") or [None])[0]
+    if not result or len(result.get("timestamp") or []) < 260:
+        url_10y = f"https://query1.finance.yahoo.com/v8/finance/chart/{encoded}?range=10y&interval=1d"
+        res_10y = (fetch_url_json(url_10y).get("chart", {}).get("result") or [None])[0]
+        if res_10y and len(res_10y.get("timestamp") or []) > len(result.get("timestamp") or [] if result else []):
+            result = res_10y
     if not result:
         raise RuntimeError(f"Yahoo returned no data for {symbol}")
     timestamps = result.get("timestamp") or []

@@ -11,7 +11,9 @@ import pandas as pd
 
 from build_directional_cot_system import HTML_OUT, OUT_DIR, common_report_dates, feature_snapshot, load_market_inputs, write_csv
 from cot_direction_model import load_config, preserve_structural_sign, structural_score_from_percentile, tactical_modifier
-from cot_market_registry import DIRECTIONAL_MARKETS, MARKETS
+from cot_market_registry import DIRECTIONAL_MARKETS, EQUITY_PARTICIPANTS, MARKETS
+
+CATEGORY_SPECS = EQUITY_PARTICIPANTS
 
 ROOT = Path(__file__).resolve().parent
 DECISION_JSON = OUT_DIR / "cot_direction_latest.json"
