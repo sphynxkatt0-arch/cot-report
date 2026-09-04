@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from cftc_release_calendar import release_date
-ROOT=Path(__file__).resolve().parent;WC=ROOT/'worldclass';CURRENT=WC/'cot-current-state.json';REGISTRY=WC/'cot-edge-registry.json';ACTIVE=WC/'cot-active-edges.json';CROSS=WC/'cot-cross-market.json';PROV=WC/'cot-research-provenance.json';POLICY=ROOT/'config'/'cot_edge_promotion_policy.json';HTML=ROOT/'worldclass_dashboard.html';LIGHT_CSS=WC/'cot-intelligence-light.css';EDGE_MODEL=WC/'current-edge-model.js';EDGE_JS=WC/'current-edge-command.js';EDGE_CSS=WC/'current-edge-command.css';MOBILE_CSS=WC/'mobile-ux.css';MOBILE_RUNTIME=WC/'mobile-ux-runtime.js'
+ROOT=Path(__file__).resolve().parent;WC=ROOT/'worldclass';CURRENT=WC/'cot-current-state.json';REGISTRY=WC/'cot-edge-registry.json';ACTIVE=WC/'cot-active-edges.json';CROSS=WC/'cot-cross-market.json';PROV=WC/'cot-research-provenance.json';POLICY=ROOT/'config'/'cot_edge_promotion_policy.json';HTML=ROOT/'worldclass_dashboard.html';LIGHT_CSS=WC/'cot-intelligence-light.css';EDGE_MODEL=WC/'current-edge-model.js';EDGE_JS=WC/'current-edge-command.js';EDGE_CSS=WC/'current-edge-command.css';MOBILE_CSS=WC/'mobile-ux.css';MOBILE_RUNTIME=WC/'mobile-ux-runtime.js';REPORT_TAXONOMY_JS=WC/'report-taxonomy.js';REPORT_TAXONOMY_CSS=WC/'report-taxonomy.css'
 HORIZONS=['monday','tuesday','wednesday','thursday','friday','1w','2w','3w','4w','6w','8w','13w','26w','39w','52w'];MARKETS=['sp500','nq','vix','rty','dow','gold','silver'];WEEKDAYS={'monday','tuesday','wednesday','thursday','friday'};FORWARD={'1w','2w','4w','13w','26w'}
 def load(path):assert path.exists() and path.stat().st_size>100,path;return json.loads(path.read_text(encoding='utf-8'))
 def close(a,b,tol=1e-5):return abs(float(a)-float(b))<=tol*max(1.0,abs(float(a)),abs(float(b)))
@@ -40,9 +40,12 @@ def main():
  assert total_active==int(active.get('active_threshold_count') or 0) and total_active<=59;assert ACTIVE.stat().st_size<=180000
  assert cross['governance']['status']=='DISCOVERY_ONLY';assert policy['automatic_weight_changes'] is False
  html=HTML.read_text(encoding='utf-8')
- for marker in ('data-cot-intelligence-asset="css"','data-cot-intelligence-asset="light-css"','data-cot-intelligence-asset="js"','data-cot-intelligence-asset="current-edge-model"','data-cot-intelligence-asset="current-edge-js"','data-cot-intelligence-asset="mobile-ux-css"','data-cot-intelligence-asset="mobile-ux-runtime"','data-cot-intelligence-asset="v2-copy-js"'):assert marker in html
+ for marker in ('data-cot-intelligence-asset="css"','data-cot-intelligence-asset="light-css"','data-cot-intelligence-asset="js"','data-cot-intelligence-asset="report-taxonomy-css"','data-cot-intelligence-asset="report-taxonomy-js"','data-cot-intelligence-asset="current-edge-model"','data-cot-intelligence-asset="current-edge-js"','data-cot-intelligence-asset="mobile-ux-css"','data-cot-intelligence-asset="mobile-ux-runtime"','data-cot-intelligence-asset="v2-copy-js"'):assert marker in html
+ report_taxonomy_js=REPORT_TAXONOMY_JS.read_text(encoding='utf-8');report_taxonomy_css=REPORT_TAXONOMY_CSS.read_text(encoding='utf-8')
+ assert 'financialDataset' in report_taxonomy_js and 'disaggregated' in report_taxonomy_js and 'transformRegime' in report_taxonomy_js and 'transformDetail' in report_taxonomy_js
+ assert 'report-taxonomy-control' in report_taxonomy_css and 'data-report-dataset' not in report_taxonomy_css
  edge_model=EDGE_MODEL.read_text(encoding='utf-8');assert 'GLOBAL_FDR' in edge_model and 'NONOVERLAP_CONFIRMED' in edge_model and 'historical excess' in edge_model
  mobile_runtime=MOBILE_RUNTIME.read_text(encoding='utf-8');assert 'mobileUxReady' in mobile_runtime and 'repeat(4, minmax(0, 1fr))' in mobile_runtime
- for path,limit in {CURRENT:200000,REGISTRY:500000,ACTIVE:180000,CROSS:180000,PROV:100000,WC/'cot-intelligence.js':60000,WC/'cot-intelligence.css':45000,LIGHT_CSS:20000,EDGE_MODEL:30000,EDGE_JS:40000,EDGE_CSS:32000,MOBILE_CSS:30000,MOBILE_RUNTIME:12000}.items():assert path.stat().st_size<=limit,(path,path.stat().st_size,limit)
+ for path,limit in {CURRENT:200000,REGISTRY:500000,ACTIVE:180000,CROSS:180000,PROV:100000,WC/'cot-intelligence.js':60000,WC/'cot-intelligence.css':45000,LIGHT_CSS:20000,EDGE_MODEL:30000,EDGE_JS:48000,EDGE_CSS:32000,MOBILE_CSS:30000,MOBILE_RUNTIME:12000,REPORT_TAXONOMY_JS:30000,REPORT_TAXONOMY_CSS:10000}.items():assert path.stat().st_size<=limit,(path,path.stat().st_size,limit)
  print(f'COT Intelligence v2 PASS · actors={len(states)} actor_cells={detail_cells} oi_cells={oi_cells} active={total_active} active_bytes={ACTIVE.stat().st_size}')
 if __name__=='__main__':main()

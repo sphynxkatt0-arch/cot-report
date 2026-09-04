@@ -1,55 +1,61 @@
 #!/usr/bin/env python3
-"""Adapter bridging Macro Monitor data into the COT directional model."""
+"""Adapt macro dashboard data into governed context for the COT decision system.
+
+The macro layer is deliberately separated from the directional COT thesis:
+
+* COT supplies the directional thesis.
+* Price supplies execution confirmation/invalidation.
+* Macro supplies context and an advisory risk-budget view only.
+
+The aggregate macro score uses one canonical weighting pass: Plumbing 48%,
+Transmission 42%, Supply 10%. Missing or stale inputs reduce availability and
+shrink the observed aggregate toward neutral rather than allowing a partial
+subset of factors to masquerade as a fully informed score.
+"""
 
 from __future__ import annotations
 
-import json
-import math
-import re
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 import pandas as pd
+
+from build_directional_cot_report import extract_js_object
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT_DASHBOARD = ROOT / "interactive_cot_dashboard.html"
-MACRO_VINTAGE_SAFE = False
-MINIMUM_RELIABLE_AVAILABILITY = 0.50
+MINIMUM_RELIABLE_AVAILABILITY = 0.60
+NEUTRAL_SCORE = 50.0
 
+# These factor weights are the canonical production weights. Their sums are the
+# component weights: Plumbing 48, Transmission 42, Supply 10. Do not apply a
+# second component-weight normalization pass after these weights are used.
 PLUMBING_FACTORS = {
     "score_net_liquidity": 26.0,
     "score_bank_reserves": 10.0,
     "score_repo_spread": 8.0,
     "score_slr_load": 4.0,
 }
-
 TRANSMISSION_FACTORS = {
     "score_real_yield": 14.0,
     "score_credit": 14.0,
     "score_dollar": 8.0,
     "score_vix": 6.0,
 }
-
-SUPPLY_FACTORS = {
-    "score_treasury_supply": 10.0,
+SUPPLY_FACTORS = {"score_treasury_supply": 10.0}
+ALL_FACTOR_WEIGHTS = {**PLUMBING_FACTORS, **TRANSMISSION_FACTORS, **SUPPLY_FACTORS}
+COMPONENT_WEIGHTS = {
+    "plumbing": sum(PLUMBING_FACTORS.values()),
+    "transmission": sum(TRANSMISSION_FACTORS.values()),
+    "supply": sum(SUPPLY_FACTORS.values()),
 }
 
-ALL_FACTOR_WEIGHTS = {
-    **PLUMBING_FACTORS,
-    **TRANSMISSION_FACTORS,
-    **SUPPLY_FACTORS,
-}
-
-GROUP_WEIGHTS = {
-    "plumbing": 48.0,
-    "transmission": 42.0,
-    "supply": 10.0,
-}
-
-TOTAL_WEIGHT = sum(ALL_FACTOR_WEIGHTS.values())
+if COMPONENT_WEIGHTS != {"plumbing": 48.0, "transmission": 42.0, "supply": 10.0}:
+    raise RuntimeError(f"Unexpected canonical macro weights: {COMPONENT_WEIGHTS}")
+if abs(sum(ALL_FACTOR_WEIGHTS.values()) - 100.0) > 1e-9:
+    raise RuntimeError("Canonical macro factor weights must sum to 100")
 
 FACTOR_SOURCE_DATES = {
     "score_net_liquidity": (
@@ -73,14 +79,13 @@ FACTOR_SOURCE_DATES = {
 
 @dataclass
 class MacroDirectionContext:
-    macro_context: dict[str, Any]
-    macro_risk_budget: dict[str, Any]
-    macro_directional_edges: dict[str, Any]
     macro_regime_score: float | None
+    macro_observed_score: float | None
     liquidity_plumbing_score: float | None
     market_transmission_score: float | None
     supply_pressure_score: float | None
     availability_ratio: float
+    availability_confidence: float
     available_weight: float
     total_weight: float
     reliable_for_action: bool
@@ -91,6 +96,9 @@ class MacroDirectionContext:
     severe_alerts: list[str]
     stale_factors: list[str]
     missing_factors: list[str]
+    macro_context: dict[str, Any]
+    macro_risk_budget: dict[str, Any]
+    macro_directional_edges: list[dict[str, Any]]
     source: str
 
     def to_dict(self) -> dict[str, Any]:
@@ -99,10 +107,10 @@ class MacroDirectionContext:
 
 def finite(value: Any) -> float | None:
     try:
-        num = float(value)
+        number = float(value)
     except (TypeError, ValueError):
         return None
-    return num if math.isfinite(num) else None
+    return number if number == number else None
 
 
 def clamp_score(value: float) -> float:
@@ -147,205 +155,149 @@ def factor_freshness(
     return not failures, failures
 
 
-def extract_js_object(source: str, variable: str) -> dict[str, Any] | None:
-    """Read a JSON object assigned as `const NAME = <json>;` or `var NAME = <json>;` in HTML."""
-    start = -1
-    for prefix in (f"const {variable} = ", f"var {variable} = ", f"let {variable} = "):
-        pos = source.find(prefix)
-        if pos >= 0:
-            start = pos + len(prefix)
-            break
-    if start < 0:
-        return None
-    index = start
-    depth = 0
-    in_string = False
-    escaped = False
-    for cursor in range(index, len(source)):
-        char = source[cursor]
-        if in_string:
-            if escaped:
-                escaped = False
-            elif char == "\\":
-                escaped = True
-            elif char == '"':
-                in_string = False
-            continue
-        if char == '"':
-            in_string = True
-        elif char in "[{":
-            depth += 1
-        elif char in "]}":
-            depth -= 1
-            if depth < 0:
-                return None
-        elif char == ";" and depth == 0:
-            try:
-                parsed = json.loads(source[index:cursor])
-            except json.JSONDecodeError:
-                return None
-            return parsed if isinstance(parsed, dict) else None
-    return None
-
-
 def weighted_available_score(
     latest: dict[str, Any],
-    weights: dict[str, float],
-    eligible_factors: set[str] | None = None,
+    factors: dict[str, float],
+    eligible: set[str] | None = None,
 ) -> tuple[float | None, float]:
-    total_w = 0.0
-    accum = 0.0
-    for factor, weight in weights.items():
-        if eligible_factors is not None and factor not in eligible_factors:
+    """Return the observed weighted score and the weight actually available.
+
+    This function intentionally normalizes only across the available factor
+    weights supplied to it. The production aggregate then applies missing-data
+    shrinkage exactly once using the fraction of the canonical 100 weight that
+    was available.
+    """
+    numerator = 0.0
+    available_weight = 0.0
+    for key, weight in factors.items():
+        if eligible is not None and key not in eligible:
             continue
-        val = finite(latest.get(factor))
-        if val is None:
+        value = finite(latest.get(key))
+        if value is None:
             continue
-        accum += val * float(weight)
-        total_w += float(weight)
-    if total_w <= 1e-9:
+        numerator += clamp_score(value) * weight
+        available_weight += weight
+    if available_weight <= 0:
         return None, 0.0
-    return clamp_score(accum / total_w), total_w
+    return clamp_score(numerator / available_weight), available_weight
 
 
 def shrink_toward_neutral(
     observed_score: float | None,
     availability_confidence: float,
 ) -> float | None:
+    """Shrink incomplete evidence toward 50 using the governed formula."""
     if observed_score is None:
         return None
     confidence = max(0.0, min(1.0, float(availability_confidence)))
-    return clamp_score(50.0 + confidence * (float(observed_score) - 50.0))
+    effective_score = NEUTRAL_SCORE + confidence * (float(observed_score) - NEUTRAL_SCORE)
+    return clamp_score(effective_score)
+
+
+def component_effective_score(
+    observed_score: float | None,
+    available_weight: float,
+    canonical_weight: float,
+) -> float | None:
+    confidence = available_weight / canonical_weight if canonical_weight > 0 else 0.0
+    return shrink_toward_neutral(observed_score, confidence)
 
 
 def regime_label(score: float | None) -> str:
     if score is None:
         return "Unavailable"
-    s = clamp_score(score)
-    if s >= 70.0:
+    if score >= 70:
         return "Strong supportive"
-    if s >= 55.0:
+    if score >= 55:
         return "Supportive"
-    if s >= 45.0:
+    if score >= 45:
         return "Neutral"
-    if s >= 30.0:
+    if score >= 30:
         return "Defensive"
     return "Risk-off"
 
 
+def edge_label(score: float | None) -> str:
+    if score is None:
+        return "unavailable"
+    if score >= 55:
+        return "supportive"
+    if score <= 45:
+        return "defensive"
+    return "neutral"
+
+
+def directional_edges(
+    plumbing: float | None,
+    transmission: float | None,
+    supply: float | None,
+) -> list[dict[str, Any]]:
+    rows = (
+        ("Liquidity plumbing", "plumbing", plumbing, COMPONENT_WEIGHTS["plumbing"]),
+        ("Market transmission", "transmission", transmission, COMPONENT_WEIGHTS["transmission"]),
+        ("Treasury supply", "supply", supply, COMPONENT_WEIGHTS["supply"]),
+    )
+    return [
+        {
+            "label": label,
+            "component": component,
+            "score": round(score, 2) if score is not None else None,
+            "context": edge_label(score),
+            "canonical_weight_pct": weight,
+            "production_directional_weight": 0.0,
+            "evidence_status": "context_only_not_vintage_safe",
+        }
+        for label, component, score, weight in rows
+    ]
+
+
 def risk_budget_payload(
     *,
+    score: float | None,
+    availability: float,
     hard_override: bool,
-    raw_override: bool,
     reliable: bool,
-    severe_alerts: list[str],
 ) -> dict[str, Any]:
+    """Describe macro risk context without silently resizing the COT thesis."""
     if hard_override:
-        return {
-            "status": "HARD_OVERRIDE",
-            "multiplier": 0.0,
-            "exposure_cap": 0.0,
-            "hard_override_applied": True,
-            "raw_override": raw_override,
-            "reliable": reliable,
-            "severe_alert_count": len(severe_alerts),
-            "severe_alerts": severe_alerts,
-            "aggregate_score_sizing_weight": 0.0,
-        }
-    if not reliable:
-        return {
-            "status": "DEGRADED_AVAILABILITY",
-            "multiplier": 1.0,
-            "exposure_cap": 1.0,
-            "hard_override_applied": False,
-            "raw_override": raw_override,
-            "reliable": False,
-            "severe_alert_count": len(severe_alerts),
-            "severe_alerts": severe_alerts,
-            "aggregate_score_sizing_weight": 0.0,
-        }
+        state = "hard_override"
+    elif not reliable:
+        state = "insufficient_fresh_data"
+    else:
+        state = edge_label(score)
     return {
-        "status": "NEUTRAL",
-        "multiplier": 1.0,
-        "exposure_cap": 1.0,
-        "hard_override_applied": False,
-        "raw_override": raw_override,
-        "reliable": True,
-        "severe_alert_count": len(severe_alerts),
-        "severe_alerts": severe_alerts,
-        "aggregate_score_sizing_weight": 0.0,
-    }
-
-
-def directional_edges_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "status": "RESEARCH_ONLY_NOT_VINTAGE_SAFE",
-        "macro_vintage_safe": MACRO_VINTAGE_SAFE,
-        "aggregate_score_directional_weight": 0.0,
-        "production_weight": 0.0,
-        "active_edges": [],
-        "evidence_status": "CALENDAR_ALIGNED_NOT_VINTAGE_SAFE",
-    }
-
-
-def score_block(
-    latest: dict[str, Any],
-    weights: dict[str, float],
-    eligible: set[str] | None = None,
-) -> dict[str, Any]:
-    observed, available_w = weighted_available_score(latest, weights, eligible)
-    total_w = sum(weights.values())
-    availability = available_w / total_w if total_w else 0.0
-    effective = shrink_toward_neutral(observed, availability)
-    return {
-        "observed_score": round(observed, 2) if observed is not None else None,
-        "effective_score": round(effective, 2) if effective is not None else None,
-        "availability_ratio": round(availability, 4),
-        "available_weight": round(available_w, 2),
-        "total_weight": round(total_w, 2),
-        "weights": weights,
+        "state": state,
+        "context_score": round(score, 2) if score is not None else None,
+        "availability_confidence": round(availability, 4),
+        "production_macro_multiplier": 1.0,
+        "production_directional_weight": 0.0,
+        "hard_override": bool(hard_override),
+        "advisory_only": True,
+        "evidence_status": "calendar_aligned_not_vintage_safe",
+        "policy": "Macro does not resize or reverse COT direction; independent hard overrides remain active.",
     }
 
 
 def unavailable_context(source: str) -> MacroDirectionContext:
-    risk_budget = risk_budget_payload(
-        hard_override=False,
-        raw_override=False,
-        reliable=False,
-        severe_alerts=[],
-    )
-    directional_edges = directional_edges_payload({})
+    total_weight = sum(ALL_FACTOR_WEIGHTS.values())
     macro_context = {
-        "observed_score": None,
         "effective_score": None,
-        "regime_label": "Unavailable",
-        "availability_ratio": 0.0,
-        "available_weight": 0.0,
-        "total_weight": TOTAL_WEIGHT,
-        "reliable": False,
-        "macro_vintage_safe": MACRO_VINTAGE_SAFE,
-        "canonical_group_weights": GROUP_WEIGHTS,
-        "canonical_factor_weights": ALL_FACTOR_WEIGHTS,
-        "missing_factors": list(ALL_FACTOR_WEIGHTS),
-        "stale_factors": [],
-        "components": {
-            "plumbing": score_block({}, PLUMBING_FACTORS, set()),
-            "transmission": score_block({}, TRANSMISSION_FACTORS, set()),
-            "supply": score_block({}, SUPPLY_FACTORS, set()),
-        },
-        "source": source,
+        "observed_score": None,
+        "availability_confidence": 0.0,
+        "regime": "Unavailable",
+        "canonical_weights_pct": COMPONENT_WEIGHTS.copy(),
+        "evidence_status": "unavailable",
     }
     return MacroDirectionContext(
-        macro_context=macro_context,
-        macro_risk_budget=risk_budget,
-        macro_directional_edges=directional_edges,
         macro_regime_score=None,
+        macro_observed_score=None,
         liquidity_plumbing_score=None,
         market_transmission_score=None,
         supply_pressure_score=None,
         availability_ratio=0.0,
+        availability_confidence=0.0,
         available_weight=0.0,
-        total_weight=TOTAL_WEIGHT,
+        total_weight=total_weight,
         reliable_for_action=False,
         regime_label="Unavailable",
         hard_override=False,
@@ -354,6 +306,14 @@ def unavailable_context(source: str) -> MacroDirectionContext:
         severe_alerts=[],
         stale_factors=[],
         missing_factors=list(ALL_FACTOR_WEIGHTS),
+        macro_context=macro_context,
+        macro_risk_budget=risk_budget_payload(
+            score=None,
+            availability=0.0,
+            hard_override=False,
+            reliable=False,
+        ),
+        macro_directional_edges=directional_edges(None, None, None),
         source=source,
     )
 
@@ -387,15 +347,32 @@ def load_macro_direction_context(
         else:
             stale_factors.append(f"{factor}: " + "; ".join(failures))
 
-    observed_score, available_weight = weighted_available_score(
-        latest, ALL_FACTOR_WEIGHTS, eligible
-    )
-    availability = available_weight / TOTAL_WEIGHT if TOTAL_WEIGHT else 0.0
-    effective_score = shrink_toward_neutral(observed_score, availability)
+    plumbing_observed, plumbing_weight = weighted_available_score(latest, PLUMBING_FACTORS, eligible)
+    transmission_observed, transmission_weight = weighted_available_score(latest, TRANSMISSION_FACTORS, eligible)
+    supply_observed, supply_weight = weighted_available_score(latest, SUPPLY_FACTORS, eligible)
 
-    plumbing = score_block(latest, PLUMBING_FACTORS, eligible)
-    transmission = score_block(latest, TRANSMISSION_FACTORS, eligible)
-    supply = score_block(latest, SUPPLY_FACTORS, eligible)
+    plumbing = component_effective_score(
+        plumbing_observed,
+        plumbing_weight,
+        COMPONENT_WEIGHTS["plumbing"],
+    )
+    transmission = component_effective_score(
+        transmission_observed,
+        transmission_weight,
+        COMPONENT_WEIGHTS["transmission"],
+    )
+    supply = component_effective_score(
+        supply_observed,
+        supply_weight,
+        COMPONENT_WEIGHTS["supply"],
+    )
+
+    # Single canonical aggregate pass. The original factor weights already sum
+    # to 48/42/10 by component, so there must be no second component weighting.
+    observed_score, available_weight = weighted_available_score(latest, ALL_FACTOR_WEIGHTS, eligible)
+    total_weight = sum(ALL_FACTOR_WEIGHTS.values())
+    availability = available_weight / total_weight if total_weight else 0.0
+    macro_score = shrink_toward_neutral(observed_score, availability)
 
     severe = [
         str(row.get("label") or "Unnamed severe alert")
@@ -405,54 +382,48 @@ def load_macro_direction_context(
     reliable = availability >= MINIMUM_RELIABLE_AVAILABILITY
     raw_override = len(severe) >= 2
     hard_override = raw_override and reliable
+    label = regime_label(macro_score)
 
-    context_source = "interactive_cot_dashboard.MACRO_MONITOR+METADATA"
     macro_context = {
+        "effective_score": round(macro_score, 2) if macro_score is not None else None,
         "observed_score": round(observed_score, 2) if observed_score is not None else None,
-        "effective_score": round(effective_score, 2) if effective_score is not None else None,
-        "regime_label": regime_label(effective_score),
-        "availability_ratio": round(availability, 4),
-        "available_weight": round(available_weight, 2),
-        "total_weight": round(TOTAL_WEIGHT, 2),
-        "reliable": reliable,
-        "macro_vintage_safe": MACRO_VINTAGE_SAFE,
-        "canonical_group_weights": GROUP_WEIGHTS,
-        "canonical_factor_weights": ALL_FACTOR_WEIGHTS,
+        "availability_confidence": round(availability, 4),
+        "regime": label,
+        "canonical_weights_pct": COMPONENT_WEIGHTS.copy(),
         "components": {
-            "plumbing": plumbing,
-            "transmission": transmission,
-            "supply": supply,
+            "plumbing": round(plumbing, 2) if plumbing is not None else None,
+            "transmission": round(transmission, 2) if transmission is not None else None,
+            "supply": round(supply, 2) if supply is not None else None,
         },
-        "missing_factors": missing_factors,
-        "stale_factors": stale_factors,
-        "source": context_source,
+        "reliable_for_action": reliable,
+        "evidence_status": "calendar_aligned_not_vintage_safe",
     }
-    risk_budget = risk_budget_payload(
-        hard_override=hard_override,
-        raw_override=raw_override,
-        reliable=reliable,
-        severe_alerts=severe,
-    )
-    directional_edges = directional_edges_payload(payload)
 
     return MacroDirectionContext(
-        macro_context=macro_context,
-        macro_risk_budget=risk_budget,
-        macro_directional_edges=directional_edges,
-        macro_regime_score=round(effective_score, 2) if effective_score is not None else None,
-        liquidity_plumbing_score=plumbing["effective_score"],
-        market_transmission_score=transmission["effective_score"],
-        supply_pressure_score=supply["effective_score"],
+        macro_regime_score=round(macro_score, 2) if macro_score is not None else None,
+        macro_observed_score=round(observed_score, 2) if observed_score is not None else None,
+        liquidity_plumbing_score=round(plumbing, 2) if plumbing is not None else None,
+        market_transmission_score=round(transmission, 2) if transmission is not None else None,
+        supply_pressure_score=round(supply, 2) if supply is not None else None,
         availability_ratio=round(availability, 4),
+        availability_confidence=round(availability, 4),
         available_weight=round(available_weight, 2),
-        total_weight=round(TOTAL_WEIGHT, 2),
+        total_weight=round(total_weight, 2),
         reliable_for_action=reliable,
-        regime_label=regime_label(effective_score),
+        regime_label=label,
         hard_override=hard_override,
         hard_override_suppressed_by_freshness=raw_override and not reliable,
         severe_alert_count=len(severe),
         severe_alerts=severe,
         stale_factors=stale_factors,
         missing_factors=missing_factors,
-        source=context_source,
+        macro_context=macro_context,
+        macro_risk_budget=risk_budget_payload(
+            score=macro_score,
+            availability=availability,
+            hard_override=hard_override,
+            reliable=reliable,
+        ),
+        macro_directional_edges=directional_edges(plumbing, transmission, supply),
+        source="interactive_cot_dashboard.MACRO_MONITOR+METADATA",
     )

@@ -1,76 +1,114 @@
 # Deploying COT Intelligence
 
-The production dashboard now uses a **lightweight application shell + compact runtime data**, while the large full-history research HTML remains a build/research artifact. The public site should not serve the multi-megabyte research document as its root page.
+Production is built as a validated static release from the `analysis/` tree and published to `gh-pages`. The large full-history research artifacts remain build/research inputs; the production root is `analysis/index.html`, generated from the validated world-class dashboard shell.
 
-## GitHub Pages production setup
+## Authoritative production pipeline
 
-In **Settings → Pages**, keep **Source = GitHub Actions**.
+`.github/workflows/refresh-and-deploy.yml` is the only authoritative build/deploy workflow. It runs on:
 
-The `Refresh and Deploy` workflow is the authoritative production pipeline. It:
+- every push to `main`;
+- manual `workflow_dispatch`;
+- the DST-safe Friday 15:35 New York scheduled refresh.
 
-1. Validates Python/JavaScript syntax, the canonical model specification, macro parsers, live-ledger integrity, data contracts and lookahead safety.
-2. Refreshes CFTC/FRED/Treasury/OFR inputs on scheduled/manual refreshes.
-3. Builds the compact `worldclass/base.json`, research/backtest artifacts, model identity and macro-control-room payload.
-4. Builds a lightweight Pages artifact containing the production shell, `worldclass/` runtime assets, macro payload and chart runtime. The multi-megabyte `interactive_cot_dashboard.html` research artifact is intentionally excluded from the public Pages artifact.
-5. Uploads the artifact with one-day retention and deploys it using the official `actions/deploy-pages` path required by the repository's **GitHub Actions** Pages source.
-6. Publishes the full `analysis/` directory to `gh-pages` as a **last-valid cache/mirror** used by refresh recovery and integrity tooling. `gh-pages` is not the configured public Pages source.
-7. Runs public production-contract checks against the actual `github.io` URL. The checks require a lightweight root shell, the canonical model identity, guarded runtime bootstrap and populated macro-control-room pillars.
+A separate `.github/workflows/cot-refresh-dispatch.yml` exists only as the Friday 16:35 New York retry/manual dispatcher. It no longer dispatches on `main` pushes, avoiding duplicate refresh jobs racing or cancelling one another.
 
-### Why both Pages Actions and `gh-pages` exist
+Every authoritative run performs the following sequence:
 
-The repository previously switched from Pages artifacts to direct `gh-pages` publishing because accumulated deployment artifacts hit storage limits. That left the repository's Pages setting (`GitHub Actions`) inconsistent with the deployment method. The current workflow solves both problems:
+1. Validate Python/JavaScript syntax and governed research/model contracts.
+2. Refresh the raw normalized CFTC source layer. **A `main` push now refreshes CFTC data too**; it is not allowed to rebuild production from an intentionally stale normalized snapshot.
+3. Refresh the metals and macro inputs, retaining last-valid caches only where the source layer explicitly permits it.
+4. Build current context plus the frozen release-corrected-v2 historical research artifacts.
+5. Validate the current CFTC report date against the report that should already be public. A stale week therefore blocks deployment instead of being published as `LIVE`.
+6. Build prospective live-ledger forecasts and the presentation track record.
+7. Copy the validated dashboard shell to `analysis/index.html`.
+8. Generate `analysis/worldclass/release-manifest.json`, containing the source commit, release ID, file sizes, and SHA-256 hashes for the production runtime surface.
+9. Verify every manifest hash before deployment.
+10. Publish the whole validated `analysis/` tree to `gh-pages` as one force-orphan release commit.
+11. Fetch the published `gh-pages` tree back and verify the research contract and every release-manifest hash again.
 
-- old `github-pages` deployment artifacts are removed before upload;
-- the new Pages artifact has one-day retention;
-- the public artifact excludes the large research HTML;
-- `gh-pages` remains available for last-valid data/cache recovery without being mistaken for the active Pages source.
+This makes the static publish unit the **entire validated release tree**, not individual files. A new JavaScript shell cannot be intentionally paired with an older COT JSON payload, and a partial/mixed-version runtime fails release verification.
 
 ## Production URL
 
 `https://sphynxkatt0-arch.github.io/cot-report/`
 
-A healthy deployment must serve the lightweight `index.html` shell from this URL. The production contract fails if the root grows above 200 KB or if it contains the embedded `const COT_DATA = ...` research payload.
+The public site should always represent the same release recorded by `worldclass/release-manifest.json` and the current report status recorded by `worldclass/release-status.json`.
 
-## Automated schedule
+## CFTC timing
 
-CFTC refresh is scheduled for **Friday at 21:35 Europe/Stockholm**. Two UTC cron expressions are used and a timezone gate selects the one that maps to 21:35, so CET/CEST changes do not move the intended local refresh time.
+The normal CFTC refresh is scheduled for **Friday at 21:35 Europe/Stockholm during CEST** / the equivalent 15:35 New York release-follow-up time. The workflow uses two UTC cron candidates and an America/New_York timezone gate so DST changes do not shift the intended New York execution time.
 
-If the expected CFTC release is delayed, the dashboard keeps the last valid observations and exposes the delayed state instead of fabricating a neutral update.
+A second dispatcher checks at **16:35 New York time** as a retry. If the expected CFTC release is genuinely delayed, the validator preserves the last valid observation but marks the release as delayed; it must not fabricate a new neutral report or label stale data as current.
+
+## Governed model contract
+
+Production decisions follow the tri-partite contract:
+
+- **COT = directional thesis.** Legacy Non-commercial positioning defines structural direction; tactical TFF evidence may strengthen or weaken an already actionable thesis without reversing it.
+- **Price = execution.** Price determines waiting, confirmation, contradiction, and invalidation.
+- **Macro = context / risk budget.** Aggregate macro is calendar-aligned but not proven point-in-time vintage safe, so its production directional weight is `0.0` and its production multiplier is fixed at `1.0`. Independent hard-risk overrides remain active.
+
+The macro adapter uses one canonical weighting pass:
+
+- Plumbing: **48%**
+- Transmission: **42%**
+- Supply: **10%**
+
+Missing or stale macro evidence is shrunk toward neutral using:
+
+`effective_score = 50 + availability_confidence * (observed_score - 50)`
+
+The adapter emits `macro_context`, `macro_risk_budget`, and `macro_directional_edges` so the UI/research layer can show the context without quietly turning it into unsupported directional sizing.
+
+## Backtest independence contract
+
+The regime backtest continues to report raw weekly observations, but raw N is not treated as independent evidence for multi-week horizons. Each horizon now reports:
+
+- `observations`: raw realized weekly signals;
+- `non_overlapping_n`: signals spaced by at least that forward horizon in trading days;
+- `regime_episode_n`: contiguous weekly matches to the same regime collapsed into episodes;
+- `effective_n = min(non_overlapping_n, regime_episode_n)`.
+
+Confidence labels use `effective_n`. Historical macro evidence remains explicitly tagged `macro_vintage_safe: false` until genuine vintage-safe replication is available.
+
+## Release manifest
+
+`analysis/build_release_manifest.py` is part of the production contract. The generated manifest records:
+
+- `release_id`;
+- `source_commit`;
+- aggregate release-content SHA-256;
+- every included runtime path, byte size, and SHA-256;
+- `mixed_version_runtime_allowed: false`;
+- required pre-deploy and post-deploy verification.
+
+Manual verification against an already built tree:
+
+```bash
+python analysis/build_release_manifest.py --root analysis --verify
+```
 
 ## Required / optional secrets
 
 | Secret | Purpose |
 |---|---|
-| `FRED_API_KEY` | Optional FRED API access. The pipeline retains last-valid data/fallback paths when the key/feed is unavailable. |
+| `FRED_API_KEY` | Optional FRED API access. The pipeline retains governed last-valid/fallback paths when this feed is unavailable. |
 
-GitHub's automatically supplied `GITHUB_TOKEN` handles branch mirrors, artifact cleanup and Pages deployment using the workflow permissions declared in `.github/workflows/refresh-and-deploy.yml`.
+GitHub's automatically supplied `GITHUB_TOKEN` handles the release publish, retry dispatcher, live-ledger writes, and branch verification using the workflow permissions declared in the repository.
 
-## Production data safeguards
-
-The deployment is blocked or repaired when any of these contracts fail:
-
-- required index/metal COT coverage and valid dates;
-- price history availability;
-- canonical `MODEL_SPEC` version/hash;
-- lookahead-safe backtests;
-- compact runtime bundle integrity;
-- macro core fields (net-liquidity impulse, reserve impulse/level, funding spread);
-- server macro-control-room pillars;
-- public Pages lightweight-shell and macro rendering contract.
-
-The hourly `Runtime Bundle Integrity` workflow independently checks the published compact bundle and repairs the `gh-pages` mirror from canonical source data when needed.
-
-## Local development
+## Local validation
 
 ```bash
-# Full refresh + local server
-python analysis/serve_interactive_cot_dashboard.py --open
+# Governed regression tests added for macro weighting/shrinkage and sample independence
+python analysis/tests/test_governed_cot_contract.py
 
-# Refresh data only
-python analysis/serve_interactive_cot_dashboard.py --refresh-only
+# Release-corrected production validator
+python analysis/validate_worldclass_release_v2.py
 
-# Serve existing data without refreshing
-python analysis/serve_interactive_cot_dashboard.py --skip-refresh
+# Build/verify a release manifest after production outputs exist
+cp analysis/worldclass_dashboard.html analysis/index.html
+python analysis/build_release_manifest.py --root analysis
+python analysis/build_release_manifest.py --root analysis --verify
 ```
 
-The research HTML is intentionally large because it embeds historical data. That size is acceptable for research/build use; it is no longer the intended public root document.
+The production validator is expected to fail rather than deploy when the currently public CFTC report has not been incorporated correctly.

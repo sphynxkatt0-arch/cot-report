@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""Shared directional-model I/O helpers and backward-compatible launcher.
-
-The original standalone v1 builder has been retired. Running this file directly
-now delegates to the integrated cached-data workflow so there is no code path
-that can silently bypass release tracking, macro freshness, trend-aware price
-execution, output validation, or dashboard injection.
-"""
-
+"""Shared directional-model I/O helpers and integrated workflow launcher."""
 from __future__ import annotations
 
 import json
@@ -18,28 +11,12 @@ from typing import Any, Iterable
 import pandas as pd
 
 from cot_direction_model import percentile_rank_prior, rank_score
+from cot_market_registry import MARKETS
 
 ROOT = Path(__file__).resolve().parent
 PROJECT = ROOT.parent
 OUT_DIR = ROOT / "model_output"
 HTML_OUT = ROOT / "directional_cot_report.html"
-
-MARKETS = {
-    "sp500": {
-        "label": "S&P 500",
-        "legacy_glob": "cot_legacy_output/sp500_legacy_data_*.csv",
-        "tff_glob": "cot_exact_output/sp500_exact_consolidated_data_*.csv",
-        "price_path": PROJECT / "data" / "SP500.csv",
-        "price_col": "SP500",
-    },
-    "nq": {
-        "label": "NASDAQ-100",
-        "legacy_glob": "cot_legacy_output/nq_legacy_data_*.csv",
-        "tff_glob": "cot_exact_output/nq_exact_consolidated_data_*.csv",
-        "price_path": PROJECT / "data" / "NASDAQ100.csv",
-        "price_col": "NASDAQ100",
-    },
-}
 
 
 def contained_latest_date(path: Path) -> pd.Timestamp | None:
@@ -78,6 +55,7 @@ def latest_file(pattern: str) -> Path:
 
 def read_position_file(path: Path) -> pd.DataFrame:
     frame = pd.read_csv(path)
+    frame.columns = [str(column).strip().lstrip("\ufeff") for column in frame.columns]
     if "date" not in frame.columns:
         raise KeyError(f"{path} has no date column")
     frame["date"] = pd.to_datetime(frame["date"], errors="coerce")
@@ -99,7 +77,7 @@ def read_prices(path: Path, value_col: str) -> pd.DataFrame:
         raise KeyError(f"{path} has no {value_col} column")
     frame["date"] = pd.to_datetime(frame[date_col], errors="coerce")
     frame["price"] = pd.to_numeric(frame[value_col], errors="coerce")
-    return frame[["date", "price"]].dropna().sort_values("date").reset_index(drop=True)
+    return frame[["date", "price"]].dropna().sort_values("date").drop_duplicates("date", keep="last").reset_index(drop=True)
 
 
 def expanding_percentile(values: pd.Series, minimum: int) -> float | None:
@@ -137,7 +115,7 @@ def latest_price(prices: pd.DataFrame) -> tuple[str | None, float | None]:
 
 
 def extract_js_object(source: str, variable: str) -> dict[str, Any] | None:
-    """Read a JSON object assigned as `const NAME = <json>;` in generated HTML."""
+    """Read a JSON object assigned as ``const NAME = <json>;`` in generated HTML."""
     marker = f"const {variable} = "
     start = source.find(marker)
     if start < 0:
@@ -190,7 +168,7 @@ def main() -> None:
         str(ROOT / "refresh_directional_cot_system.py"),
         "--skip-public-refresh",
     ]
-    print("Deprecated standalone entry point; running integrated cached-data workflow:")
+    print("Running integrated cached-data workflow:")
     print("$", " ".join(command))
     subprocess.run(command, cwd=ROOT, check=True)
 
