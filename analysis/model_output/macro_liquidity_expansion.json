@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "model_version": "macro-liquidity-control-room-v1.2",
-  "generated_at_utc": "2026-09-04T21:13:49.730166+00:00",
+  "generated_at_utc": "2026-09-05T00:02:12.729315+00:00",
   "role": "descriptive risk and plumbing context; does not create or reverse COT direction",
   "source_coverage_ratio": 0.846,
   "source_coverage_label": "Good",
@@ -425,7 +425,7 @@
       "change_short": 0.020000000000000018,
       "change_medium": 0.009999999999999787,
       "zscore": 0.4752480610813535,
-      "age_days": 1,
+      "age_days": 2,
       "error": null
     },
     {
@@ -442,7 +442,7 @@
       "change_short": 0.029999999999999805,
       "change_medium": 0.040000000000000036,
       "zscore": -0.8497073169842038,
-      "age_days": 3,
+      "age_days": 4,
       "error": null
     },
     {
@@ -459,7 +459,7 @@
       "change_short": 0.010000000000000231,
       "change_medium": 0.0,
       "zscore": 0.46746912711000405,
-      "age_days": 2,
+      "age_days": 3,
       "error": null
     },
     {
@@ -476,7 +476,7 @@
       "change_short": 127.36579906334055,
       "change_medium": -99.70275887007983,
       "zscore": -1.0415561384706897,
-      "age_days": 1,
+      "age_days": 2,
       "error": null
     },
     {
@@ -510,7 +510,7 @@
       "change_short": -9373.0,
       "change_medium": -19539.0,
       "zscore": null,
-      "age_days": 1710,
+      "age_days": 1711,
       "error": null
     },
     {
@@ -527,7 +527,7 @@
       "change_short": -15677.0,
       "change_medium": 9330.0,
       "zscore": -0.5486648222128501,
-      "age_days": 9,
+      "age_days": 10,
       "error": null
     },
     {
@@ -544,7 +544,7 @@
       "change_short": 6808.871559269959,
       "change_medium": 25560.102474089712,
       "zscore": 2.11710249493537,
-      "age_days": 35,
+      "age_days": 36,
       "error": null
     },
     {
@@ -561,7 +561,7 @@
       "change_short": 171342.84838445997,
       "change_medium": 270896.8014772404,
       "zscore": 1.5604979584996101,
-      "age_days": 35,
+      "age_days": 36,
       "error": null
     },
     {
@@ -578,7 +578,7 @@
       "change_short": -117616.64396681986,
       "change_medium": -74116.08696026984,
       "zscore": 0.007871098077588616,
-      "age_days": 35,
+      "age_days": 36,
       "error": null
     },
     {
@@ -594,8 +594,8 @@
       "latest_value": 903.928,
       "change_short": -46.875999999999976,
       "change_medium": -57.798,
-      "zscore": 0.12877002713387303,
-      "age_days": 1,
+      "zscore": 0.12794731014598135,
+      "age_days": 2,
       "error": null
     },
     {
@@ -611,8 +611,8 @@
       "latest_value": 80.875,
       "change_short": 93.75700000000006,
       "change_medium": 115.58499999999994,
-      "zscore": 1.0926809394526926,
-      "age_days": 1,
+      "zscore": 1.073230669399687,
+      "age_days": 2,
       "error": null
     },
     {
@@ -629,7 +629,7 @@
       "change_short": 0.07607142857142847,
       "change_medium": 0.1961735712431152,
       "zscore": null,
-      "age_days": 8,
+      "age_days": 9,
       "error": null
     }
   ],
