@@ -1,0 +1,11 @@
+﻿key,label,dataset,source,unit,status,mnemonic,resolution,latest_date,latest_value,change_short,change_medium,zscore,age_days,error
+repo_dvp_rate,DVP overnight/open repo rate,repo,Office of Financial Research STFM,%,fresh,REPO-DVP_AR_OO-P,configured,2026-09-03,3.67,0.020000000000000018,0.009999999999999787,0.4752480610813535,2,
+repo_gcf_rate,GCF overnight/open repo rate,repo,Office of Financial Research STFM,%,fresh,REPO-GCF_AR_OO-P,configured,2026-09-01,3.71,0.029999999999999805,0.040000000000000036,-0.8497073169842038,4,
+repo_triparty_rate,Tri-party overnight/open repo rate,repo,Office of Financial Research STFM,%,fresh,REPO-TRI_AR_OO-P,configured,2026-09-02,3.64,0.010000000000000231,0.0,0.46746912711000405,3,
+repo_dvp_volume,DVP overnight/open transaction volume,repo,Office of Financial Research STFM,USD bn,fresh,REPO-DVP_TV_OO-P,configured; scaled raw OFR dollars by 1e+09,2026-09-03,2748.2177893818903,127.36579906334055,-99.70275887007983,-1.0415561384706897,2,
+dealer_treasury_positions,Dealer Treasury net positions,nypd,Office of Financial Research STFM,USD mn,unavailable,,no qualified match,,,,,,,no qualified match
+dealer_treasury_financing,Dealer Treasury repo financing,nypd,Office of Financial Research STFM,USD mn,stale,NYPD-PD_RP_T_TOT-A,configured; scaled raw OFR dollars by 1e+06,2021-12-29,1970185.0,-9373.0,-19539.0,,1711,
+dealer_treasury_fails,Dealer Treasury settlement fails,nypd,Office of Financial Research STFM,USD mn,fresh,NYPD-PD_AFtD_T-A,configured; scaled raw OFR dollars by 1e+06,2026-08-26,81852.0,-15677.0,9330.0,-0.5486648222128501,10,
+mmf_agency_holdings,MMF agency/GSE holdings,mmf,Office of Financial Research STFM,USD mn,fresh,MMF-MMF_AG_TOT-M,configured; scaled raw OFR dollars by 1e+06,2026-07-31,1214752.03578745,6808.871559269959,25560.102474089712,2.11710249493537,36,
+mmf_treasury_holdings,MMF Treasury holdings,mmf,Office of Financial Research STFM,USD mn,fresh,MMF-MMF_T_TOT-M,configured; scaled raw OFR dollars by 1e+06,2026-07-31,3452555.74824141,171342.84838445997,270896.8014772404,1.5604979584996101,36,
+mmf_treasury_repo_holdings,MMF Treasury-backed repo holdings,mmf,Office of Financial Research STFM,USD mn,fresh,MMF-MMF_RP_T_TOT-M,configured; scaled raw OFR dollars by 1e+06,2026-07-31,1798110.13381436,-117616.64396681986,-74116.08696026984,0.007871098077588616,36,

@@ -1,0 +1,317 @@
+{
+  "schema_version": 1,
+  "release_id": "20260905T003903Z-f609a0058cf4-a2e4b945b2a9",
+  "generated_at_utc": "2026-09-05T00:39:03Z",
+  "source_commit": "f609a0058cf47f1d069170885ba27ebb645f887f",
+  "release_content_sha256": "a2e4b945b2a9f59dc43de09175388cf4ddc9103d432c37df9629d00f284c96c6",
+  "publish_contract": {
+    "strategy": "single-commit-gh-pages",
+    "atomic_publish_unit": "validated publish tree",
+    "predeploy_hash_verification_required": true,
+    "postdeploy_hash_verification_required": true,
+    "mixed_version_runtime_allowed": false
+  },
+  "required_runtime_paths": [
+    "index.html",
+    "worldclass/base.json",
+    "worldclass/model-spec.json",
+    "worldclass/backtest.json",
+    "worldclass/regime_backtest.json",
+    "worldclass/cot-current-state.json",
+    "worldclass/cot-edge-registry.json",
+    "worldclass/cot-active-edges.json",
+    "worldclass/cot-cross-market.json",
+    "worldclass/cot-research-provenance.json",
+    "worldclass/live-track-record.json",
+    "worldclass/release-status.json",
+    "model_output/macro_liquidity_expansion.json"
+  ],
+  "file_count": 57,
+  "files": [
+    {
+      "path": "index.html",
+      "bytes": 12014,
+      "sha256": "03276adbd86549f837426a6b061b86a64f542db68d5a90e9a7077b6b38587807"
+    },
+    {
+      "path": "model_output/macro_liquidity_expansion.json",
+      "bytes": 22401,
+      "sha256": "e8e6e972fd8ee0df4c2b042b3f2724552cf2073e4c68bc72716abd10dac328f4"
+    },
+    {
+      "path": "worldclass/app.js",
+      "bytes": 44925,
+      "sha256": "d4cc55d7a0f2f0f48012bf906a44a7d2e7535f1bdfec186c7c22b7e239a70563"
+    },
+    {
+      "path": "worldclass/backtest.json",
+      "bytes": 58502,
+      "sha256": "9600ce1576bb320cffc2cad61fd609179383bea1075369cc24ff910479bb4ca1"
+    },
+    {
+      "path": "worldclass/base.json",
+      "bytes": 4447780,
+      "sha256": "57cb08a9392312cd2fbc055d8d300913cb907dd68bc100c183284b1e98274706"
+    },
+    {
+      "path": "worldclass/bootstrap.js",
+      "bytes": 12455,
+      "sha256": "325143e9f10cad2aaac3fc40b5967e4d994bde4c8b908acc10dba8a729738ab0"
+    },
+    {
+      "path": "worldclass/cot-active-edges-v2.json",
+      "bytes": 64517,
+      "sha256": "8e40e6c9b0c80843320af7fc94b0e3ce2a8baa979e9dff03002befc50c0779ee"
+    },
+    {
+      "path": "worldclass/cot-active-edges.json",
+      "bytes": 64517,
+      "sha256": "8e40e6c9b0c80843320af7fc94b0e3ce2a8baa979e9dff03002befc50c0779ee"
+    },
+    {
+      "path": "worldclass/cot-cross-market-v2.json",
+      "bytes": 85280,
+      "sha256": "ca5f036ef8998df6ab9b7be92bf905128a6995d181eb407cebeec233c5453f39"
+    },
+    {
+      "path": "worldclass/cot-cross-market.json",
+      "bytes": 85280,
+      "sha256": "ca5f036ef8998df6ab9b7be92bf905128a6995d181eb407cebeec233c5453f39"
+    },
+    {
+      "path": "worldclass/cot-current-state.json",
+      "bytes": 82377,
+      "sha256": "dcda9ea11a524e1bb0b767a70cf28063dcdf465fb9511b0852659b3a55ab28b8"
+    },
+    {
+      "path": "worldclass/cot-edge-registry-v2.json",
+      "bytes": 492041,
+      "sha256": "73d82c7d1ec0fb40a90346fd01c5e7f3ed06edf79689a6e4bb19a1441e39e67c"
+    },
+    {
+      "path": "worldclass/cot-edge-registry.json",
+      "bytes": 492041,
+      "sha256": "73d82c7d1ec0fb40a90346fd01c5e7f3ed06edf79689a6e4bb19a1441e39e67c"
+    },
+    {
+      "path": "worldclass/cot-intelligence-light.css",
+      "bytes": 6159,
+      "sha256": "41fe1a53c61244d3ac4111b2dd8892437d813278cde4dda71cdb6df3b4714a63"
+    },
+    {
+      "path": "worldclass/cot-intelligence-v2-copy.js",
+      "bytes": 1411,
+      "sha256": "ed66f5d5873f4ea3111d3ef6c06d4feb805f2a000912f618e399acd86ca49079"
+    },
+    {
+      "path": "worldclass/cot-intelligence-worldclass-ux.css",
+      "bytes": 17082,
+      "sha256": "79df89ef29e3fb709ba3e61a984dc3784572589e33941ac320dcf9fb0ad49b6f"
+    },
+    {
+      "path": "worldclass/cot-intelligence-worldclass-ux.js",
+      "bytes": 1223,
+      "sha256": "c4bf9b719f9b4b7783ca1b8897ee39635d8cbaa30a0c55e4001517c418791cd8"
+    },
+    {
+      "path": "worldclass/cot-intelligence.css",
+      "bytes": 10186,
+      "sha256": "e5052672ff8f091239f50354895266c39bf0ef242cb63e19c210ca1a3fe0c0d1"
+    },
+    {
+      "path": "worldclass/cot-intelligence.js",
+      "bytes": 22558,
+      "sha256": "cde9a3abd53097e1f29d70fcda0a5220e715f65f912ca2d5d9f92604156caa86"
+    },
+    {
+      "path": "worldclass/cot-research-provenance.json",
+      "bytes": 1563,
+      "sha256": "0581437242e3d42344147357b33c369e1ca8888a38c3a433fbc7bf1e0897c47d"
+    },
+    {
+      "path": "worldclass/cross-actor.css",
+      "bytes": 4220,
+      "sha256": "d919c8134ddf1d0348aa5d3479eada4b223328f805258ee671dd87b4a9eff227"
+    },
+    {
+      "path": "worldclass/cross-actor.js",
+      "bytes": 11959,
+      "sha256": "902499c7bbff1e6591a9bffe910c8cb94e83673a426a051cbdef9ae209588972"
+    },
+    {
+      "path": "worldclass/current-edge-command.css",
+      "bytes": 25497,
+      "sha256": "47a6bb0dbfec0bafcf0f61e847e9eaf9310641fea0f166dfe35b9612003f8898"
+    },
+    {
+      "path": "worldclass/current-edge-command.js",
+      "bytes": 43026,
+      "sha256": "52327b6cb7c15992482168f8eb0831aa3ccb275f8150889b70e4d5a6c04a6315"
+    },
+    {
+      "path": "worldclass/current-edge-model.js",
+      "bytes": 17281,
+      "sha256": "436668f93bbc236f4914c47e95c9f979db52b38d200eb797d3bbfb407d54610a"
+    },
+    {
+      "path": "worldclass/decision-system.css",
+      "bytes": 14272,
+      "sha256": "ea0de3ab6023000d15c0a80e5785a30f594a319260d1cd30fd9770a441b23a61"
+    },
+    {
+      "path": "worldclass/decision-system.js",
+      "bytes": 17096,
+      "sha256": "8b7cd9e3f730ffc869687a66937f7f8fa94baf9be7cdd8e075b2bec4049dc49e"
+    },
+    {
+      "path": "worldclass/enhancements.css",
+      "bytes": 3816,
+      "sha256": "28805d7845b1858fd9cdd882c5fdc6fc62be65b2eb338a609e52ab810eac748a"
+    },
+    {
+      "path": "worldclass/enhancements.js",
+      "bytes": 15496,
+      "sha256": "683a7d1cbf6153d9dc2cda94476351ea4fc2947629a8fabfafae96d957f9f883"
+    },
+    {
+      "path": "worldclass/kpi-accent.css",
+      "bytes": 848,
+      "sha256": "d3fb5345960b6c8ae4c2b71beca43ceb788a2112f4b72a6471532ceadbe03c82"
+    },
+    {
+      "path": "worldclass/live-track-record-panel.css",
+      "bytes": 7547,
+      "sha256": "876546b025cc3797f1e851f45d9930ad394eb23d27a67885ba89acc7c5b08791"
+    },
+    {
+      "path": "worldclass/live-track-record-panel.js",
+      "bytes": 9730,
+      "sha256": "5f7271d673b0a1fb6fcf0be5d37646fcd91eb453fa7153b9086b836825df7d8d"
+    },
+    {
+      "path": "worldclass/live-track-record.json",
+      "bytes": 359904,
+      "sha256": "2e1e2171e49d9bf4887e8ecaa63f81f98a697dcbe1aff6c4026c55b13a52379d"
+    },
+    {
+      "path": "worldclass/macro-control-fallback.js",
+      "bytes": 6196,
+      "sha256": "ae0bd8b4bcb8ee110d5d4271edcaf54d167d12c5c8d844943642a1ff826936f0"
+    },
+    {
+      "path": "worldclass/macro-effectiveness.json",
+      "bytes": 15022,
+      "sha256": "41fc48c818519da75e60955065329a5b49ae3cc15660dbdfa68d411fa4460ffe"
+    },
+    {
+      "path": "worldclass/macro-live-sources.js",
+      "bytes": 21366,
+      "sha256": "fd7dfadf6bd0031037d51a419a8864dfdd990abb7c8292a9d36b390f4105145e"
+    },
+    {
+      "path": "worldclass/macro-state-renderer.js",
+      "bytes": 13429,
+      "sha256": "03a569e3bfb784439b85a7b662a0878955f23d10a08d4efd3876b4726f33acd1"
+    },
+    {
+      "path": "worldclass/market-sentiment.json",
+      "bytes": 25963,
+      "sha256": "3ecc4b8fea33143499b175da97f9188c4db93baa4cd0df0a3f5d8f39864b9f51"
+    },
+    {
+      "path": "worldclass/metals.json",
+      "bytes": 621702,
+      "sha256": "2bfcdb086f63922cc5da71856dc451ed6e0695fd582b1313a8c98aadf9b34f97"
+    },
+    {
+      "path": "worldclass/mobile-ux-runtime.js",
+      "bytes": 3147,
+      "sha256": "326825e3127f04ccfc163b050633cf49ef072656c9af15d636be9c1731d0a5b4"
+    },
+    {
+      "path": "worldclass/mobile-ux.css",
+      "bytes": 19160,
+      "sha256": "e1eda1fbf82b1157e96b56cfe68f65854dc8166a906828ba2bc8cdd8bb75cfa0"
+    },
+    {
+      "path": "worldclass/model-spec.json",
+      "bytes": 1779,
+      "sha256": "468e33efe712c9c9887b7c24fc0e5d6b3380d2578d590b49fae7d21178d3c0af"
+    },
+    {
+      "path": "worldclass/regime_backtest.json",
+      "bytes": 1093120,
+      "sha256": "842f154eaadac2f2f0ab628e035ea807451e88e0b1bfc8c7113bcf87a07637f4"
+    },
+    {
+      "path": "worldclass/release-status.json",
+      "bytes": 4303,
+      "sha256": "c3f41e44b1dc7730ac9cf47b50f945ae8a58e71dc722475a6cd7e3e7a80591dc"
+    },
+    {
+      "path": "worldclass/report-taxonomy.css",
+      "bytes": 1580,
+      "sha256": "c43b19642c9f64f0be847cea28d9daea715605297aabb9c77f277615903e2ab9"
+    },
+    {
+      "path": "worldclass/report-taxonomy.js",
+      "bytes": 11780,
+      "sha256": "7e16bd2880e4eaf99aedece097677e2cecc7d0cac28e5a59cce53e78a613cf64"
+    },
+    {
+      "path": "worldclass/sentiment-panel.css",
+      "bytes": 7043,
+      "sha256": "f0c3ce8aad6d409b0d351e3b42f987485c3531b2a2f28810c5421e3f4a80348a"
+    },
+    {
+      "path": "worldclass/sentiment-panel.js",
+      "bytes": 6280,
+      "sha256": "43b1cab2704bd93158a20cce4c048ccc6c71771f278ec0450596d731bbbb401c"
+    },
+    {
+      "path": "worldclass/styles.css",
+      "bytes": 23485,
+      "sha256": "6fc0e314562e08a0586280eaf9c154c737c59e4038dfb5ce543ff14e6ccf3b93"
+    },
+    {
+      "path": "worldclass/taxonomy-governance.js",
+      "bytes": 9144,
+      "sha256": "399b3b794bef18369e26e754818631548278aa0a9e484105284f6fe9ee4cb468"
+    },
+    {
+      "path": "worldclass/terminal-v2.css",
+      "bytes": 8345,
+      "sha256": "7df560f8e616da4388821cc0ed3f93a026aca50228c27a191ae2e1674255e8ea"
+    },
+    {
+      "path": "worldclass/terminal-v2.js",
+      "bytes": 17117,
+      "sha256": "668f0f4b64bd6e9a34c3eef9c2cd38d02765a141ef8ecb2da7ad7403e6f39fd1"
+    },
+    {
+      "path": "worldclass/terminal-v3.css",
+      "bytes": 11521,
+      "sha256": "fa129fa2190bd2dbcb0ba1547b602a3f591123e8e139f792aca2f0a51fd841a6"
+    },
+    {
+      "path": "worldclass/terminal-v3.js",
+      "bytes": 25997,
+      "sha256": "b1774562b2f3c5d941b3e366c37234c72dcc9529afb172e4bfa603dce2f85567"
+    },
+    {
+      "path": "worldclass/ux-hardening.css",
+      "bytes": 4917,
+      "sha256": "fbd7de69fda1089ccd618a15309c44046d049269b3d7bdb3ae58a7b0d17f5b6d"
+    },
+    {
+      "path": "worldclass/ux-hardening.js",
+      "bytes": 5137,
+      "sha256": "a772e0d1273b4dc2940c65bfb9de8d4d6cee6f3b44307b50c80e128364fee9be"
+    },
+    {
+      "path": "worldclass_dashboard.html",
+      "bytes": 12014,
+      "sha256": "03276adbd86549f837426a6b061b86a64f542db68d5a90e9a7077b6b38587807"
+    }
+  ]
+}

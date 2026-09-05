@@ -1,0 +1,154 @@
+{
+  "schema_version": 2,
+  "state": "LIVE",
+  "generated_at_utc": "2026-09-05T00:39:01Z",
+  "latest_cot_report_date": "2026-09-01",
+  "expected_cot_report_date": "2026-09-01",
+  "model": {
+    "model_version": "1.3.0",
+    "model_spec_hash": "a78c87e61dadb513bac3f844c4c7cc3c134deb495d187e0ebe5128c1ae15251e"
+  },
+  "market_states": {
+    "sp500": {
+      "state": "LIVE",
+      "latest_cot_report_date": "2026-09-01",
+      "expected_cot_report_date": "2026-09-01"
+    },
+    "nq": {
+      "state": "LIVE",
+      "latest_cot_report_date": "2026-09-01",
+      "expected_cot_report_date": "2026-09-01"
+    },
+    "vix": {
+      "state": "LIVE",
+      "latest_cot_report_date": "2026-09-01",
+      "expected_cot_report_date": "2026-09-01"
+    },
+    "rty": {
+      "state": "LIVE",
+      "latest_cot_report_date": "2026-09-01",
+      "expected_cot_report_date": "2026-09-01"
+    },
+    "dow": {
+      "state": "LIVE",
+      "latest_cot_report_date": "2026-09-01",
+      "expected_cot_report_date": "2026-09-01"
+    },
+    "gold": {
+      "state": "LIVE",
+      "latest_cot_report_date": "2026-09-01",
+      "expected_cot_report_date": "2026-09-01"
+    },
+    "silver": {
+      "state": "LIVE",
+      "latest_cot_report_date": "2026-09-01",
+      "expected_cot_report_date": "2026-09-01"
+    }
+  },
+  "markets": {
+    "sp500": {
+      "status": "LIVE",
+      "latest_report_date": "2026-09-01",
+      "expected_report_date": "2026-09-01"
+    },
+    "nq": {
+      "status": "LIVE",
+      "latest_report_date": "2026-09-01",
+      "expected_report_date": "2026-09-01"
+    },
+    "vix": {
+      "status": "LIVE",
+      "latest_report_date": "2026-09-01",
+      "expected_report_date": "2026-09-01"
+    },
+    "rty": {
+      "status": "LIVE",
+      "latest_report_date": "2026-09-01",
+      "expected_report_date": "2026-09-01"
+    },
+    "dow": {
+      "status": "LIVE",
+      "latest_report_date": "2026-09-01",
+      "expected_report_date": "2026-09-01"
+    },
+    "gold": {
+      "status": "LIVE",
+      "latest_report_date": "2026-09-01",
+      "expected_report_date": "2026-09-01"
+    },
+    "silver": {
+      "status": "LIVE",
+      "latest_report_date": "2026-09-01",
+      "expected_report_date": "2026-09-01"
+    }
+  },
+  "delayed_markets": [],
+  "message": "Validated current CFTC report 2026-09-01 across all required markets.",
+  "markets_validated": [
+    "sp500",
+    "nq",
+    "vix",
+    "rty",
+    "dow",
+    "gold",
+    "silver"
+  ],
+  "data_contracts": "PASS",
+  "actor_taxonomy": "PASS",
+  "lookahead_safety": "PASS",
+  "historical_regression_floors": {
+    "nq/tff": 500,
+    "nq/legacy": 500,
+    "sp500/tff": 450,
+    "sp500/legacy": 450,
+    "gold/disaggregated": 500,
+    "silver/disaggregated": 500
+  },
+  "macro_plumbing": {
+    "state": "LIVE",
+    "model_version": "macro-liquidity-control-room-v1.2",
+    "generated_at_utc": "2026-09-05T00:38:07.077704+00:00",
+    "source_coverage_ratio": 0.846,
+    "source_coverage_label": "Good",
+    "available_external_pillars": [
+      "funding_microstructure",
+      "dealer_absorption",
+      "fiscal_cash_flow",
+      "auction_absorption"
+    ],
+    "unavailable_external_pillars": [],
+    "browser_official_recovery": true,
+    "required_pillars": [
+      "net_liquidity",
+      "bank_reserves",
+      "funding_microstructure",
+      "dealer_absorption",
+      "fiscal_cash_flow",
+      "auction_absorption"
+    ]
+  },
+  "performance_gzip_bytes": {
+    "worldclass_dashboard.html": 3853,
+    "worldclass/styles.css": 5314,
+    "worldclass/live-track-record-panel.css": 1791,
+    "worldclass/bootstrap.js": 3899,
+    "worldclass/live-track-record-panel.js": 3046,
+    "worldclass/taxonomy-governance.js": 3031,
+    "worldclass/base.json": 789000,
+    "worldclass/metals.json": 93290,
+    "worldclass/app.js": 12057,
+    "worldclass/enhancements.css": 1094,
+    "worldclass/kpi-accent.css": 426,
+    "worldclass/terminal-v3.css": 2593,
+    "worldclass/sentiment-panel.css": 1702,
+    "worldclass/enhancements.js": 5144,
+    "worldclass/sentiment-panel.js": 2195,
+    "worldclass/terminal-v3.js": 7486,
+    "worldclass/market-sentiment.json": 3770,
+    "worldclass/live-track-record.json": 14998,
+    "worldclass/release-status.json": 1041,
+    "initial_total": 955730,
+    "deferred_after_load_total": 130738,
+    "budget": 1000000
+  }
+}

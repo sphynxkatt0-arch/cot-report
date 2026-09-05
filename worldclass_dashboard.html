@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07111f">
+  <title>COT Intelligence | Positioning & Macro Liquidity</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="worldclass/styles.css?v=20260809-cache-safe-runtime-v1">
+  <link rel="stylesheet" href="worldclass/live-track-record-panel.css?v=20260809-cache-safe-runtime-v1">
+  <!-- Runtime JS is loaded below with the current release timestamp as a cache key. -->
+  <link rel="stylesheet" href="worldclass/cot-intelligence.css?v=e5052672ff8f" data-cot-intelligence-asset="css">
+  <link rel="stylesheet" href="worldclass/cot-intelligence-light.css?v=41fe1a53c612" data-cot-intelligence-asset="light-css">
+  <link rel="stylesheet" href="worldclass/current-edge-command.css?v=47a6bb0dbfec" data-cot-intelligence-asset="current-edge-css">
+  <link rel="stylesheet" href="worldclass/mobile-ux.css?v=e1eda1fbf82b" data-cot-intelligence-asset="mobile-ux-css">
+  <link rel="stylesheet" href="worldclass/cot-intelligence-worldclass-ux.css?v=79df89ef29e3" data-cot-intelligence-asset="worldclass-ux-css">
+  <link rel="stylesheet" href="worldclass/report-taxonomy.css?v=c43b19642c9f" data-cot-intelligence-asset="report-taxonomy-css">
+  <link rel="stylesheet" href="worldclass/ux-hardening.css?v=fbd7de69fda1" data-cot-intelligence-asset="ux-hardening-css">
+</head>
+<body>
+  <a class="skip-link" href="#mainContent">Skip to market analysis</a>
+  <div class="app-frame">
+    <header class="topbar">
+      <div class="brand-lockup">
+        <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div>
+          <div class="eyebrow">CFTC POSITIONING · MACRO LIQUIDITY</div>
+          <h1>COT Intelligence</h1>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <div id="freshnessPill" class="status-pill"><span class="status-dot"></span><span>Loading data</span></div>
+        <button id="themeToggle" class="icon-button" type="button" aria-label="Switch to light theme" title="Switch to light theme">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <main id="mainContent" tabindex="-1">
+      <section class="hero">
+        <div>
+          <div class="eyebrow">WEEKLY POSITIONING TERMINAL</div>
+          <h2>See who moved, by exactly how much, and whether liquidity confirms it.</h2>
+          <p>Consolidated index futures, physical-commodity positioning, price response and macro liquidity in one auditable view.</p>
+        </div>
+        <div id="heroAsOf" class="hero-asof"></div>
+      </section>
+
+      <section class="instrument-bar" aria-label="Instrument selection">
+        <div id="instrumentTabs" class="instrument-tabs"></div>
+      </section>
+
+      <section class="controls-surface">
+        <details id="mobileControls" class="mobile-controls">
+          <summary>Chart controls <span id="mobileControlSummary"></span></summary>
+          <div id="mobileControlBody" class="mobile-control-body"></div>
+        </details>
+        <div id="desktopControls" class="desktop-controls"></div>
+      </section>
+
+      <section id="alertStrip" class="alert-strip" hidden></section>
+      <section id="headlineCards" class="headline-grid" aria-label="Current market summary"></section>
+
+      <section class="panel workbench-panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker">MARKET WORKBENCH</div>
+            <h3 id="workbenchTitle">COT positioning + price + liquidity</h3>
+          </div>
+          <div class="panel-actions">
+            <div id="legendHint" class="panel-meta"></div>
+            <div id="rangeButtons" class="range-buttons" role="group" aria-label="Chart range">
+              <button data-range="1y" type="button">1Y</button>
+              <button data-range="3y" type="button">3Y</button>
+              <button data-range="5y" type="button">5Y</button>
+              <button data-range="all" class="active" type="button">All</button>
+            </div>
+          </div>
+        </div>
+        <div id="mainChart" class="main-chart"></div>
+      </section>
+
+      <section id="weeklySectionHeading" class="section-heading">
+        <div>
+          <div class="section-number">01</div>
+          <div>
+            <h2 id="weeklyChangeHeading">What changed since last update</h2>
+            <p id="weeklyChangeSub">Latest report versus the prior weekly observation.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="weeklyChangePanel" class="panel">
+        <div id="weeklyOverview" class="weekly-overview"></div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Trader group</th><th>Latest net/OI</th><th>Δ net/OI</th><th>Δ long</th><th>Δ short</th><th>Δ net</th><th>Flow</th>
+              </tr>
+            </thead>
+            <tbody id="weeklyChangeRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="positioningColumns" class="two-column">
+        <section class="panel">
+          <div class="panel-head compact">
+            <div><div class="panel-kicker">POSITIONING REGIME</div><h3>Historical extremes & score contribution</h3></div>
+            <div class="panel-meta">Percentiles use the selected instrument's visible history</div>
+          </div>
+          <div id="positioningPanel" class="positioning-panel"></div>
+        </section>
+        <section class="panel score-panel">
+          <div class="panel-head compact"><div><div class="panel-kicker">DIRECTIONAL COT SCORE</div><h3>Transparent, governed positioning signal</h3></div></div>
+          <div id="cotScorePanel"></div>
+        </section>
+      </section>
+
+      <section id="macroSectionHeading" class="section-heading">
+        <div><div class="section-number">02</div><div><h2>Macro liquidity</h2><p>Liquidity plumbing, funding stress, real rates, credit, dollar and volatility.</p></div></div>
+      </section>
+
+      <section id="macroCards" class="macro-grid"></section>
+
+      <section id="macroColumns" class="two-column macro-columns">
+        <section class="panel">
+          <div class="panel-head compact"><div><div class="panel-kicker">LIQUIDITY TREND</div><h3>Unified macro score</h3></div><div class="panel-meta">0 = restrictive · 100 = supportive</div></div>
+          <div id="macroChart" class="macro-chart"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-head compact"><div><div class="panel-kicker">CURRENT MACRO STATE</div><h3>What is driving the regime</h3></div></div>
+          <div id="macroDrivers" class="driver-list"></div>
+        </section>
+      </section>
+
+      <section id="methodologySectionHeading" class="section-heading">
+        <div><div class="section-number">03</div><div><h2>Data integrity & methodology</h2><p>Every score stays tied to the underlying weekly report, governed model version and source taxonomy.</p></div></div>
+      </section>
+
+      <section id="methodologyPanel" class="panel methodology">
+        <div class="method-card">
+          <strong>TFF directional score · v1.3</strong>
+          <p>Index-futures direction is driven only by Asset Manager / Institutional and Leveraged Funds. Dealer / Intermediary, Other Reportables and Nonreportables remain visible as context but carry zero directional weight.</p>
+        </div>
+        <div class="method-card">
+          <strong>Legacy directional score · v1.3</strong>
+          <p>Non-Commercial is the sole directional Legacy input. Commercial, Total Reportable and Nonreportable positioning remain visible for descriptive analysis and carry zero score weight.</p>
+        </div>
+        <div class="method-card">
+          <strong>Gold &amp; Silver · v1.3</strong>
+          <p>Physical commodities use CFTC Disaggregated Futures Only. Managed Money is the sole directional metals input; Producer/Merchant, Swap Dealers, Other Reportables and Non-reportables remain visible as context.</p>
+        </div>
+        <div class="method-card">
+          <strong>Release timing & governance</strong>
+          <p>COT observations are Tuesday “as of” positions released later in the week. Secondary actors only receive future non-zero production weight after precommitted lookahead-safe holdout evidence demonstrates incremental value.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer><div>COT Intelligence · Research dashboard</div><div id="footerFreshness"></div></footer>
+  </div>
+
+  <div id="loadingOverlay" class="loading-overlay"><div class="loading-card"><div class="loader"></div><strong>Building market view</strong><span>Loading COT, prices and macro liquidity…</span></div></div>
+
+  <script>
+    (() => {
+      "use strict";
+      const addScript = src => {
+        const script = document.createElement("script");
+        script.src = src;
+        document.body.appendChild(script);
+        return script;
+      };
+      const versioned = (path, version) => `${path}${path.includes("?") ? "&" : "?"}v=${encodeURIComponent(version)}`;
+
+      async function startCurrentRelease() {
+        let releaseVersion = null;
+        try {
+          const response = await fetch(`worldclass/release-status.json?v=${Date.now()}`, { cache: "no-store" });
+          if (response.ok) {
+            const release = await response.json();
+            releaseVersion = release.generated_at_utc || release.model?.model_spec_hash || null;
+          }
+        } catch (error) {
+          console.warn("Could not resolve current release version; using one-shot cache bypass.", error);
+        }
+
+        // The release version is only a cache key for runtime assets; it must not rewrite
+        // the address bar or force a full-page reload on every visit.
+        const runtimeVersion = releaseVersion || String(Date.now());
+        window.__COT_RUNTIME_VERSION__ = runtimeVersion;
+        const bootstrap = addScript(versioned("worldclass/bootstrap.js", runtimeVersion));
+        addScript(versioned("worldclass/live-track-record-panel.js", runtimeVersion));
+        bootstrap.addEventListener("load", async () => {
+          try {
+            if (window.__COT_APP_DATA_READY__) await window.__COT_APP_DATA_READY__;
+          } catch (error) {
+            console.warn("Shared runtime data did not become ready before taxonomy startup.", error);
+          }
+          addScript(versioned("worldclass/taxonomy-governance.js", runtimeVersion));
+        }, { once: true });
+      }
+
+      startCurrentRelease();
+    })();
+  </script>
+  <script defer src="worldclass/cot-intelligence.js?v=cde9a3abd530" data-cot-intelligence-asset="js"></script>
+  <script defer src="worldclass/report-taxonomy.js?v=7e16bd2880e4" data-cot-intelligence-asset="report-taxonomy-js"></script>
+  <script defer src="worldclass/current-edge-model.js?v=436668f93bbc" data-cot-intelligence-asset="current-edge-model"></script>
+  <script defer src="worldclass/current-edge-command.js?v=52327b6cb7c1" data-cot-intelligence-asset="current-edge-js"></script>
+  <script defer src="worldclass/mobile-ux-runtime.js?v=326825e3127f" data-cot-intelligence-asset="mobile-ux-runtime"></script>
+  <script defer src="worldclass/cot-intelligence-worldclass-ux.js?v=c4bf9b719f9b" data-cot-intelligence-asset="worldclass-ux-runtime"></script>
+  <script defer src="worldclass/ux-hardening.js?v=a772e0d1273b" data-cot-intelligence-asset="ux-hardening-js"></script>
+  <script defer src="worldclass/cot-intelligence-v2-copy.js?v=ed66f5d5873f" data-cot-intelligence-asset="v2-copy-js"></script>
+</body>
+</html>
