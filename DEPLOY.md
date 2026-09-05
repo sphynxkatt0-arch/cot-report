@@ -36,9 +36,9 @@ The public site should always represent the same release recorded by `worldclass
 
 ## CFTC timing
 
-The normal CFTC refresh is scheduled for **Friday at 21:35 Europe/Stockholm during CEST** / the equivalent 15:35 New York release-follow-up time. The workflow uses two UTC cron candidates and an America/New_York timezone gate so DST changes do not shift the intended New York execution time.
+The normal refresh is scheduled for **every day at 21:35 Europe/Stockholm** (15:35 America/New_York release time). The workflow uses two UTC cron candidates and a timezone gate so DST changes do not shift the intended execution time.
 
-A second dispatcher checks at **16:35 New York time** as a retry. If the expected CFTC release is genuinely delayed, the validator preserves the last valid observation but marks the release as delayed; it must not fabricate a new neutral report or label stale data as current.
+A second dispatcher checks at **22:35 Stockholm / 16:35 New York time** as a daily retry. If the expected CFTC release is genuinely delayed, the validator preserves the last valid observation but marks the release as delayed; it must not fabricate a new neutral report or label stale data as current.
 
 ## Governed model contract
 

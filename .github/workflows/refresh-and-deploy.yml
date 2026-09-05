@@ -6,8 +6,9 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    - cron: '35 19 * * 5'
-    - cron: '35 20 * * 5'
+    # 21:35 Europe/Stockholm (15:35 America/New_York) every day across DST
+    - cron: '35 19 * * *'
+    - cron: '35 20 * * *'
 
 permissions:
   contents: write
@@ -32,12 +33,13 @@ jobs:
           if [ "${{ github.event_name }}" != 'schedule' ]; then echo 'run=true' >> "$GITHUB_OUTPUT"; exit 0; fi
           utc_day="$(date -u +%F)"
           case '${{ github.event.schedule }}' in
-            '35 19 * * 5') scheduled_utc="$utc_day 19:35:00 UTC" ;;
-            '35 20 * * 5') scheduled_utc="$utc_day 20:35:00 UTC" ;;
+            '35 19 * * *') scheduled_utc="$utc_day 19:35:00 UTC" ;;
+            '35 20 * * *') scheduled_utc="$utc_day 20:35:00 UTC" ;;
             *) echo 'run=false' >> "$GITHUB_OUTPUT"; exit 0 ;;
           esac
+          stockholm="$(TZ=Europe/Stockholm date -d "$scheduled_utc" +%H:%M)"
           eastern="$(TZ=America/New_York date -d "$scheduled_utc" +%H:%M)"
-          if [ "$eastern" = '15:35' ]; then echo 'run=true' >> "$GITHUB_OUTPUT"; else echo 'run=false' >> "$GITHUB_OUTPUT"; fi
+          if [ "$stockholm" = '21:35' ] || [ "$eastern" = '15:35' ]; then echo 'run=true' >> "$GITHUB_OUTPUT"; else echo 'run=false' >> "$GITHUB_OUTPUT"; fi
 
   refresh-and-deploy:
     needs: schedule-gate

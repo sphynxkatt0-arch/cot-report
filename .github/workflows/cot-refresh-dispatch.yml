@@ -3,10 +3,10 @@ name: Ensure COT Refresh Retry
 on:
   workflow_dispatch:
   schedule:
-    # Retry the canonical Friday refresh one hour after the expected 15:35 ET run.
-    # 20:35 UTC is 16:35 ET during EDT; 21:35 UTC is 16:35 ET during EST.
-    - cron: '35 20 * * 5'
-    - cron: '35 21 * * 5'
+    # Retry the canonical refresh one hour after the expected 21:35 Stockholm / 15:35 ET run every day.
+    # 20:35 UTC is 16:35 ET / 22:35 Stockholm during EDT; 21:35 UTC is 16:35 ET / 22:35 Stockholm during EST.
+    - cron: '35 20 * * *'
+    - cron: '35 21 * * *'
 
 permissions:
   contents: read
@@ -33,13 +33,14 @@ jobs:
 
           utc_day="$(date -u +%F)"
           case '${{ github.event.schedule }}' in
-            '35 20 * * 5') scheduled_utc="$utc_day 20:35:00 UTC" ;;
-            '35 21 * * 5') scheduled_utc="$utc_day 21:35:00 UTC" ;;
+            '35 20 * * *') scheduled_utc="$utc_day 20:35:00 UTC" ;;
+            '35 21 * * *') scheduled_utc="$utc_day 21:35:00 UTC" ;;
             *) echo 'run=false' >> "$GITHUB_OUTPUT"; exit 0 ;;
           esac
 
           eastern="$(TZ=America/New_York date -d "$scheduled_utc" +%H:%M)"
-          if [ "$eastern" = '16:35' ]; then
+          stockholm="$(TZ=Europe/Stockholm date -d "$scheduled_utc" +%H:%M)"
+          if [ "$stockholm" = '22:35' ] || [ "$eastern" = '16:35' ]; then
             echo 'run=true' >> "$GITHUB_OUTPUT"
           else
             echo 'run=false' >> "$GITHUB_OUTPUT"
