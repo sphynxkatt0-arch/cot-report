@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "release_id": "20260909T105506Z-a826286aaaf3-653df79fa0ad",
-  "generated_at_utc": "2026-09-09T10:55:06Z",
-  "source_commit": "a826286aaaf348579bc6b0823f4277b124d142b7",
-  "release_content_sha256": "653df79fa0adf39cc700a923dbfc81fdbb36ad2390eb6dbaef1791f683a6d133",
+  "release_id": "20260909T220047Z-96a7eabb87a8-1c6161860db0",
+  "generated_at_utc": "2026-09-09T22:00:47Z",
+  "source_commit": "96a7eabb87a8b76c11c09cdbb67bd98d8b955e52",
+  "release_content_sha256": "1c6161860db08a4783ee304c0a8611dce17663bc7ed97befb42d6f34e81b7910",
   "publish_contract": {
     "strategy": "single-commit-gh-pages",
     "atomic_publish_unit": "validated publish tree",
@@ -35,8 +35,8 @@
     },
     {
       "path": "model_output/macro_liquidity_expansion.json",
-      "bytes": 22264,
-      "sha256": "3d98ef49e113ea3875e8291d458e51e2cf9fe31bed53bdad0068b503887a5d06"
+      "bytes": 14740,
+      "sha256": "a91358f67b795a2a2f7e3093f05149395b3cf97e41761c7c0508077bbffb222d"
     },
     {
       "path": "worldclass/app.js",
@@ -45,13 +45,13 @@
     },
     {
       "path": "worldclass/backtest.json",
-      "bytes": 58498,
-      "sha256": "943580ec92223c2b90f4863f5fcd3d6fd4d883320af0f2f8a46a6dbd08b5f703"
+      "bytes": 58496,
+      "sha256": "134bdba5ee4293632a12fd4662346be972dd15a12f7c96da3e57e205bed9a45d"
     },
     {
       "path": "worldclass/base.json",
-      "bytes": 4449951,
-      "sha256": "f2458ea82c69043f0e367e275a755d19c7c371e1202b258d85276ec5068f1667"
+      "bytes": 4450097,
+      "sha256": "d5fde519f2b6529439f186460ca7bc9f4ad37d379e84fcc5e332ad4d0469b810"
     },
     {
       "path": "worldclass/bootstrap.js",
@@ -71,17 +71,17 @@
     {
       "path": "worldclass/cot-cross-market-v2.json",
       "bytes": 85280,
-      "sha256": "c8246c1d0f14967a0f89bfb681ef604b87d99380e3079d355d4be7b37aee0950"
+      "sha256": "c76947805f4fa744dc2e43f9f92f2b31c43fb5165c90183fd6efe429bb799997"
     },
     {
       "path": "worldclass/cot-cross-market.json",
       "bytes": 85280,
-      "sha256": "c8246c1d0f14967a0f89bfb681ef604b87d99380e3079d355d4be7b37aee0950"
+      "sha256": "c76947805f4fa744dc2e43f9f92f2b31c43fb5165c90183fd6efe429bb799997"
     },
     {
       "path": "worldclass/cot-current-state.json",
       "bytes": 82377,
-      "sha256": "494324e0eb59c72c17090e8b47bfab26117fa595114a0374d049f3c6eb4a32ce"
+      "sha256": "9eba902d2dd3c6559bd8005ad1816a584bf72baf1c5c4c756ac419a860ec046d"
     },
     {
       "path": "worldclass/cot-edge-registry-v2.json",
@@ -126,7 +126,7 @@
     {
       "path": "worldclass/cot-research-provenance.json",
       "bytes": 1563,
-      "sha256": "ed15ff2fabc1585dc3ce59ac3875e89126e3a89c8def9176be411be836542b36"
+      "sha256": "1218db031912f59d29ef7c10a9bf3fe025f45aee77212006a9e98327991a8406"
     },
     {
       "path": "worldclass/cross-actor.css",
@@ -191,7 +191,7 @@
     {
       "path": "worldclass/live-track-record.json",
       "bytes": 359904,
-      "sha256": "1c894dc55b303987cd3d339aba16476b56caa532a044490017b8263306e456c3"
+      "sha256": "2d9506beb810c62eafe88e7df36ff1d092623b0239f791a47bd0fa7ba66c2ece"
     },
     {
       "path": "worldclass/macro-control-fallback.js",
@@ -216,12 +216,12 @@
     {
       "path": "worldclass/market-sentiment.json",
       "bytes": 39087,
-      "sha256": "d2fff8f737c3320e05e7ab9dcb17125f2f58d550a024c2997bb7a9f13c7a321b"
+      "sha256": "314efbf28f5dcc061b69356cf5f580c4eec075c466ba359a1d4f44e70cbe52b0"
     },
     {
       "path": "worldclass/metals.json",
       "bytes": 621702,
-      "sha256": "6c59f804d2903a2472fe7a7e481a2f7c9c795cfd09437efb56997d8ac1461601"
+      "sha256": "06f8e85771bf19ac4bf176b5afe9358914ac7b5d2b0171521eb66cb12e702bfb"
     },
     {
       "path": "worldclass/mobile-ux-runtime.js",
@@ -240,13 +240,13 @@
     },
     {
       "path": "worldclass/regime_backtest.json",
-      "bytes": 1092934,
-      "sha256": "a943528e857011c207927da905e84a775d35a0a901fed89cb5b409216c36b9eb"
+      "bytes": 1092925,
+      "sha256": "2790b799610cac9d8af8432f84ba451c5c34316cac546284ae096692b1267452"
     },
     {
       "path": "worldclass/release-status.json",
       "bytes": 4310,
-      "sha256": "160af4f726ff87b15a6b86dd8dcd4ab1997512f94e0a785010c76a13a85fd68c"
+      "sha256": "0738dd10165d1c7e6a9d5adfaaea2c91f51b8a1bedd5d323c9b8e0e71b2974e8"
     },
     {
       "path": "worldclass/report-taxonomy.css",

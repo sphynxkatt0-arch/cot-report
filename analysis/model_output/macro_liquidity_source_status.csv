@@ -1,8 +1,8 @@
 ﻿key,label,dataset,source,unit,status,mnemonic,resolution,latest_date,latest_value,change_short,change_medium,zscore,age_days,error
-repo_dvp_rate,DVP overnight/open repo rate,repo,Office of Financial Research STFM,%,fresh,REPO-DVP_AR_OO-P,configured,2026-09-04,3.66,-0.009999999999999787,0.020000000000000018,0.23609097227913356,5,
+repo_dvp_rate,DVP overnight/open repo rate,repo,Office of Financial Research STFM,%,fresh,REPO-DVP_AR_OO-P,configured,2026-09-08,3.66,-0.040000000000000036,0.020000000000000018,0.23950973858670302,1,
 repo_gcf_rate,GCF overnight/open repo rate,repo,Office of Financial Research STFM,%,fresh,REPO-GCF_AR_OO-P,configured,2026-09-04,3.7,0.020000000000000018,0.03000000000000025,-0.8666282620786717,5,
-repo_triparty_rate,Tri-party overnight/open repo rate,repo,Office of Financial Research STFM,%,stale,REPO-TRI_AR_OO-P,configured,2026-09-03,3.65,0.020000000000000018,0.009999999999999787,0.7653188758120294,6,
-repo_dvp_volume,DVP overnight/open transaction volume,repo,Office of Financial Research STFM,USD bn,fresh,REPO-DVP_TV_OO-P,configured; scaled raw OFR dollars by 1e+09,2026-09-04,2726.97403859008,127.57559908464009,-30.649668264819866,-1.2070821640739864,5,
+repo_triparty_rate,Tri-party overnight/open repo rate,repo,Office of Financial Research STFM,%,fresh,REPO-TRI_AR_OO-P,configured,2026-09-04,3.64,0.0,0.03000000000000025,0.45852389670142957,5,
+repo_dvp_volume,DVP overnight/open transaction volume,repo,Office of Financial Research STFM,USD bn,fresh,REPO-DVP_TV_OO-P,configured; scaled raw OFR dollars by 1e+09,2026-09-08,2738.29179193191,-176.91778622180982,22.251852402350323,-1.1040632329133502,1,
 dealer_treasury_positions,Dealer Treasury net positions,nypd,Office of Financial Research STFM,USD mn,unavailable,,no qualified match,,,,,,,no qualified match
 dealer_treasury_financing,Dealer Treasury repo financing,nypd,Office of Financial Research STFM,USD mn,stale,NYPD-PD_RP_T_TOT-A,configured; scaled raw OFR dollars by 1e+06,2021-12-29,1970185.0,-9373.0,-19539.0,,1715,
 dealer_treasury_fails,Dealer Treasury settlement fails,nypd,Office of Financial Research STFM,USD mn,stale,NYPD-PD_AFtD_T-A,configured; scaled raw OFR dollars by 1e+06,2026-08-26,81852.0,-15677.0,9330.0,-0.5486648222128501,14,
