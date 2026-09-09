@@ -46,6 +46,23 @@ jobs:
         working-directory: analysis
         run: python validate_cot_research_correctness.py
 
+  direction-model-regressions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: analysis/requirements.txt
+      - name: Install analysis dependencies
+        run: pip install -r analysis/requirements.txt
+      - name: Run release and directional model regression tests
+        working-directory: analysis
+        run: |
+          python tests/test_cot_direction_model.py
+          python tests/test_release_and_macro.py
+
   calendar-artifact:
     runs-on: ubuntu-latest
     steps:
