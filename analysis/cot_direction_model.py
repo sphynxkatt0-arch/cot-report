@@ -17,12 +17,14 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 from typing import Any, Iterable
 
 import numpy as np
 import pandas as pd
+
+from cftc_release_calendar import normal_release_date
 
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent / "config" / "cot_direction_model_v1.json"
 MACRO_PRODUCTION_MULTIPLIER = 1.0
@@ -134,9 +136,8 @@ def load_config(path: Path | str = DEFAULT_CONFIG_PATH) -> dict[str, Any]:
 
 
 def scheduled_release_date(report_date: str | date | pd.Timestamp) -> date:
-    """Return the first Friday on or after the COT as-of date."""
-    day = pd.Timestamp(report_date).date()
-    return day + timedelta(days=(4 - day.weekday()) % 7)
+    """Return the canonical normal-schedule CFTC release date."""
+    return normal_release_date(pd.Timestamp(report_date).date())
 
 
 def percentile_rank_prior(history: Iterable[Any], value: Any, minimum: int = 26) -> float | None:
@@ -314,7 +315,10 @@ def confidence_score(
         score -= float(cfg.get("missing_macro_penalty", 0.0))
     if not has_price:
         score -= float(cfg["missing_price_penalty"])
-    if release_date_source != "actual":
+    # Only an unobserved scheduled assumption gets the schedule-confidence
+    # penalty. A first-observed release is empirical timing evidence even when
+    # it arrived on the normal schedule.
+    if release_date_source == "scheduled_assumption":
         score -= float(cfg["scheduled_release_assumption_penalty"])
     return clamp(score, 0.0, 1.0)
 
