@@ -27,6 +27,10 @@ class ReleaseTrackerTests(unittest.TestCase):
         self.assertEqual(release.isoformat(), "2026-07-24T15:30:00-04:00")
         self.assertEqual(release.astimezone(ZoneInfo("Europe/Stockholm")).strftime("%H:%M"), "21:30")
 
+    def test_scheduled_release_skips_federal_holiday(self):
+        release = scheduled_release_datetime("2026-12-22")
+        self.assertEqual(release.isoformat(), "2026-12-28T15:30:00-05:00")
+
     def test_expected_report_changes_after_friday_release(self):
         before = datetime(2026, 7, 24, 19, 20, tzinfo=UTC)
         after = datetime(2026, 7, 24, 19, 40, tzinfo=UTC)
