@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT))
 from cot_direction_model import (  # noqa: E402
     asset_manager_multiplier,
     build_decision,
+    confidence_score,
     load_config,
     preserve_structural_sign,
     scheduled_release_date,
@@ -25,8 +26,20 @@ class DirectionModelTests(unittest.TestCase):
     def setUpClass(cls):
         cls.config = load_config(ROOT / "config" / "cot_direction_model_v1.json")
 
-    def test_release_alignment_uses_friday(self):
+    def test_release_alignment_uses_business_day_calendar(self):
         self.assertEqual(scheduled_release_date("2026-07-21").isoformat(), "2026-07-24")
+        self.assertEqual(scheduled_release_date("2026-12-22").isoformat(), "2026-12-28")
+
+    def test_first_observed_release_does_not_get_schedule_penalty(self):
+        actual = confidence_score("sp500", 1.0, True, True, True, "actual", self.config)
+        observed = confidence_score(
+            "sp500", 1.0, True, True, True, "first_observed_on_schedule", self.config
+        )
+        assumed = confidence_score(
+            "sp500", 1.0, True, True, True, "scheduled_assumption", self.config
+        )
+        self.assertEqual(observed, actual)
+        self.assertLess(assumed, observed)
 
     def test_low_noncommercial_percentile_is_bullish(self):
         self.assertGreater(structural_score_from_percentile(5, self.config), 0.9)

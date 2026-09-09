@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Track scheduled and first-observed CFTC COT release timing.
 
-The COT observation is normally as of Tuesday and published Friday at 15:30
-America/New_York. The repository cannot reconstruct exact historical release
-timestamps, so this module stores the first time the local refresher observes a
-new report and clearly distinguishes that from an official timestamp.
+The COT observation is normally as of Tuesday and published on the third U.S.
+federal business day after the report date at 15:30 America/New_York. The
+repository cannot reconstruct exact historical release timestamps, so this
+module stores the first time the local refresher observes a new report and
+clearly distinguishes that from an official timestamp.
 """
 
 from __future__ import annotations
@@ -14,6 +15,8 @@ from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
+
+from cftc_release_calendar import normal_release_date
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT_LEDGER = ROOT / "model_output" / "cftc_release_observations.json"
@@ -40,14 +43,14 @@ def parse_date(value: str | date | datetime) -> date:
 
 
 def scheduled_release_datetime(report_date: str | date | datetime) -> datetime:
-    """Return the normal Friday 15:30 ET release timestamp for a report date."""
+    """Return the canonical scheduled CFTC release timestamp for a report."""
     report = parse_date(report_date)
-    friday = report + timedelta(days=(4 - report.weekday()) % 7)
-    return datetime.combine(friday, RELEASE_TIME_ET, tzinfo=NEW_YORK)
+    release_day = normal_release_date(report)
+    return datetime.combine(release_day, RELEASE_TIME_ET, tzinfo=NEW_YORK)
 
 
 def expected_latest_report_date(now: datetime | None = None) -> date:
-    """Latest Tuesday report whose normal Friday release time has passed."""
+    """Latest Tuesday report whose normal scheduled release time has passed."""
     current = aware_utc(now)
     local = current.astimezone(NEW_YORK)
     candidate = local.date() - timedelta(days=(local.date().weekday() - 1) % 7)
