@@ -12,7 +12,7 @@ test('Today is the default decision surface and newest COT changes are immediate
   await open(page);
 
   await expect(page.locator('.hero')).toBeHidden();
-  await expect(page.locator('[data-decision-view]')).toHaveCount(3);
+  await expect(page.locator('[data-decision-view]')).toHaveCount(4);
   await expect(page.locator('[data-decision-view="today"]')).toHaveClass(/active/);
   await expect(page.locator('.decision-title-row')).toBeVisible();
   await expect(page.locator('[data-decision-surface="latest-cot-changes"]')).toBeVisible();
@@ -161,7 +161,7 @@ test('market, horizon and model family persist in URL and synchronize Today', as
   await expect(page).toHaveURL(/model=macro/);
 });
 
-test('Research is self-contained and never exposes the legacy dashboard', async ({ page }) => {
+test('Research restores the deep evidence surface without reopening chart controls', async ({ page }) => {
   await open(page, '?market=gold&view=research');
 
   await expect(page.locator('[data-decision-view="research"]')).toHaveClass(/active/);
@@ -172,11 +172,64 @@ test('Research is self-contained and never exposes the legacy dashboard', async 
   await expect(page.locator('[data-decision-surface="research"]')).toContainText('Macro evidence');
   await expect(page.locator('[data-decision-surface="research"]')).toContainText('Methodology & provenance');
 
-  await expect(page.locator('#cotIntelligence')).toBeHidden();
+  await expect(page.locator('#cotIntelligence')).toBeVisible();
+  await expect(page.locator('#cotIntelligence')).toHaveAttribute('aria-hidden', 'false');
   await expect(page.locator('.controls-surface')).toBeHidden();
   await expect(page.locator('.workbench-panel')).toBeHidden();
   await expect(page.locator('.methodology')).toBeHidden();
-  await expect(page.locator('[data-decision-view]')).toHaveCount(3);
+  await expect(page.locator('[data-decision-view]')).toHaveCount(4);
+});
+
+test('Charts & data restores holdings history, controls and analytical components', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await open(page, '?market=nq&view=data');
+
+  await expect(page.locator('[data-decision-view="data"]')).toHaveClass(/active/);
+  await expect(page.locator('[data-decision-surface="data"]')).toBeVisible();
+  await expect(page.locator('.controls-surface')).toBeVisible();
+  await expect(page.locator('.workbench-panel')).toBeVisible();
+  await expect(page.locator('#weeklyChangePanel')).toBeVisible();
+  await expect(page.locator('#positioningColumns')).toBeVisible();
+  await expect(page.locator('#macroCards')).toBeVisible();
+  await expect(page.locator('#methodologyPanel')).toBeVisible();
+
+  await page.waitForFunction(() => Array.isArray(document.querySelector('#mainChart')?.data) && document.querySelector('#mainChart').data.length > 0);
+  const chart = await page.evaluate(() => ({
+    traces: document.querySelector('#mainChart')?.data?.length || 0,
+    title: document.querySelector('#workbenchTitle')?.textContent || ''
+  }));
+  expect(chart.traces).toBeGreaterThan(0);
+  expect(chart.title).toMatch(/Nasdaq-100.*positioning/i);
+});
+
+test('holdings chart can plot historical weekly net changes with short date ranges', async ({ page }) => {
+  await open(page, '?market=nq&view=data');
+  const metric = page.locator('#desktopControls [data-control="metric"]');
+  await expect(metric).toBeVisible();
+  await metric.selectOption('net_change');
+  await expect(page.locator('#workbenchTitle')).toContainText('weekly holdings change');
+  await expect(page.locator('#legendHint')).toContainText('current COT position minus the prior report');
+
+  const traces = await page.evaluate(() => (document.querySelector('#mainChart')?.data || [])
+    .filter(trace => trace.yaxis === 'y' && Array.isArray(trace.y))
+    .map(trace => ({ name: trace.name, count: trace.y.length, finite: trace.y.filter(Number.isFinite).length })));
+  expect(traces.length).toBeGreaterThan(0);
+  expect(traces.every(trace => trace.count > 10 && trace.finite === trace.count)).toBeTruthy();
+
+  await page.locator('#rangeButtons [data-range="3m"]').click();
+  await expect(page.locator('#rangeButtons [data-range="3m"]')).toHaveClass(/active/);
+  const threeMonthCount = await page.evaluate(() => (document.querySelector('#mainChart')?.data || [])
+    .find(trace => trace.yaxis === 'y' && Array.isArray(trace.x))?.x?.length || 0);
+  expect(threeMonthCount).toBeGreaterThan(2);
+  expect(threeMonthCount).toBeLessThan(30);
+});
+
+test('Legacy report selection stays synchronized with the visible workbench', async ({ page }) => {
+  await open(page, '?market=nq&view=data&report=legacy');
+  await expect(page.locator('#reportTaxonomyControl [data-report-dataset="legacy"]')).toHaveClass(/active/);
+  await expect(page.locator('#desktopControls [data-control="dataset"]')).toHaveValue('legacy');
+  await expect(page.locator('#workbenchTitle')).toContainText('Legacy');
+  await expect(page.locator('[data-decision-surface="data"]')).toContainText('LEGACY');
 });
 
 test('weekday path preserves release timing language on Today', async ({ page }) => {
@@ -195,7 +248,7 @@ test('important index and VIX option expiries remain visible on Today', async ({
   const overview = page.locator('.decision-current');
   await expect(overview).toContainText('Important expiries');
   await expect(overview).toContainText('Next index OPEX');
-  await expect(overview).toContainText('Next VIX expiry');
+  await expect(overview).toContainText('Next VIX settlement');
 });
 
 test('mobile has no page-level horizontal overflow and latest COT changes become cards', async ({ page }) => {
@@ -215,6 +268,27 @@ test('mobile has no page-level horizontal overflow and latest COT changes become
   await page.locator('[data-decision-view="research"]').click();
   overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test('mobile Charts & data keeps controls and the holdings graph inside the viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page, '?market=nq&view=data');
+  await expect(page.locator('.workbench-panel')).toBeVisible();
+  await expect(page.locator('#mobileControls')).toBeVisible();
+  await page.locator('#mobileControls > summary').click();
+  await page.locator('#mobileControlBody [data-control="metric"]').selectOption('net_change');
+  await expect(page.locator('#workbenchTitle')).toContainText('weekly holdings change');
+  await page.waitForFunction(() => Array.isArray(document.querySelector('#mainChart')?.data) && document.querySelector('#mainChart').data.length > 0);
+
+  const geometry = await page.evaluate(() => ({
+    viewport: document.documentElement.clientWidth,
+    scroll: document.documentElement.scrollWidth,
+    chart: document.querySelector('#mainChart')?.getBoundingClientRect().width || 0,
+    panel: document.querySelector('.workbench-panel')?.getBoundingClientRect().width || 0
+  }));
+  expect(geometry.scroll).toBeLessThanOrEqual(geometry.viewport + 2);
+  expect(geometry.chart).toBeLessThanOrEqual(geometry.viewport);
+  expect(geometry.panel).toBeLessThanOrEqual(geometry.viewport);
 });
 
 test('light and dark themes retain readable decision surfaces', async ({ page }) => {

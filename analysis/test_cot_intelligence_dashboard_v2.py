@@ -45,7 +45,9 @@ def main():
  assert 'financialDataset' in report_taxonomy_js and 'disaggregated' in report_taxonomy_js and 'transformRegime' in report_taxonomy_js and 'transformDetail' in report_taxonomy_js
  assert 'report-taxonomy-control' in report_taxonomy_css and 'data-report-dataset' not in report_taxonomy_css
  edge_model=EDGE_MODEL.read_text(encoding='utf-8');assert 'GLOBAL_FDR' in edge_model and 'NONOVERLAP_CONFIRMED' in edge_model and 'historical excess' in edge_model
- mobile_runtime=MOBILE_RUNTIME.read_text(encoding='utf-8');assert 'mobileUxReady' in mobile_runtime and 'repeat(4, minmax(0, 1fr))' in mobile_runtime
+ mobile_runtime=MOBILE_RUNTIME.read_text(encoding='utf-8');mobile_css=MOBILE_CSS.read_text(encoding='utf-8')
+ assert 'mobileUxReady' in mobile_runtime and 'repeat(4, minmax(0, 1fr))' in mobile_css
+ assert '100vw' not in mobile_runtime and '100vw' not in mobile_css, 'Mobile panels must fit their container, including gutters and scrollbars'
  for path,limit in {CURRENT:200000,REGISTRY:500000,ACTIVE:180000,CROSS:180000,PROV:100000,WC/'cot-intelligence.js':60000,WC/'cot-intelligence.css':45000,LIGHT_CSS:20000,EDGE_MODEL:30000,EDGE_JS:48000,EDGE_CSS:32000,MOBILE_CSS:30000,MOBILE_RUNTIME:12000,REPORT_TAXONOMY_JS:30000,REPORT_TAXONOMY_CSS:10000}.items():assert path.stat().st_size<=limit,(path,path.stat().st_size,limit)
  print(f'COT Intelligence v2 PASS · actors={len(states)} actor_cells={detail_cells} oi_cells={oi_cells} active={total_active} active_bytes={ACTIVE.stat().st_size}')
 if __name__=='__main__':main()

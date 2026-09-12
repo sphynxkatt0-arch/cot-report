@@ -7,6 +7,13 @@
   --surface-3: #111f34;
   --line: #20314a;
   --line-soft: rgba(92, 119, 153, .22);
+  /* Shared aliases used by the analytical add-on layers. Keep them tied to
+     the canonical theme tokens so restored components do not fall back to
+     light surfaces inside the dark terminal. */
+  --panel: var(--surface);
+  --panel-soft: var(--surface-2);
+  --border: var(--line);
+  --accent-soft: var(--cyan-soft);
   --text: #f3f7fb;
   --muted: #91a2b8;
   --muted-2: #657991;
@@ -373,7 +380,7 @@ html[data-theme="light"] .status-pill { background: rgba(255,255,255,.7); }
 .main-chart { height: min(650px, 63vh); min-height: 460px; }
 .macro-chart { height: 380px; }
 
-.range-buttons { display: flex; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-2); }
+.range-buttons { display: flex; flex-wrap: wrap; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-2); }
 .range-buttons button {
   min-width: 42px;
   height: 30px;

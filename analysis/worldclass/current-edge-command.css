@@ -1,5 +1,7 @@
 /* Decision-first COT terminal: conclusions first, newest release changes first, proof on demand. */
-html,body{max-width:100%;overflow-x:hidden}
+/* overflow-x:clip prevents sideways scroll without creating a scroll container,
+   which would silently disable every position:sticky header below it. */
+html,body{max-width:100%;overflow-x:hidden;overflow-x:clip}
 .hero{display:none!important}
 .topbar{min-height:58px;padding-top:9px!important;padding-bottom:9px!important}
 .brand-lockup .eyebrow{display:none}
@@ -88,7 +90,8 @@ html,body{max-width:100%;overflow-x:hidden}
 .positive{color:var(--green,#31d27c)!important}
 .negative{color:var(--red,#ff6675)!important}
 .neutral{color:var(--muted,#9fb0c3)!important}
-.decision-block-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.decision-block-head{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:6px 12px}
+.decision-block-head>div{min-width:0}
 .decision-block-head h3{margin:4px 0 0;font-size:15px;letter-spacing:-.02em}
 .decision-block-head h2{margin:5px 0 5px}
 .decision-direction{display:inline-flex;align-items:center;border:1px solid currentColor;border-radius:5px;padding:4px 6px;font-size:8px;font-weight:900;letter-spacing:.05em}
@@ -171,17 +174,52 @@ html,body{max-width:100%;overflow-x:hidden}
 .decision-empty strong,.decision-loading strong{display:block;color:var(--text,#f3f7fb);margin-bottom:4px}
 .decision-empty span,.decision-loading span{font-size:10px}
 
-/* The legacy dashboard remains in the DOM only for runtime compatibility. It never becomes a competing visual surface. */
+/* Keep one surface visible at a time. The analytical workbench remains live and is
+   exposed deliberately through Charts & data instead of being permanently hidden. */
 #wcCommandCenter,
 main>.controls-surface,
-main>#alertStrip,
 main>#headlineCards,
 main>.workbench-panel,
+main>#weeklyChangePanel,
 main>.section-heading,
 main>.two-column,
 main>#macroCards,
 main>.methodology,
-main>#cotIntelligence{display:none!important}
+main>#cotIntelligence,
+main>#wcForecastPanel,
+main>#wcAdvancedPositioning,
+main>#wcMacroControl,
+main>#wcCrossActorPanel,
+main>#wcTaxonomyBanner,
+main>#marketSentimentPanel{display:none!important}
+
+html[data-cot-decision-view="data"] main>.controls-surface,
+html[data-cot-decision-view="data"] main>.workbench-panel,
+html[data-cot-decision-view="data"] main>#weeklyChangePanel,
+html[data-cot-decision-view="data"] main>.section-heading,
+html[data-cot-decision-view="data"] main>#wcForecastPanel,
+html[data-cot-decision-view="data"] main>#wcAdvancedPositioning,
+html[data-cot-decision-view="data"] main>#wcMacroControl,
+html[data-cot-decision-view="data"] main>#wcCrossActorPanel,
+html[data-cot-decision-view="data"] main>#marketSentimentPanel,
+html[data-cot-decision-view="data"] main>#wcTaxonomyBanner:not([hidden]){display:block!important}
+html[data-cot-decision-view="data"] main>#headlineCards,
+html[data-cot-decision-view="data"] main>#macroCards{display:grid!important}
+html[data-cot-decision-view="data"] main>.two-column,
+html[data-cot-decision-view="data"] main>.methodology{display:grid!important}
+html[data-cot-decision-view="research"] main>#cotIntelligence,
+html[data-cot-decision-view="research"] main>#wcCrossActorPanel,
+html[data-cot-decision-view="research"] main>#wcTaxonomyBanner:not([hidden]),
+html[data-cot-decision-view="today"] main>#wcTaxonomyBanner:not([hidden]){display:block!important}
+
+.decision-data-intro{padding:16px}
+.decision-data-intro b{color:var(--text,#f3f7fb)}
+.decision-data-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:13px;border-top:1px solid var(--border,rgba(148,163,184,.13));border-bottom:1px solid var(--border,rgba(148,163,184,.13))}
+.decision-data-meta>div{padding:10px;border-right:1px solid var(--border,rgba(148,163,184,.08))}
+.decision-data-meta>div:last-child{border-right:0}
+.decision-data-meta span{display:block;font-size:8px;font-weight:850;letter-spacing:.07em;text-transform:uppercase;color:var(--muted,#8fa2b7)}
+.decision-data-meta strong{display:block;margin-top:4px;font-size:11px}
+
 html[data-cot-decision-view]:not([data-cot-decision-view="live"]) main>#liveTrackRecordPanel{display:none!important}
 html[data-cot-decision-view="live"] main>#liveTrackRecordPanel{display:block!important;margin-top:10px}
 
@@ -197,6 +235,7 @@ html[data-theme="light"] .decision-semantic,
 html[data-theme="light"] .decision-watch,
 html[data-theme="light"] .decision-research-group{background:#f7f9fc}
 html[data-theme="light"] .decision-nav{background:rgba(255,255,255,.96)}
+html[data-theme="light"] .decision-nav nav button.active{background:#e0f2fe;color:#075985}
 html[data-theme="light"] .instrument-bar{background:rgba(248,250,252,.96)}
 html[data-theme="light"] .decision-title-row p,
 html[data-theme="light"] .decision-view-panel p,
@@ -265,6 +304,14 @@ html[data-theme="light"] .decision-why-grid>div{background:#fff}
   .decision-forward-grid{grid-template-columns:1fr}.decision-forward-grid>div{display:grid;grid-template-columns:48px 80px 1fr;align-items:center;border-right:0;border-bottom:1px solid var(--border,rgba(148,163,184,.08));padding:8px 4px}.decision-forward-grid strong,.decision-forward-grid small{margin:0}
   .decision-research-group>summary{padding:11px}.decision-research-body{padding:0 10px 10px}.decision-research-meta{grid-template-columns:1fr 1fr}
   .decision-live-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .decision-data-meta{grid-template-columns:1fr 1fr}
+  .decision-data-meta>div:nth-child(2){border-right:0}
+  .decision-data-meta>div:nth-child(-n+2){border-bottom:1px solid var(--border,rgba(148,163,184,.08))}
+  html[data-cot-decision-view="data"] .decision-page-links{display:none}
+  html[data-cot-decision-view="data"] main>#headlineCards{display:none!important}
+  .decision-data-intro{padding:13px}
+  .decision-data-intro .decision-block-head h2{font-size:22px;line-height:1.05}
+  .decision-data-intro .decision-block-head p{font-size:10px;line-height:1.45}
 }
 
 @media (max-width:420px){

@@ -30,14 +30,14 @@ test('decision layer separates current estimate, prospective record and historic
   await expect(page.locator('#wcCommandCenter')).toBeHidden();
 });
 
-test('active edge view preserves conditional, normal, uplift and independent sample evidence', async ({ page }) => {
+test('research positioning preserves conditional, normal, uplift and independent sample evidence', async ({ page }) => {
   await open(page);
   const market = await selectMarketWithActiveEdge(page);
   if (!market) return;
 
-  await page.locator('[data-decision-view="edges"]').click();
-  const panel = page.locator('.decision-view-panel[data-decision-surface="edges"]');
-  await expect(panel).toContainText('Ranked current actor conditions');
+  await page.locator('[data-decision-view="research"]').click();
+  const panel = page.locator('.decision-view-panel[data-decision-surface="research"]');
+  await expect(panel).toContainText('Positioning & actors');
   const rows = panel.locator('.decision-edge-row');
   if (await rows.count()) {
     await expect(rows.first()).toContainText('Historical result');
@@ -48,22 +48,24 @@ test('active edge view preserves conditional, normal, uplift and independent sam
   }
 });
 
-test('research matrix exposes all 15 horizons and can switch evidence metric', async ({ page }) => {
+test('research groups governed positioning, backtest, macro and provenance evidence', async ({ page }) => {
   await open(page, '?market=nq&view=research');
   const panel = page.locator('.decision-view-panel[data-decision-surface="research"]');
-  const matrix = panel.locator('.decision-matrix');
-  await expect(matrix.locator('thead th')).toHaveCount(16);
-  await expect(matrix).toContainText('52W');
-  await panel.locator('#researchMetricSelector').selectOption('n');
-  expect(await matrix.locator('tbody tr').count()).toBeGreaterThan(0);
+  await expect(panel.locator('.decision-research-group')).toHaveCount(4);
+  await expect(panel).toContainText('Positioning & actors');
+  await expect(panel).toContainText('Backtests & regimes');
+  await expect(panel).toContainText('Macro evidence');
+  await expect(panel).toContainText('Methodology & provenance');
+  const backtests = panel.locator('.decision-research-group').filter({ hasText: 'Backtests & regimes' });
+  await backtests.locator('summary').click();
+  await expect(backtests).toContainText('Historical signal count');
+  await expect(backtests).toContainText(/Current COT regime/i);
 });
 
 test('research view exposes cross-market evidence only on demand', async ({ page }) => {
   await open(page, '?market=nq&view=overview');
   await expect(page.locator('#wcCrossActorPanel')).toBeHidden();
   await page.locator('[data-decision-view="research"]').click();
-  await expect(page.locator('#wcCrossActorPanel')).toBeHidden();
-  await page.locator('[data-research-section="positioning"]').click();
   await expect(page.locator('#wcCrossActorPanel')).toBeVisible();
   await expect(page.locator('#wcCrossActorPanel')).toContainText('CROSS-INSTRUMENT ACTOR TREND');
 });
@@ -110,8 +112,9 @@ test('live view never relabels historical research as prospective proof', async 
   await open(page);
   await page.locator('[data-decision-view="live"]').click();
   const panel = page.locator('.decision-view-panel[data-decision-surface="live"]');
-  await expect(panel).toContainText('Historical backtests and future live forecasts remain strictly decoupled');
-  await expect(panel).toContainText('Past reports are never retroactively backfilled as live proof');
+  await expect(panel).toContainText('Frozen prospective forecasts and realized outcomes');
+  await expect(panel).toContainText('Only forecasts recorded before outcomes count as live evidence');
+  await expect(panel).toContainText('Current model estimates on Today are not retroactively entered into the live ledger');
   await expect(panel).toContainText('DISALLOWED');
-  await expect(panel).toContainText('Governance Review');
+  await expect(page.locator('#liveTrackRecordPanel')).toBeVisible();
 });

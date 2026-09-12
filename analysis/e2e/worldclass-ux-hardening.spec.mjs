@@ -71,7 +71,10 @@ test('financial futures switch TFF and Legacy as one coherent report taxonomy', 
       activeSeries: active.map(row => row.series),
       regimeDataset: regime.markets?.nq?.presentation_dataset,
       detailDatasets: [...new Set((detail.actors || []).map(row => String(row.series).split(':')[0]))],
-      livePredictions: (model.state.live?.current_predictions || []).filter(row => row.market === 'nq').length
+      livePredictions: (model.state.live?.current_predictions || []).filter(row => row.market === 'nq').length,
+      livePredictionDatasets: [...new Set((model.state.live?.current_predictions || [])
+        .filter(row => row.market === 'nq')
+        .map(row => row.dataset))]
     };
   });
   expect(legacyState.datasets).toEqual(['legacy']);
@@ -79,7 +82,8 @@ test('financial futures switch TFF and Legacy as one coherent report taxonomy', 
   expect(legacyState.activeSeries.every(series => String(series).startsWith('legacy:'))).toBeTruthy();
   expect(legacyState.regimeDataset).toBe('legacy');
   expect(legacyState.detailDatasets).toEqual(['legacy']);
-  expect(legacyState.livePredictions).toBe(0);
+  expect(legacyState.livePredictions).toBeGreaterThan(0);
+  expect(legacyState.livePredictionDatasets).toEqual(['legacy']);
 
   await page.locator('#instrumentTabs [data-market="gold"]').click();
   await expect(page.locator('#reportTaxonomyControl')).toContainText('Disaggregated');

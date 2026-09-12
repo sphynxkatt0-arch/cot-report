@@ -13,16 +13,17 @@
     });
   }
 
-  function quarantineLegacyResearch() {
+  function coordinateResearchSurface() {
     const legacy = $("#cotIntelligence");
     if (!legacy) return;
     legacy.classList.add("cot-intel-worldclass", "decision-legacy-research");
-    legacy.setAttribute("aria-hidden", "true");
+    const researchVisible = document.documentElement.dataset.cotDecisionView === "research";
+    legacy.setAttribute("aria-hidden", researchVisible ? "false" : "true");
     legacy.querySelector(".cot-ux-market-switcher")?.remove();
   }
 
   function coordinate() {
-    quarantineLegacyResearch();
+    coordinateResearchSurface();
     document.documentElement.classList.toggle("cot-worldclass-ux-ready", Boolean($("#currentEdgeCommand")));
   }
 

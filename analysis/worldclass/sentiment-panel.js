@@ -12,7 +12,10 @@
   function ensureRoot() {
     let root = document.getElementById("marketSentimentPanel");
     if (root) return root;
-    const anchor = document.getElementById("currentEdgeCommand") || document.getElementById("headlineCards");
+    const anchor = document.getElementById("macroColumns")
+      || document.getElementById("macroCards")
+      || document.getElementById("currentEdgeCommand")
+      || document.getElementById("headlineCards");
     if (!anchor) return null;
     root = document.createElement("section");
     root.id = "marketSentimentPanel";

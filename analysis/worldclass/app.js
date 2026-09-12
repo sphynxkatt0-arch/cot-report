@@ -55,10 +55,15 @@
   const METRIC_LABELS = {
     net_oi_pct: "Net / open interest (%)",
     net: "Net contracts",
+    net_change: "Weekly Δ net contracts",
     long: "Long contracts",
+    long_change: "Weekly Δ long contracts",
     short: "Short contracts",
+    short_change: "Weekly Δ short contracts",
     short_oi_pct: "Short / open interest (%)"
   };
+
+  const FINANCIAL_MARKETS = new Set(["sp500", "nq", "vix", "rty", "dow"]);
 
   const state = {
     market: "sp500",
@@ -218,6 +223,37 @@
 
   function fieldFor(category, metric = state.metric) {
     return `${category}_${metric}`;
+  }
+
+  function metricPoints(rows, category, metric = state.metric) {
+    const change = /^(net|long|short)_change$/.exec(metric);
+    if (!change) {
+      const field = fieldFor(category, metric);
+      return rows
+        .filter(row => finite(row[field]) !== null)
+        .map(row => ({ date: row.date, value: finite(row[field]) }));
+    }
+
+    const field = fieldFor(category, change[1]);
+    const points = [];
+    for (let index = 1; index < rows.length; index += 1) {
+      const current = finite(rows[index]?.[field]);
+      const prior = finite(rows[index - 1]?.[field]);
+      if (current === null || prior === null) continue;
+      points.push({ date: rows[index].date, value: current - prior });
+    }
+    return points;
+  }
+
+  function requestedDatasetForMarket(market) {
+    const taxonomy = window.__COT_REPORT_TAXONOMY__;
+    const governed = taxonomy?.datasetForMarket?.(market);
+    if (governed) return governed;
+    if (FINANCIAL_MARKETS.has(market)) {
+      const requested = new URL(window.location.href).searchParams.get("report");
+      if (requested === "legacy" || requested === "tff") return requested;
+    }
+    return market === "gold" || market === "silver" ? "disaggregated" : null;
   }
 
   function priceRecords(market) {
@@ -425,9 +461,13 @@
 
   function rangeStart(latestDate) {
     if (state.range === "all" || !latestDate) return null;
-    const years = state.range === "1y" ? 1 : state.range === "3y" ? 3 : 5;
     const date = new Date(`${latestDate}T00:00:00Z`);
-    date.setUTCFullYear(date.getUTCFullYear() - years);
+    if (state.range === "3m" || state.range === "6m") {
+      date.setUTCMonth(date.getUTCMonth() - (state.range === "3m" ? 3 : 6));
+    } else {
+      const years = state.range === "1y" ? 1 : state.range === "3y" ? 3 : 5;
+      date.setUTCFullYear(date.getUTCFullYear() - years);
+    }
     return date.toISOString().slice(0, 10);
   }
 
@@ -453,7 +493,7 @@
   function setMarket(market) {
     if (!MARKET_META[market]) return;
     state.market = market;
-    state.dataset = chooseDatasetForMarket(market, state.dataset);
+    state.dataset = chooseDatasetForMarket(market, requestedDatasetForMarket(market) || state.dataset);
     state.activeCategories = new Set(categoryKeys());
     state.priceOverlays.add(market);
     renderAll();
@@ -461,6 +501,14 @@
 
   function setDataset(dataset) {
     if (!availableDatasets(state.market).includes(dataset)) return;
+    const governed = window.__COT_REPORT_TAXONOMY__?.datasetForMarket?.(state.market);
+    if (FINANCIAL_MARKETS.has(state.market) && governed && dataset !== governed) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("report", dataset);
+      url.searchParams.delete("dataset");
+      window.location.assign(url.toString());
+      return;
+    }
     state.dataset = dataset;
     state.activeCategories = new Set(categoryKeys());
     renderAll();
@@ -678,22 +726,23 @@
     const rows = currentRows();
     const latestDate = rows.at(-1)?.date || priceRecords(state.market).at(-1)?.date;
     const startDate = rangeStart(latestDate);
-    const cotRows = startDate ? rows.filter(row => row.date >= startDate) : rows;
     const traces = [];
+    const changeMetric = /_change$/.test(state.metric);
+    const positionFormat = state.metric.includes("_oi_pct") ? ",.2f" : ",.0f";
 
     for (const key of categoryKeys()) {
       if (!state.activeCategories.has(key)) continue;
-      const field = fieldFor(key);
-      const points = cotRows.filter(row => finite(row[field]) !== null);
+      const allPoints = metricPoints(rows, key);
+      const points = startDate ? allPoints.filter(row => row.date >= startDate) : allPoints;
       traces.push({
         type: "scatter",
         mode: "lines",
         name: shortCategory(categoryMap()[key] || key),
         x: points.map(row => row.date),
-        y: points.map(row => finite(row[field])),
+        y: points.map(row => row.value),
         line: { width: 2.1, color: CATEGORY_COLORS[key] || "#91a2b8" },
         yaxis: "y",
-        hovertemplate: `<b>${escapeHtml(categoryMap()[key] || key)}</b><br>%{x}<br>${escapeHtml(METRIC_LABELS[state.metric])}: %{y:,.2f}<extra></extra>`
+        hovertemplate: `<b>${escapeHtml(categoryMap()[key] || key)}</b><br>%{x}<br>${escapeHtml(METRIC_LABELS[state.metric])}: %{y:${positionFormat}}<extra></extra>`
       });
     }
 
@@ -745,17 +794,20 @@
     const t = plotTokens();
     const yTitle = METRIC_LABELS[state.metric];
     const y2Title = indexPrices ? "Price (indexed = 100)" : "Price";
-    $("#workbenchTitle").textContent = `${MARKET_META[state.market].label} · ${DATASET_LABELS[state.dataset]} positioning`;
-    $("#legendHint").textContent = selectedPrices.length > 1 ? "Multiple price overlays are indexed to 100 for comparability" : "Hover any line for exact values";
+    const compactPlot = window.innerWidth <= 700;
+    $("#workbenchTitle").textContent = `${MARKET_META[state.market].label} · ${DATASET_LABELS[state.dataset]} ${changeMetric ? "weekly holdings change" : "positioning"}`;
+    $("#legendHint").textContent = changeMetric
+      ? "Weekly change = current COT position minus the prior report"
+      : selectedPrices.length > 1 ? "Multiple price overlays are indexed to 100 for comparability" : "Hover any line for exact values";
 
     Plotly.react("mainChart", traces, {
       paper_bgcolor: t.paper,
       plot_bgcolor: t.plot,
-      margin: { l: 64, r: 82, t: 24, b: 54 },
+      margin: compactPlot ? { l: 44, r: 42, t: 38, b: 46 } : { l: 64, r: 82, t: 24, b: 54 },
       font: { family: "Inter, ui-sans-serif, sans-serif", color: t.text, size: 11 },
-      hovermode: "x unified",
+      hovermode: compactPlot ? "closest" : "x unified",
       hoverlabel: { bgcolor: state.theme === "light" ? "#fff" : "#101d30", bordercolor: t.zero, font: { color: t.text } },
-      legend: { orientation: "h", x: 0, y: 1.06, xanchor: "left", yanchor: "bottom", font: { size: 10, color: t.muted } },
+      legend: { orientation: "h", x: 0, y: 1.06, xanchor: "left", yanchor: "bottom", font: { size: compactPlot ? 9 : 10, color: t.muted } },
       xaxis: {
         type: "date",
         gridcolor: t.grid,
@@ -765,14 +817,15 @@
         fixedrange: false
       },
       yaxis: {
-        title: { text: yTitle, font: { size: 10, color: t.muted } },
+        title: { text: compactPlot ? "" : yTitle, font: { size: 10, color: t.muted } },
         gridcolor: t.grid,
         zerolinecolor: t.zero,
+        zerolinewidth: changeMetric ? 1.4 : 1,
         tickfont: { color: t.muted, size: 10 },
         side: "left"
       },
       yaxis2: {
-        title: { text: y2Title, font: { size: 10, color: t.muted } },
+        title: { text: compactPlot ? "" : y2Title, font: { size: 10, color: t.muted } },
         overlaying: "y",
         side: "right",
         showgrid: false,
@@ -789,7 +842,7 @@
         range: state.factorOverlays.size === 1 && state.factorOverlays.has("macro_score") ? [0, 100] : undefined
       },
       dragmode: "pan",
-      modebar: { orientation: "v" }
+      modebar: { orientation: compactPlot ? "h" : "v" }
     }, {
       responsive: true,
       displaylogo: false,
@@ -1067,7 +1120,7 @@
     bindEvents();
     try {
       await loadData();
-      state.dataset = chooseDatasetForMarket(state.market, "tff");
+      state.dataset = chooseDatasetForMarket(state.market, requestedDatasetForMarket(state.market) || "tff");
       state.activeCategories = new Set(categoryKeys());
       renderAll();
       $("#loadingOverlay").classList.add("done");

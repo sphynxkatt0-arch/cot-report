@@ -262,9 +262,11 @@
       section.id = "wcCrossActorPanel";
       section.className = "wc-cross-actor";
       section.setAttribute("aria-label", "Cross-instrument actor positioning comparison");
+      const positioning = $("#positioningColumns");
+      const weekly = $("#weeklyChangePanel");
       const decision = $("#currentEdgeCommand");
       const command = $("#wcCommandCenter");
-      const anchor = decision || command || $(".instrument-bar");
+      const anchor = positioning || weekly || decision || command || $(".instrument-bar");
       if (!anchor) return;
       anchor.insertAdjacentElement("afterend", section);
     }

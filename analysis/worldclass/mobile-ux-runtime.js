@@ -5,50 +5,15 @@
   const media = window.matchMedia("(max-width: 720px)");
   let scheduled = false;
 
-  function important(el, property, value) {
-    if (el) el.style.setProperty(property, value, "important");
-  }
-
   function promoteMobileStylesheet() {
     scheduled = false;
     const link = document.querySelector(SELECTOR);
     if (link && document.head && document.head.lastElementChild !== link) document.head.appendChild(link);
-    enforceMobileGeometry();
     document.documentElement.dataset.mobileUxReady = "true";
   }
 
-  function enforceMobileGeometry() {
-    if (!media.matches) return;
-    important(document.body, "overflow-x", "hidden");
-    const frame = document.querySelector(".app-frame");
-    const main = document.querySelector("main");
-    important(frame, "width", "100%");
-    important(frame, "max-width", "100%");
-    important(frame, "min-width", "0");
-    important(main, "width", "100%");
-    important(main, "max-width", "100%");
-    important(main, "min-width", "0");
-
-    const commandWidth = "calc(100vw - 24px)";
-    for (const selector of ["#currentEdgeCommand", "#wcCommandCenter", "#cotIntelligence"]) {
-      const el = document.querySelector(selector);
-      important(el, "width", commandWidth);
-      important(el, "max-width", commandWidth);
-      important(el, "min-width", "0");
-      important(el, "justify-self", "stretch");
-    }
-
-    const bar = document.querySelector(".instrument-bar");
-    important(bar, "width", "100vw");
-    important(bar, "max-width", "100vw");
-    const tabs = document.querySelector(".instrument-tabs");
-    important(tabs, "display", "grid");
-    important(tabs, "grid-template-columns", "repeat(4, minmax(0, 1fr))");
-    important(tabs, "width", "100%");
-    important(tabs, "max-width", "100%");
-    important(tabs, "overflow", "visible");
-    document.querySelectorAll(".instrument-tab").forEach(tab => important(tab, "min-width", "0"));
-  }
+  // Responsive geometry lives in mobile-ux.css so resizing back to desktop
+  // cannot leave viewport-wide inline styles attached to the dashboard.
 
   function schedulePromotion() {
     if (scheduled) return;
