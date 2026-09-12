@@ -1,27 +1,27 @@
 {
   "schema_version": 1,
   "model_version": "macro-liquidity-control-room-v1.2",
-  "generated_at_utc": "2026-09-11T19:47:16.366207+00:00",
+  "generated_at_utc": "2026-09-12T18:52:06.564683+00:00",
   "role": "descriptive risk and plumbing context; does not create or reverse COT direction",
   "source_coverage_ratio": 0.769,
   "source_coverage_label": "Good",
   "existing_macro_latest": {
-    "date": "2026-09-11",
+    "date": "2026-09-12",
     "walcl": 6740.619,
     "tga": 843.705,
     "rrp": 5.255,
     "bank_reserves": 2991.31,
-    "bank_treasury_agency": 4793.285,
-    "bank_assets": 19559.478,
-    "reserves_to_bank_assets_pct": 15.293,
-    "slr_balance_sheet_load": 7784.595,
+    "bank_treasury_agency": 4800.255,
+    "bank_assets": 19565.889,
+    "reserves_to_bank_assets_pct": 15.288,
+    "slr_balance_sheet_load": 7791.565,
     "net_liquidity": 5891.659,
     "net_liquidity_4w_change": 91.359,
     "net_liquidity_13w_change": -32.2,
     "bank_reserves_4w_change": 47.251,
-    "bank_treasury_agency_4w_change": -15.577,
-    "slr_balance_sheet_load_4w_change": 31.674,
-    "reserves_to_bank_assets_4w_change": 0.222,
+    "bank_treasury_agency_4w_change": -8.985,
+    "slr_balance_sheet_load_4w_change": 38.266,
+    "reserves_to_bank_assets_4w_change": 0.218,
     "tga_4w_change": -115.7,
     "rrp_4w_change": 5.005,
     "sofr": 3.62,
@@ -31,36 +31,36 @@
     "effr_iorb_spread": -0.02,
     "sofr_iorb_spread_4w_change": 0.0,
     "effr_iorb_spread_4w_change": 0.0,
-    "real_yield_10y": 2.55,
-    "real_yield_5y": 2.29,
-    "real_yield_4w_change": 0.14,
-    "real_yield_5y_4w_change": 0.17,
-    "nominal_yield_10y": 4.95,
-    "nominal_yield_2y": 4.56,
-    "nominal_yield_3m": 4.0,
-    "nominal_yield_30y": 5.37,
-    "nominal_yield_30y_4w_change": 0.12,
-    "yield_curve_10y_2y": 0.39,
-    "yield_curve_10y_3m": 0.95,
-    "yield_curve_30y_10y": 0.42,
+    "real_yield_10y": 2.6,
+    "real_yield_5y": 2.38,
+    "real_yield_4w_change": 0.19,
+    "real_yield_5y_4w_change": 0.26,
+    "nominal_yield_10y": 4.96,
+    "nominal_yield_2y": 4.63,
+    "nominal_yield_3m": 4.07,
+    "nominal_yield_30y": 5.35,
+    "nominal_yield_30y_4w_change": 0.1,
+    "yield_curve_10y_2y": 0.33,
+    "yield_curve_10y_3m": 0.89,
+    "yield_curve_30y_10y": 0.39,
     "hy_oas": 2.7,
     "ig_oas": 0.8,
     "hy_oas_4w_change": 0.03,
     "ig_oas_4w_change": 0.0,
     "dollar_index": 118.073,
     "dollar_4w_change": -0.83,
-    "vix": 15.85,
-    "vix_4w_change": 1.6,
-    "sp500": 7663.16,
-    "nasdaq": 29399.135,
-    "sp500_13w_change_pct": 3.118,
+    "vix": 15.84,
+    "vix_4w_change": 1.59,
+    "sp500": 7656.98,
+    "nasdaq": 29368.44,
+    "sp500_13w_change_pct": 3.035,
     "sp500_forward_5d": null,
     "sp500_forward_10d": null,
     "treasury_issuance_7d": 493.0,
     "treasury_issuance_28d": 2519.0,
     "treasury_issuance_next_7d": 625.0,
-    "liquidity_plumbing_score": 58.853,
-    "liquidity_score": 47.469,
+    "liquidity_plumbing_score": 58.781,
+    "liquidity_score": 46.407,
     "regime_label": "Neutral",
     "sp500_forward_20d": null,
     "sp500_forward_60d": null,
@@ -88,55 +88,55 @@
     "tsp_equity_ift_m": 3444.0,
     "retirement_flow_signal": 6687.0,
     "credit_override": false,
-    "score_net_liquidity": 62.164,
-    "score_bank_reserves": 58.513,
+    "score_net_liquidity": 62.209,
+    "score_bank_reserves": 58.564,
     "score_treasury_supply": 0.0,
-    "score_repo_spread": 54.228,
-    "score_slr_load": 47.437,
-    "score_real_yield": 39.654,
-    "score_credit": 46.086,
-    "score_dollar": 57.268,
-    "score_vix": 43.901,
-    "macro_regime_score": -0.1,
+    "score_repo_spread": 54.091,
+    "score_slr_load": 46.421,
+    "score_real_yield": 32.26,
+    "score_credit": 46.102,
+    "score_dollar": 57.281,
+    "score_vix": 43.978,
+    "macro_regime_score": -0.14,
     "macro_regime_score_label": "Neutral / transition",
-    "confidence_score": 24,
+    "confidence_score": 35,
     "confidence_label": "low"
   },
   "treasury_cash_context": {
-    "latest_operating_cash_bn": 843.705,
-    "operating_cash_change_5d_bn": -99.08799999999997,
-    "operating_cash_change_20d_bn": -153.625,
-    "latest_flow_date": "2026-09-09",
-    "daily_private_cash_flow_bn": 72.63,
-    "private_cash_flow_5d_bn": 198.18099999999998,
-    "private_cash_flow_20d_bn": 307.24099999999993,
-    "deposits_5d_bn": 1386.284,
-    "withdrawals_5d_bn": 1584.465,
-    "tax_deposits_5d_bn": 81.407,
+    "latest_operating_cash_bn": 818.11,
+    "operating_cash_change_5d_bn": -126.25400000000002,
+    "operating_cash_change_20d_bn": -141.29499999999996,
+    "latest_flow_date": "2026-09-10",
+    "daily_private_cash_flow_bn": 51.19599999999991,
+    "private_cash_flow_5d_bn": 252.5159999999999,
+    "private_cash_flow_20d_bn": 282.5889999999999,
+    "deposits_5d_bn": 1924.294,
+    "withdrawals_5d_bn": 2176.81,
+    "tax_deposits_5d_bn": 87.65400000000001,
     "top_cash_flow_categories_5d": [
       {
         "category": "Public Debt Cash Redemp. (Table IIIB)",
-        "private_cash_effect_bn": 638.03
+        "private_cash_effect_bn": 929.5
       },
       {
         "category": "Public Debt Cash Issues (Table IIIB)",
-        "private_cash_effect_bn": -599.66
+        "private_cash_effect_bn": -862.26
       },
       {
         "category": "Other",
-        "private_cash_effect_bn": 99.09
-      },
-      {
-        "category": "Taxes - Withheld Individual/FICA",
-        "private_cash_effect_bn": -60.76
+        "private_cash_effect_bn": 126.25
       },
       {
         "category": "SSA - Benefits Payments",
-        "private_cash_effect_bn": 59.85
+        "private_cash_effect_bn": 59.83
+      },
+      {
+        "category": "Taxes - Withheld Individual/FICA",
+        "private_cash_effect_bn": -56.19
       },
       {
         "category": "HHS - Grants to States for Medicaid",
-        "private_cash_effect_bn": 22.95
+        "private_cash_effect_bn": 26.55
       }
     ],
     "sign_convention": "positive = Treasury withdrawal / private-sector cash injection; negative = Treasury deposit / private-sector cash drain"
@@ -322,7 +322,7 @@
   "pillars": {
     "macro_regime": {
       "label": "Macro risk regime",
-      "score": 47.469,
+      "score": 46.407,
       "state": "Neutral"
     },
     "net_liquidity": {
@@ -386,13 +386,13 @@
       "score": 90.0,
       "state": "Supportive",
       "coverage": 1.0,
-      "private_cash_flow_5d_bn": 198.18099999999998,
-      "private_cash_flow_20d_bn": 307.24099999999993,
-      "operating_cash_change_5d_bn": -99.08799999999997,
-      "tax_deposits_5d_bn": 81.407,
+      "private_cash_flow_5d_bn": 252.5159999999999,
+      "private_cash_flow_20d_bn": 282.5889999999999,
+      "operating_cash_change_5d_bn": -126.25400000000002,
+      "tax_deposits_5d_bn": 87.65400000000001,
       "reasons": [
-        "5d private cash effect +198.2 bn",
-        "5d operating-cash change -99.1 bn"
+        "5d private cash effect +252.5 bn",
+        "5d operating-cash change -126.3 bn"
       ]
     },
     "auction_absorption": {
@@ -425,7 +425,7 @@
       "change_short": -0.03000000000000025,
       "change_medium": 0.0,
       "zscore": -0.46614341570017986,
-      "age_days": 1,
+      "age_days": 2,
       "error": null
     },
     {
@@ -442,7 +442,7 @@
       "change_short": 0.020000000000000018,
       "change_medium": 0.03000000000000025,
       "zscore": -0.8666282620786717,
-      "age_days": 7,
+      "age_days": 8,
       "error": null
     },
     {
@@ -459,7 +459,7 @@
       "change_short": -0.010000000000000231,
       "change_medium": -0.010000000000000231,
       "zscore": 0.15833101102051092,
-      "age_days": 2,
+      "age_days": 3,
       "error": null
     },
     {
@@ -476,7 +476,7 @@
       "change_short": 8.355473626480034,
       "change_medium": 58.91355006579033,
       "zscore": -1.0833076834821347,
-      "age_days": 1,
+      "age_days": 2,
       "error": null
     },
     {
@@ -510,7 +510,7 @@
       "change_short": -9373.0,
       "change_medium": -19539.0,
       "zscore": null,
-      "age_days": 1717,
+      "age_days": 1718,
       "error": null
     },
     {
@@ -527,7 +527,7 @@
       "change_short": 10752.0,
       "change_medium": -10146.0,
       "zscore": -0.24796117999905798,
-      "age_days": 9,
+      "age_days": 10,
       "error": null
     },
     {
@@ -544,7 +544,7 @@
       "change_short": 6808.871559269959,
       "change_medium": 25560.102474089712,
       "zscore": 2.1079377224045097,
-      "age_days": 42,
+      "age_days": 43,
       "error": null
     },
     {
@@ -561,7 +561,7 @@
       "change_short": 171342.84838445997,
       "change_medium": 270896.8014772404,
       "zscore": 1.5538980583294768,
-      "age_days": 42,
+      "age_days": 43,
       "error": null
     },
     {
@@ -578,7 +578,7 @@
       "change_short": -117616.64396681986,
       "change_medium": -74116.08696026984,
       "zscore": -0.022980188971168405,
-      "age_days": 42,
+      "age_days": 43,
       "error": null
     },
     {
@@ -590,11 +590,11 @@
       "status": "fresh",
       "mnemonic": null,
       "resolution": "official fiscaldata API; deterministic TGA closing-balance selection",
-      "latest_date": "2026-09-09",
-      "latest_value": 843.705,
-      "change_short": -99.08799999999997,
-      "change_medium": -153.625,
-      "zscore": -0.6652699646880851,
+      "latest_date": "2026-09-10",
+      "latest_value": 818.11,
+      "change_short": -126.25400000000002,
+      "change_medium": -141.29499999999996,
+      "zscore": -1.0140310836345274,
       "age_days": 2,
       "error": null
     },
@@ -607,11 +607,11 @@
       "status": "fresh",
       "mnemonic": null,
       "resolution": "official fiscaldata API",
-      "latest_date": "2026-09-09",
-      "latest_value": 72.63,
-      "change_short": 198.18099999999998,
-      "change_medium": 307.24099999999993,
-      "zscore": 1.1136492576614683,
+      "latest_date": "2026-09-10",
+      "latest_value": 51.19599999999991,
+      "change_short": 252.5159999999999,
+      "change_medium": 282.5889999999999,
+      "zscore": 0.7737761413659453,
       "age_days": 2,
       "error": null
     },
@@ -629,7 +629,7 @@
       "change_short": 0.06767857142857141,
       "change_medium": 0.2555368393449946,
       "zscore": null,
-      "age_days": 1,
+      "age_days": 2,
       "error": null
     }
   ],
