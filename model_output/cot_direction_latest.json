@@ -1,0 +1,1314 @@
+[
+  {
+    "model_version": "cot-direction-v1.2",
+    "market": "sp500",
+    "report_date": "2026-09-01",
+    "scheduled_release_date": "2026-09-04",
+    "actual_release_date": "2026-09-04",
+    "release_date_source": "first_observed_on_schedule",
+    "signal_price_date": "2026-09-04",
+    "latest_price_date": "2026-09-04",
+    "structural_bias": "Bullish",
+    "structural_score": 0.4532,
+    "noncommercial_percentile": 26.40449438202247,
+    "tactical_modifier": 0.1355,
+    "adjusted_cot_score": 0.5886,
+    "asset_manager_percentile": 87.26591760299625,
+    "asset_manager_state": "Elevated",
+    "asset_manager_multiplier": 0.9,
+    "macro_score": 42.56,
+    "macro_state": "Defensive",
+    "macro_multiplier": 1.0,
+    "macro_override": false,
+    "execution_state": "Contradicted",
+    "price_change_since_release_pct": 0.0,
+    "execution_multiplier": 0.25,
+    "exposure_multiplier": 0.1324,
+    "confidence_score": 0.4294,
+    "confidence_label": "Low",
+    "final_action": "Wait for Long",
+    "reasons": [
+      "Legacy Non-commercial percentile 26.4%",
+      "Tactical modifier +0.14",
+      "Asset Manager crowding Elevated; size x0.90",
+      "Macro Defensive; context only, production size x1.00",
+      "CFTC release status current; expected report 2026-09-01",
+      "Macro availability 92%",
+      "Exact CFTC consolidated parent row; component, E-mini, Micro, dividend, and TR rows are excluded.",
+      "Macro freshness warning: 1 stale factor(s) excluded",
+      "Price execution Contradicted; 20d trend -0.50% and 65d trend +2.18%"
+    ],
+    "tactical_components": [
+      {
+        "label": "Other Reportables 13w trend",
+        "rank_score": -0.509,
+        "support": 0.509,
+        "contribution": 0.28
+      },
+      {
+        "label": "Nonreportable 13w trend",
+        "rank_score": -0.033,
+        "support": 0.033,
+        "contribution": 0.008
+      },
+      {
+        "label": "Non-commercial 4w flow alignment",
+        "rank_score": -0.762,
+        "support": -0.762,
+        "contribution": -0.152
+      }
+    ],
+    "conviction_percentile": 87.26591760299625,
+    "conviction_group_label": "Asset Manager",
+    "other_reportable_trend13_rank": -0.508637236084453,
+    "nonreportable_trend13_rank": -0.0326295585412667,
+    "noncommercial_flow4_rank": -0.7622641509433963,
+    "market_label": "S&P 500",
+    "asset_class": "equity_index",
+    "secondary_report": "TFF",
+    "contract_selection_mode": "consolidated_exact",
+    "contract_selection_note": "Exact CFTC consolidated parent row; component, E-mini, Micro, dividend, and TR rows are excluded.",
+    "signal_price": 7718.6,
+    "latest_price": 7718.6,
+    "release_status": "current",
+    "expected_report_date": "2026-09-01",
+    "scheduled_release_utc": "2026-09-04T19:30:00+00:00",
+    "scheduled_release_stockholm": "2026-09-04T21:30:00+02:00",
+    "first_observed_utc": "2026-09-04T21:14:16.029424+00:00",
+    "first_observed_delay_minutes": 104.3,
+    "new_signal_available": true,
+    "macro_regime_score": 42.56,
+    "liquidity_plumbing_score": 43.41,
+    "market_transmission_score": 51.67,
+    "supply_pressure_score": 0.2,
+    "macro_availability_ratio": 0.92,
+    "macro_severe_alerts": [],
+    "source_legacy": "cot_legacy_output\\sp500_legacy_data_2016_2026.csv",
+    "source_secondary": "cot_exact_output\\sp500_exact_consolidated_data_2016_2026.csv",
+    "source_tff": "cot_exact_output\\sp500_exact_consolidated_data_2016_2026.csv",
+    "macro_stale_factors": [
+      "score_dollar: factor_latest.dollar_index stale 7.9d>5d"
+    ],
+    "macro_missing_factors": [],
+    "macro_available_weight": 92.0,
+    "macro_total_weight": 100.0,
+    "price_alignment": "opposed",
+    "price_trend_20d_pct": -0.503,
+    "price_trend_65d_pct": 2.183,
+    "macro_reliable_for_action": true,
+    "macro_hard_override_suppressed_by_freshness": false,
+    "liquidity_plumbing_guard": {
+      "model_version": "macro-liquidity-guard-v1.0",
+      "reliable": true,
+      "active": false,
+      "source_coverage_ratio": 0.846,
+      "minimum_source_coverage": 0.6,
+      "severe_score_threshold": 25.0,
+      "minimum_severe_pillars": 2,
+      "available_pillar_count": 3,
+      "severe_pillars": [],
+      "pillar_evaluations": [
+        {
+          "pillar": "funding_microstructure",
+          "score": 41.0,
+          "state": "Neutral",
+          "available": true,
+          "fresh": true,
+          "fresh_source_count": 4,
+          "required_fresh_source_count": 2,
+          "fresh_subset_source_count": 3,
+          "required_fresh_subset_source_count": 2,
+          "source_statuses": {
+            "repo_dvp_rate": "fresh",
+            "repo_dvp_volume": "fresh",
+            "repo_gcf_rate": "fresh",
+            "repo_triparty_rate": "fresh"
+          },
+          "severe": false,
+          "reasons": [
+            "repo rate dispersion 7.0 bp",
+            "largest short-term rate move 3.0 bp"
+          ]
+        },
+        {
+          "pillar": "dealer_absorption",
+          "score": 50.0,
+          "state": "Neutral",
+          "available": false,
+          "fresh": false,
+          "fresh_source_count": 1,
+          "required_fresh_source_count": 2,
+          "fresh_subset_source_count": 0,
+          "required_fresh_subset_source_count": 0,
+          "source_statuses": {
+            "dealer_treasury_fails": "fresh",
+            "dealer_treasury_financing": "stale",
+            "dealer_treasury_positions": "unavailable"
+          },
+          "severe": false,
+          "reasons": [
+            "settlement fails z -0.55"
+          ]
+        },
+        {
+          "pillar": "fiscal_cash_flow",
+          "score": 82.8,
+          "state": "Supportive",
+          "available": true,
+          "fresh": true,
+          "fresh_source_count": 2,
+          "required_fresh_source_count": 2,
+          "fresh_subset_source_count": 0,
+          "required_fresh_subset_source_count": 0,
+          "source_statuses": {
+            "treasury_cash_flows": "fresh",
+            "treasury_operating_cash": "fresh"
+          },
+          "severe": false,
+          "reasons": [
+            "5d private cash effect +93.8 bn",
+            "5d operating-cash change -46.9 bn"
+          ]
+        },
+        {
+          "pillar": "auction_absorption",
+          "score": 50.5,
+          "state": "Neutral",
+          "available": true,
+          "fresh": true,
+          "fresh_source_count": 1,
+          "required_fresh_source_count": 1,
+          "fresh_subset_source_count": 0,
+          "required_fresh_subset_source_count": 0,
+          "source_statuses": {
+            "treasury_auction_absorption": "fresh"
+          },
+          "severe": false,
+          "reasons": [
+            "same-tenor bid-to-cover delta +0.08",
+            "dealer share delta +0.2 pp",
+            "indirect share delta -0.1 pp"
+          ]
+        }
+      ]
+    },
+    "liquidity_plumbing_guard_active": false,
+    "liquidity_plumbing_guard_reliable": true,
+    "historical_evidence_state": "Contradictory",
+    "historical_evidence_by_horizon": {
+      "4w": "Weak/Mixed",
+      "13w": "Contradictory",
+      "26w": "Contradictory"
+    },
+    "historical_evidence_reason": "contradictory historical evidence at 13w, 26w",
+    "historical_evidence_exposure_cap": 0.0,
+    "new_report_observed": true,
+    "previous_report_date": "2026-08-25",
+    "weekly_signal_change": "COT signal strengthened",
+    "weekly_signal_material": true,
+    "previous_structural_score": 0.3827,
+    "structural_score_change": 0.0704,
+    "previous_tactical_modifier": -0.0223,
+    "tactical_modifier_change": 0.1577,
+    "previous_adjusted_cot_score": 0.3605,
+    "adjusted_cot_score_change": 0.2282,
+    "noncommercial_percentile_change": -2.11,
+    "asset_manager_percentile_change": -1.85,
+    "position_changes": [
+      {
+        "key": "legacy_noncommercial",
+        "label": "Legacy Non-commercial",
+        "current_net": -89371.0,
+        "previous_net": -78175.0,
+        "delta_net": -11196.0,
+        "current_net_oi_pct": -4.2984,
+        "previous_net_oi_pct": -3.7676,
+        "delta_net_oi_pct": -0.5308
+      },
+      {
+        "key": "asset_manager",
+        "label": "Asset Manager",
+        "current_net": 936311.0,
+        "previous_net": 954976.0,
+        "delta_net": -18665.0,
+        "current_net_oi_pct": 45.0334,
+        "previous_net_oi_pct": 46.0245,
+        "delta_net_oi_pct": -0.9911
+      },
+      {
+        "key": "leveraged_money",
+        "label": "Leveraged Money",
+        "current_net": -334436.0,
+        "previous_net": -328532.0,
+        "delta_net": -5904.0,
+        "current_net_oi_pct": -16.0852,
+        "previous_net_oi_pct": -15.8334,
+        "delta_net_oi_pct": -0.2518
+      },
+      {
+        "key": "other_reportables",
+        "label": "Other Reportables",
+        "current_net": -6031.0,
+        "previous_net": -9154.0,
+        "delta_net": 3123.0,
+        "current_net_oi_pct": -0.2901,
+        "previous_net_oi_pct": -0.4412,
+        "delta_net_oi_pct": 0.1511
+      },
+      {
+        "key": "nonreportables",
+        "label": "Retail proxy (Nonreportables)",
+        "current_net": 105389.0,
+        "previous_net": 127201.0,
+        "delta_net": -21812.0,
+        "current_net_oi_pct": 5.0689,
+        "previous_net_oi_pct": 6.1304,
+        "delta_net_oi_pct": -1.0615
+      }
+    ]
+  },
+  {
+    "model_version": "cot-direction-v1.2",
+    "market": "nq",
+    "report_date": "2026-09-01",
+    "scheduled_release_date": "2026-09-04",
+    "actual_release_date": "2026-09-04",
+    "release_date_source": "first_observed_on_schedule",
+    "signal_price_date": "2026-09-04",
+    "latest_price_date": "2026-09-04",
+    "structural_bias": "Neutral",
+    "structural_score": -0.0324,
+    "noncommercial_percentile": 60.97122302158273,
+    "tactical_modifier": 0.0,
+    "adjusted_cot_score": -0.0324,
+    "asset_manager_percentile": 72.12230215827338,
+    "asset_manager_state": "Normal",
+    "asset_manager_multiplier": 1.0,
+    "macro_score": 42.56,
+    "macro_state": "Defensive",
+    "macro_multiplier": 1.0,
+    "macro_override": false,
+    "execution_state": "No structural signal",
+    "price_change_since_release_pct": 0.0,
+    "execution_multiplier": 0.0,
+    "exposure_multiplier": 0.0,
+    "confidence_score": 0.3924,
+    "confidence_label": "Weak",
+    "final_action": "No COT Trade",
+    "reasons": [
+      "Legacy Non-commercial percentile 61.0%",
+      "Tactical layer inactive because Legacy structure is neutral/weak or TFF inputs are unavailable",
+      "Asset Manager crowding Normal; size x1.00",
+      "Macro Defensive; context only, production size x1.00",
+      "CFTC release status current; expected report 2026-09-01",
+      "Macro availability 92%",
+      "Exact CFTC consolidated parent row; component, E-mini, Micro, dividend, and TR rows are excluded.",
+      "Macro freshness warning: 1 stale factor(s) excluded",
+      "Price execution No structural signal; 20d trend -0.60% and 65d trend -3.36%"
+    ],
+    "tactical_components": [],
+    "conviction_percentile": 72.12230215827338,
+    "conviction_group_label": "Asset Manager",
+    "other_reportable_trend13_rank": -0.149171270718232,
+    "nonreportable_trend13_rank": 0.45856353591160226,
+    "noncommercial_flow4_rank": 0.9565217391304346,
+    "market_label": "NASDAQ-100",
+    "asset_class": "equity_index",
+    "secondary_report": "TFF",
+    "contract_selection_mode": "consolidated_exact",
+    "contract_selection_note": "Exact CFTC consolidated parent row; component, E-mini, Micro, dividend, and TR rows are excluded.",
+    "signal_price": 29544.154,
+    "latest_price": 29544.154,
+    "release_status": "current",
+    "expected_report_date": "2026-09-01",
+    "scheduled_release_utc": "2026-09-04T19:30:00+00:00",
+    "scheduled_release_stockholm": "2026-09-04T21:30:00+02:00",
+    "first_observed_utc": "2026-09-04T21:14:16.029424+00:00",
+    "first_observed_delay_minutes": 104.3,
+    "new_signal_available": true,
+    "macro_regime_score": 42.56,
+    "liquidity_plumbing_score": 43.41,
+    "market_transmission_score": 51.67,
+    "supply_pressure_score": 0.2,
+    "macro_availability_ratio": 0.92,
+    "macro_severe_alerts": [],
+    "source_legacy": "cot_legacy_output\\nq_legacy_data_2016_2026.csv",
+    "source_secondary": "cot_exact_output\\nq_exact_consolidated_data_2016_2026.csv",
+    "source_tff": "cot_exact_output\\nq_exact_consolidated_data_2016_2026.csv",
+    "macro_stale_factors": [
+      "score_dollar: factor_latest.dollar_index stale 7.9d>5d"
+    ],
+    "macro_missing_factors": [],
+    "macro_available_weight": 92.0,
+    "macro_total_weight": 100.0,
+    "price_alignment": "neutral",
+    "price_trend_20d_pct": -0.599,
+    "price_trend_65d_pct": -3.36,
+    "macro_reliable_for_action": true,
+    "macro_hard_override_suppressed_by_freshness": false,
+    "liquidity_plumbing_guard": {
+      "model_version": "macro-liquidity-guard-v1.0",
+      "reliable": true,
+      "active": false,
+      "source_coverage_ratio": 0.846,
+      "minimum_source_coverage": 0.6,
+      "severe_score_threshold": 25.0,
+      "minimum_severe_pillars": 2,
+      "available_pillar_count": 3,
+      "severe_pillars": [],
+      "pillar_evaluations": [
+        {
+          "pillar": "funding_microstructure",
+          "score": 41.0,
+          "state": "Neutral",
+          "available": true,
+          "fresh": true,
+          "fresh_source_count": 4,
+          "required_fresh_source_count": 2,
+          "fresh_subset_source_count": 3,
+          "required_fresh_subset_source_count": 2,
+          "source_statuses": {
+            "repo_dvp_rate": "fresh",
+            "repo_dvp_volume": "fresh",
+            "repo_gcf_rate": "fresh",
+            "repo_triparty_rate": "fresh"
+          },
+          "severe": false,
+          "reasons": [
+            "repo rate dispersion 7.0 bp",
+            "largest short-term rate move 3.0 bp"
+          ]
+        },
+        {
+          "pillar": "dealer_absorption",
+          "score": 50.0,
+          "state": "Neutral",
+          "available": false,
+          "fresh": false,
+          "fresh_source_count": 1,
+          "required_fresh_source_count": 2,
+          "fresh_subset_source_count": 0,
+          "required_fresh_subset_source_count": 0,
+          "source_statuses": {
+            "dealer_treasury_fails": "fresh",
+            "dealer_treasury_financing": "stale",
+            "dealer_treasury_positions": "unavailable"
+          },
+          "severe": false,
+          "reasons": [
+            "settlement fails z -0.55"
+          ]
+        },
+        {
+          "pillar": "fiscal_cash_flow",
+          "score": 82.8,
+          "state": "Supportive",
+          "available": true,
+          "fresh": true,
+          "fresh_source_count": 2,
+          "required_fresh_source_count": 2,
+          "fresh_subset_source_count": 0,
+          "required_fresh_subset_source_count": 0,
+          "source_statuses": {
+            "treasury_cash_flows": "fresh",
+            "treasury_operating_cash": "fresh"
+          },
+          "severe": false,
+          "reasons": [
+            "5d private cash effect +93.8 bn",
+            "5d operating-cash change -46.9 bn"
+          ]
+        },
+        {
+          "pillar": "auction_absorption",
+          "score": 50.5,
+          "state": "Neutral",
+          "available": true,
+          "fresh": true,
+          "fresh_source_count": 1,
+          "required_fresh_source_count": 1,
+          "fresh_subset_source_count": 0,
+          "required_fresh_subset_source_count": 0,
+          "source_statuses": {
+            "treasury_auction_absorption": "fresh"
+          },
+          "severe": false,
+          "reasons": [
+            "same-tenor bid-to-cover delta +0.08",
+            "dealer share delta +0.2 pp",
+            "indirect share delta -0.1 pp"
+          ]
+        }
+      ]
+    },
+    "liquidity_plumbing_guard_active": false,
+    "liquidity_plumbing_guard_reliable": true,
+    "historical_evidence_state": "Not validated",
+    "historical_evidence_by_horizon": {
+      "4w": "Weak/Mixed",
+      "13w": "Weak/Mixed",
+      "26w": "Weak/Mixed"
+    },
+    "historical_evidence_reason": "relevant horizons are weak, mixed, or not estimable",
+    "historical_evidence_exposure_cap": 0.35,
+    "new_report_observed": true,
+    "previous_report_date": "2026-08-25",
+    "weekly_signal_change": "COT signal little changed",
+    "weekly_signal_material": true,
+    "previous_structural_score": 0.0961,
+    "structural_score_change": -0.1285,
+    "previous_tactical_modifier": 0.0,
+    "tactical_modifier_change": 0.0,
+    "previous_adjusted_cot_score": 0.0961,
+    "adjusted_cot_score_change": -0.1285,
+    "noncommercial_percentile_change": 23.85,
+    "asset_manager_percentile_change": -1.03,
+    "position_changes": [
+      {
+        "key": "legacy_noncommercial",
+        "label": "Legacy Non-commercial",
+        "current_net": 27077.0,
+        "previous_net": 11127.0,
+        "delta_net": 15950.0,
+        "current_net_oi_pct": 8.451,
+        "previous_net_oi_pct": 3.4536,
+        "delta_net_oi_pct": 4.9974
+      },
+      {
+        "key": "asset_manager",
+        "label": "Asset Manager",
+        "current_net": 72886.0,
+        "previous_net": 74231.0,
+        "delta_net": -1345.0,
+        "current_net_oi_pct": 22.7484,
+        "previous_net_oi_pct": 23.0395,
+        "delta_net_oi_pct": -0.2911
+      },
+      {
+        "key": "leveraged_money",
+        "label": "Leveraged Money",
+        "current_net": -18034.0,
+        "previous_net": -44316.0,
+        "delta_net": 26282.0,
+        "current_net_oi_pct": -5.6286,
+        "previous_net_oi_pct": -13.7546,
+        "delta_net_oi_pct": 8.126
+      },
+      {
+        "key": "other_reportables",
+        "label": "Other Reportables",
+        "current_net": 1454.0,
+        "previous_net": 4130.0,
+        "delta_net": -2676.0,
+        "current_net_oi_pct": 0.4538,
+        "previous_net_oi_pct": 1.2819,
+        "delta_net_oi_pct": -0.828
+      },
+      {
+        "key": "nonreportables",
+        "label": "Retail proxy (Nonreportables)",
+        "current_net": 13409.0,
+        "previous_net": 20631.0,
+        "delta_net": -7222.0,
+        "current_net_oi_pct": 4.1851,
+        "previous_net_oi_pct": 6.4034,
+        "delta_net_oi_pct": -2.2183
+      }
+    ]
+  },
+  {
+    "model_version": "cot-direction-v1.2",
+    "market": "russell2000",
+    "report_date": "2026-09-01",
+    "scheduled_release_date": "2026-09-04",
+    "actual_release_date": "2026-09-04",
+    "release_date_source": "first_observed_on_schedule",
+    "signal_price_date": "2026-09-04",
+    "latest_price_date": "2026-09-04",
+    "structural_bias": "Strong bullish",
+    "structural_score": 0.9832,
+    "noncommercial_percentile": 10.504201680672269,
+    "tactical_modifier": 0.0222,
+    "adjusted_cot_score": 1.0,
+    "asset_manager_percentile": 46.21848739495798,
+    "asset_manager_state": "Normal",
+    "asset_manager_multiplier": 1.0,
+    "macro_score": 42.56,
+    "macro_state": "Defensive",
+    "macro_multiplier": 1.0,
+    "macro_override": false,
+    "execution_state": "Contradicted",
+    "price_change_since_release_pct": 0.0,
+    "execution_multiplier": 0.25,
+    "exposure_multiplier": 0.25,
+    "confidence_score": 0.6295,
+    "confidence_label": "Medium",
+    "final_action": "Wait for Long",
+    "reasons": [
+      "Legacy Non-commercial percentile 10.5%",
+      "Tactical modifier +0.02",
+      "Asset Manager crowding Normal; size x1.00",
+      "Macro Defensive; context only, production size x1.00",
+      "CFTC release status current; expected report 2026-09-01",
+      "Macro availability 92%",
+      "CFTC does not publish a Russell 2000 consolidated parent row in the financial futures-only file. The exact primary E-mini row 239742 is used; Micro, annual-dividend, and Russell 1000 rows are excluded.",
+      "Macro freshness warning: 1 stale factor(s) excluded",
+      "Price execution Contradicted; 20d trend -1.94% and 65d trend +2.84%"
+    ],
+    "tactical_components": [
+      {
+        "label": "Other Reportables 13w trend",
+        "rank_score": -0.316,
+        "support": 0.316,
+        "contribution": 0.174
+      },
+      {
+        "label": "Nonreportable 13w trend",
+        "rank_score": -0.147,
+        "support": 0.147,
+        "contribution": 0.037
+      },
+      {
+        "label": "Non-commercial 4w flow alignment",
+        "rank_score": -0.94,
+        "support": -0.94,
+        "contribution": -0.188
+      }
+    ],
+    "conviction_percentile": 46.21848739495798,
+    "conviction_group_label": "Asset Manager",
+    "other_reportable_trend13_rank": -0.3155555555555556,
+    "nonreportable_trend13_rank": -0.14666666666666672,
+    "noncommercial_flow4_rank": -0.9401709401709402,
+    "market_label": "Russell 2000",
+    "asset_class": "equity_index",
+    "secondary_report": "TFF",
+    "contract_selection_mode": "primary_contract_exact",
+    "contract_selection_note": "CFTC does not publish a Russell 2000 consolidated parent row in the financial futures-only file. The exact primary E-mini row 239742 is used; Micro, annual-dividend, and Russell 1000 rows are excluded.",
+    "signal_price": 2975.648,
+    "latest_price": 2975.648,
+    "release_status": "current",
+    "expected_report_date": "2026-09-01",
+    "scheduled_release_utc": "2026-09-04T19:30:00+00:00",
+    "scheduled_release_stockholm": "2026-09-04T21:30:00+02:00",
+    "first_observed_utc": "2026-09-04T21:14:16.029424+00:00",
+    "first_observed_delay_minutes": 104.3,
+    "new_signal_available": true,
+    "macro_regime_score": 42.56,
+    "liquidity_plumbing_score": 43.41,
+    "market_transmission_score": 51.67,
+    "supply_pressure_score": 0.2,
+    "macro_availability_ratio": 0.92,
+    "macro_severe_alerts": [],
+    "source_legacy": "cot_legacy_output\\russell2000_legacy_data_2016_2026.csv",
+    "source_secondary": "cot_exact_output\\russell2000_exact_consolidated_data_2016_2026.csv",
+    "source_tff": "cot_exact_output\\russell2000_exact_consolidated_data_2016_2026.csv",
+    "macro_stale_factors": [
+      "score_dollar: factor_latest.dollar_index stale 7.9d>5d"
+    ],
+    "macro_missing_factors": [],
+    "macro_available_weight": 92.0,
+    "macro_total_weight": 100.0,
+    "price_alignment": "opposed",
+    "price_trend_20d_pct": -1.939,
+    "price_trend_65d_pct": 2.839,
+    "macro_reliable_for_action": true,
+    "macro_hard_override_suppressed_by_freshness": false,
+    "liquidity_plumbing_guard": {
+      "model_version": "macro-liquidity-guard-v1.0",
+      "reliable": true,
+      "active": false,
+      "source_coverage_ratio": 0.846,
+      "minimum_source_coverage": 0.6,
+      "severe_score_threshold": 25.0,
+      "minimum_severe_pillars": 2,
+      "available_pillar_count": 3,
+      "severe_pillars": [],
+      "pillar_evaluations": [
+        {
+          "pillar": "funding_microstructure",
+          "score": 41.0,
+          "state": "Neutral",
+          "available": true,
+          "fresh": true,
+          "fresh_source_count": 4,
+          "required_fresh_source_count": 2,
+          "fresh_subset_source_count": 3,
+          "required_fresh_subset_source_count": 2,
+          "source_statuses": {
+            "repo_dvp_rate": "fresh",
+            "repo_dvp_volume": "fresh",
+            "repo_gcf_rate": "fresh",
+            "repo_triparty_rate": "fresh"
+          },
+          "severe": false,
+          "reasons": [
+            "repo rate dispersion 7.0 bp",
+            "largest short-term rate move 3.0 bp"
+          ]
+        },
+        {
+          "pillar": "dealer_absorption",
+          "score": 50.0,
+          "state": "Neutral",
+          "available": false,
+          "fresh": false,
+          "fresh_source_count": 1,
+          "required_fresh_source_count": 2,
+          "fresh_subset_source_count": 0,
+          "required_fresh_subset_source_count": 0,
+          "source_statuses": {
+            "dealer_treasury_fails": "fresh",
+            "dealer_treasury_financing": "stale",
+            "dealer_treasury_positions": "unavailable"
+          },
+          "severe": false,
+          "reasons": [
+            "settlement fails z -0.55"
+          ]
+        },
+        {
+          "pillar": "fiscal_cash_flow",
+          "score": 82.8,
+          "state": "Supportive",
+          "available": true,
+          "fresh": true,
+          "fresh_source_count": 2,
+          "required_fresh_source_count": 2,
+          "fresh_subset_source_count": 0,
+          "required_fresh_subset_source_count": 0,
+          "source_statuses": {
+            "treasury_cash_flows": "fresh",
+            "treasury_operating_cash": "fresh"
+          },
+          "severe": false,
+          "reasons": [
+            "5d private cash effect +93.8 bn",
+            "5d operating-cash change -46.9 bn"
+          ]
+        },
+        {
+          "pillar": "auction_absorption",
+          "score": 50.5,
+          "state": "Neutral",
+          "available": true,
+          "fresh": true,
+          "fresh_source_count": 1,
+          "required_fresh_source_count": 1,
+          "fresh_subset_source_count": 0,
+          "required_fresh_subset_source_count": 0,
+          "source_statuses": {
+            "treasury_auction_absorption": "fresh"
+          },
+          "severe": false,
+          "reasons": [
+            "same-tenor bid-to-cover delta +0.08",
+            "dealer share delta +0.2 pp",
+            "indirect share delta -0.1 pp"
+          ]
+        }
+      ]
+    },
+    "liquidity_plumbing_guard_active": false,
+    "liquidity_plumbing_guard_reliable": true,
+    "historical_evidence_state": "Not validated",
+    "historical_evidence_by_horizon": {
+      "4w": "Weak/Mixed",
+      "13w": "Weak/Mixed",
+      "26w": "Weak/Mixed"
+    },
+    "historical_evidence_reason": "relevant horizons are weak, mixed, or not estimable",
+    "historical_evidence_exposure_cap": 0.35,
+    "new_report_observed": true,
+    "previous_report_date": "2026-08-25",
+    "weekly_signal_change": "COT signal strengthened",
+    "weekly_signal_material": true,
+    "previous_structural_score": 0.2785,
+    "structural_score_change": 0.7047,
+    "previous_tactical_modifier": 0.038,
+    "tactical_modifier_change": -0.0158,
+    "previous_adjusted_cot_score": 0.3165,
+    "adjusted_cot_score_change": 0.6835,
+    "noncommercial_percentile_change": -21.14,
+    "asset_manager_percentile_change": 7.4,
+    "position_changes": [
+      {
+        "key": "legacy_noncommercial",
+        "label": "Legacy Non-commercial",
+        "current_net": -71663.0,
+        "previous_net": -51578.0,
+        "delta_net": -20085.0,
+        "current_net_oi_pct": -16.8753,
+        "previous_net_oi_pct": -12.4886,
+        "delta_net_oi_pct": -4.3866
+      },
+      {
+        "key": "asset_manager",
+        "label": "Asset Manager",
+        "current_net": 17498.0,
+        "previous_net": 12331.0,
+        "delta_net": 5167.0,
+        "current_net_oi_pct": 4.1204,
+        "previous_net_oi_pct": 2.9857,
+        "delta_net_oi_pct": 1.1347
+      },
+      {
+        "key": "leveraged_money",
+        "label": "Leveraged Money",
+        "current_net": -109499.0,
+        "previous_net": -97700.0,
+        "delta_net": -11799.0,
+        "current_net_oi_pct": -25.7849,
+        "previous_net_oi_pct": -23.6562,
+        "delta_net_oi_pct": -2.1287
+      },
+      {
+        "key": "other_reportables",
+        "label": "Other Reportables",
+        "current_net": -8154.0,
+        "previous_net": -7204.0,
+        "delta_net": -950.0,
+        "current_net_oi_pct": -1.9201,
+        "previous_net_oi_pct": -1.7443,
+        "delta_net_oi_pct": -0.1758
+      },
+      {
+        "key": "nonreportables",
+        "label": "Retail proxy (Nonreportables)",
+        "current_net": 3562.0,
+        "previous_net": 8665.0,
+        "delta_net": -5103.0,
+        "current_net_oi_pct": 0.8388,
+        "previous_net_oi_pct": 2.0981,
+        "delta_net_oi_pct": -1.2593
+      }
+    ]
+  },
+  {
+    "model_version": "cot-direction-v1.2",
+    "market": "dow",
+    "report_date": "2026-09-01",
+    "scheduled_release_date": "2026-09-04",
+    "actual_release_date": "2026-09-04",
+    "release_date_source": "first_observed_on_schedule",
+    "signal_price_date": "2026-09-04",
+    "latest_price_date": "2026-09-04",
+    "structural_bias": "Neutral",
+    "structural_score": -0.2482,
+    "noncommercial_percentile": 67.44604316546763,
+    "tactical_modifier": 0.0,
+    "adjusted_cot_score": -0.2482,
+    "asset_manager_percentile": 24.100719424460433,
+    "asset_manager_state": "Normal",
+    "asset_manager_multiplier": 1.0,
+    "macro_score": 42.56,
+    "macro_state": "Defensive",
+    "macro_multiplier": 1.0,
+    "macro_override": false,
+    "execution_state": "No structural signal",
+    "price_change_since_release_pct": 0.0,
+    "execution_multiplier": 0.0,
+    "exposure_multiplier": 0.0,
+    "confidence_score": 0.3709,
+    "confidence_label": "Weak",
+    "final_action": "No COT Trade",
+    "reasons": [
+      "Legacy Non-commercial percentile 67.4%",
+      "Tactical layer inactive because Legacy structure is neutral/weak or TFF inputs are unavailable",
+      "Asset Manager crowding Normal; size x1.00",
+      "Macro Defensive; context only, production size x1.00",
+      "CFTC release status current; expected report 2026-09-01",
+      "Macro availability 92%",
+      "Exact CFTC consolidated parent row; component, E-mini, Micro, dividend, and TR rows are excluded.",
+      "Macro freshness warning: 1 stale factor(s) excluded",
+      "Price execution No structural signal; 20d trend -1.15% and 65d trend +5.38%"
+    ],
+    "tactical_components": [],
+    "conviction_percentile": 24.100719424460433,
+    "conviction_group_label": "Asset Manager",
+    "other_reportable_trend13_rank": -0.11233885819521172,
+    "nonreportable_trend13_rank": 0.11602209944751385,
+    "noncommercial_flow4_rank": -0.4746376811594203,
+    "market_label": "Dow Jones",
+    "asset_class": "equity_index",
+    "secondary_report": "TFF",
+    "contract_selection_mode": "consolidated_exact",
+    "contract_selection_note": "Exact CFTC consolidated parent row; component, E-mini, Micro, dividend, and TR rows are excluded.",
+    "signal_price": 53414.25,
+    "latest_price": 53414.25,
+    "release_status": "current",
+    "expected_report_date": "2026-09-01",
+    "scheduled_release_utc": "2026-09-04T19:30:00+00:00",
+    "scheduled_release_stockholm": "2026-09-04T21:30:00+02:00",
+    "first_observed_utc": "2026-09-04T21:14:16.029424+00:00",
+    "first_observed_delay_minutes": 104.3,
+    "new_signal_available": true,
+    "macro_regime_score": 42.56,
+    "liquidity_plumbing_score": 43.41,
+    "market_transmission_score": 51.67,
+    "supply_pressure_score": 0.2,
+    "macro_availability_ratio": 0.92,
+    "macro_severe_alerts": [],
+    "source_legacy": "cot_legacy_output\\dow_legacy_data_2016_2026.csv",
+    "source_secondary": "cot_exact_output\\dow_exact_consolidated_data_2016_2026.csv",
+    "source_tff": "cot_exact_output\\dow_exact_consolidated_data_2016_2026.csv",
+    "macro_stale_factors": [
+      "score_dollar: factor_latest.dollar_index stale 7.9d>5d"
+    ],
+    "macro_missing_factors": [],
+    "macro_available_weight": 92.0,
+    "macro_total_weight": 100.0,
+    "price_alignment": "neutral",
+    "price_trend_20d_pct": -1.152,
+    "price_trend_65d_pct": 5.38,
+    "macro_reliable_for_action": true,
+    "macro_hard_override_suppressed_by_freshness": false,
+    "liquidity_plumbing_guard": {
+      "model_version": "macro-liquidity-guard-v1.0",
+      "reliable": true,
+      "active": false,
+      "source_coverage_ratio": 0.846,
+      "minimum_source_coverage": 0.6,
+      "severe_score_threshold": 25.0,
+      "minimum_severe_pillars": 2,
+      "available_pillar_count": 3,
+      "severe_pillars": [],
+      "pillar_evaluations": [
+        {
+          "pillar": "funding_microstructure",
+          "score": 41.0,
+          "state": "Neutral",
+          "available": true,
+          "fresh": true,
+          "fresh_source_count": 4,
+          "required_fresh_source_count": 2,
+          "fresh_subset_source_count": 3,
+          "required_fresh_subset_source_count": 2,
+          "source_statuses": {
+            "repo_dvp_rate": "fresh",
+            "repo_dvp_volume": "fresh",
+            "repo_gcf_rate": "fresh",
+            "repo_triparty_rate": "fresh"
+          },
+          "severe": false,
+          "reasons": [
+            "repo rate dispersion 7.0 bp",
+            "largest short-term rate move 3.0 bp"
+          ]
+        },
+        {
+          "pillar": "dealer_absorption",
+          "score": 50.0,
+          "state": "Neutral",
+          "available": false,
+          "fresh": false,
+          "fresh_source_count": 1,
+          "required_fresh_source_count": 2,
+          "fresh_subset_source_count": 0,
+          "required_fresh_subset_source_count": 0,
+          "source_statuses": {
+            "dealer_treasury_fails": "fresh",
+            "dealer_treasury_financing": "stale",
+            "dealer_treasury_positions": "unavailable"
+          },
+          "severe": false,
+          "reasons": [
+            "settlement fails z -0.55"
+          ]
+        },
+        {
+          "pillar": "fiscal_cash_flow",
+          "score": 82.8,
+          "state": "Supportive",
+          "available": true,
+          "fresh": true,
+          "fresh_source_count": 2,
+          "required_fresh_source_count": 2,
+          "fresh_subset_source_count": 0,
+          "required_fresh_subset_source_count": 0,
+          "source_statuses": {
+            "treasury_cash_flows": "fresh",
+            "treasury_operating_cash": "fresh"
+          },
+          "severe": false,
+          "reasons": [
+            "5d private cash effect +93.8 bn",
+            "5d operating-cash change -46.9 bn"
+          ]
+        },
+        {
+          "pillar": "auction_absorption",
+          "score": 50.5,
+          "state": "Neutral",
+          "available": true,
+          "fresh": true,
+          "fresh_source_count": 1,
+          "required_fresh_source_count": 1,
+          "fresh_subset_source_count": 0,
+          "required_fresh_subset_source_count": 0,
+          "source_statuses": {
+            "treasury_auction_absorption": "fresh"
+          },
+          "severe": false,
+          "reasons": [
+            "same-tenor bid-to-cover delta +0.08",
+            "dealer share delta +0.2 pp",
+            "indirect share delta -0.1 pp"
+          ]
+        }
+      ]
+    },
+    "liquidity_plumbing_guard_active": false,
+    "liquidity_plumbing_guard_reliable": true,
+    "historical_evidence_state": "Not validated",
+    "historical_evidence_by_horizon": {
+      "4w": "Weak/Mixed",
+      "13w": "Weak/Mixed",
+      "26w": "Weak/Mixed"
+    },
+    "historical_evidence_reason": "relevant horizons are weak, mixed, or not estimable",
+    "historical_evidence_exposure_cap": 0.35,
+    "new_report_observed": true,
+    "previous_report_date": "2026-08-25",
+    "weekly_signal_change": "COT signal strengthened",
+    "weekly_signal_material": true,
+    "previous_structural_score": -0.1321,
+    "structural_score_change": -0.1161,
+    "previous_tactical_modifier": 0.0,
+    "tactical_modifier_change": 0.0,
+    "previous_adjusted_cot_score": -0.1321,
+    "adjusted_cot_score_change": -0.1161,
+    "noncommercial_percentile_change": 3.48,
+    "asset_manager_percentile_change": -0.94,
+    "position_changes": [
+      {
+        "key": "legacy_noncommercial",
+        "label": "Legacy Non-commercial",
+        "current_net": 17625.0,
+        "previous_net": 15557.0,
+        "delta_net": 2068.0,
+        "current_net_oi_pct": 19.3265,
+        "previous_net_oi_pct": 17.5877,
+        "delta_net_oi_pct": 1.7388
+      },
+      {
+        "key": "asset_manager",
+        "label": "Asset Manager",
+        "current_net": 5527.0,
+        "previous_net": 5512.0,
+        "delta_net": 15.0,
+        "current_net_oi_pct": 6.0606,
+        "previous_net_oi_pct": 6.2315,
+        "delta_net_oi_pct": -0.1709
+      },
+      {
+        "key": "leveraged_money",
+        "label": "Leveraged Money",
+        "current_net": -1735.0,
+        "previous_net": -1635.0,
+        "delta_net": -100.0,
+        "current_net_oi_pct": -1.9025,
+        "previous_net_oi_pct": -1.8484,
+        "delta_net_oi_pct": -0.0541
+      },
+      {
+        "key": "other_reportables",
+        "label": "Other Reportables",
+        "current_net": -1.0,
+        "previous_net": 5.0,
+        "delta_net": -6.0,
+        "current_net_oi_pct": -0.0011,
+        "previous_net_oi_pct": 0.0057,
+        "delta_net_oi_pct": -0.0067
+      },
+      {
+        "key": "nonreportables",
+        "label": "Retail proxy (Nonreportables)",
+        "current_net": 5375.0,
+        "previous_net": 5613.0,
+        "delta_net": -238.0,
+        "current_net_oi_pct": 5.8939,
+        "previous_net_oi_pct": 6.3457,
+        "delta_net_oi_pct": -0.4518
+      }
+    ]
+  },
+  {
+    "model_version": "cot-direction-v1.2",
+    "market": "gold",
+    "report_date": "2026-09-01",
+    "scheduled_release_date": "2026-09-04",
+    "actual_release_date": "2026-09-04",
+    "release_date_source": "first_observed_on_schedule",
+    "signal_price_date": "2026-09-04",
+    "latest_price_date": "2026-09-04",
+    "structural_bias": "Strong bearish",
+    "structural_score": -1.0,
+    "noncommercial_percentile": 98.02158273381295,
+    "tactical_modifier": 0.1058,
+    "adjusted_cot_score": -1.0,
+    "asset_manager_percentile": 82.55395683453237,
+    "asset_manager_state": "Elevated",
+    "asset_manager_multiplier": 0.9,
+    "macro_score": 42.56,
+    "macro_state": "Defensive",
+    "macro_multiplier": 1.0,
+    "macro_override": false,
+    "execution_state": "Invalidated",
+    "price_change_since_release_pct": 0.0,
+    "execution_multiplier": 0.0,
+    "exposure_multiplier": 0.0,
+    "confidence_score": 0.5856,
+    "confidence_label": "Medium",
+    "final_action": "No Trade",
+    "reasons": [
+      "Legacy Non-commercial percentile 98.0%",
+      "Tactical modifier +0.11",
+      "Managed Money crowding Elevated; size x0.90",
+      "Macro Defensive; context only, production size x1.00",
+      "CFTC release status current; expected report 2026-09-01",
+      "Macro availability 92%",
+      "Exact COMEX Gold futures-only row 088691; Micro Gold and other metals are excluded.",
+      "Macro freshness warning: 1 stale factor(s) excluded",
+      "Price execution Invalidated; 20d trend +3.13% and 65d trend +0.90%"
+    ],
+    "tactical_components": [
+      {
+        "label": "Other Reportables 13w trend",
+        "rank_score": 0.444,
+        "support": 0.444,
+        "contribution": 0.244
+      },
+      {
+        "label": "Nonreportable 13w trend",
+        "rank_score": -0.359,
+        "support": -0.359,
+        "contribution": -0.09
+      },
+      {
+        "label": "Non-commercial 4w flow alignment",
+        "rank_score": 0.243,
+        "support": -0.243,
+        "contribution": -0.049
+      }
+    ],
+    "conviction_percentile": 82.55395683453237,
+    "conviction_group_label": "Managed Money",
+    "other_reportable_trend13_rank": 0.4438305709023942,
+    "nonreportable_trend13_rank": -0.3591160220994475,
+    "noncommercial_flow4_rank": 0.24275362318840576,
+    "market_label": "Gold",
+    "asset_class": "commodity",
+    "secondary_report": "Disaggregated",
+    "contract_selection_mode": "primary_contract_exact",
+    "contract_selection_note": "Exact COMEX Gold futures-only row 088691; Micro Gold and other metals are excluded.",
+    "signal_price": 4476.7,
+    "latest_price": 4476.7,
+    "release_status": "current",
+    "expected_report_date": "2026-09-01",
+    "scheduled_release_utc": "2026-09-04T19:30:00+00:00",
+    "scheduled_release_stockholm": "2026-09-04T21:30:00+02:00",
+    "first_observed_utc": "2026-09-04T21:14:16.029424+00:00",
+    "first_observed_delay_minutes": 104.3,
+    "new_signal_available": true,
+    "macro_regime_score": 42.56,
+    "liquidity_plumbing_score": 43.41,
+    "market_transmission_score": 51.67,
+    "supply_pressure_score": 0.2,
+    "macro_availability_ratio": 0.92,
+    "macro_severe_alerts": [],
+    "source_legacy": "cot_legacy_output\\gold_legacy_data_2016_2026.csv",
+    "source_secondary": "cot_disaggregated_output\\gold_disaggregated_data_2016_2026.csv",
+    "source_tff": "cot_disaggregated_output\\gold_disaggregated_data_2016_2026.csv",
+    "macro_stale_factors": [
+      "score_dollar: factor_latest.dollar_index stale 7.9d>5d"
+    ],
+    "macro_missing_factors": [],
+    "macro_available_weight": 92.0,
+    "macro_total_weight": 100.0,
+    "price_alignment": "opposed",
+    "price_trend_20d_pct": 3.133,
+    "price_trend_65d_pct": 0.902,
+    "macro_reliable_for_action": true,
+    "macro_hard_override_suppressed_by_freshness": false,
+    "liquidity_plumbing_guard": {
+      "model_version": "macro-liquidity-guard-v1.0",
+      "reliable": true,
+      "active": false,
+      "source_coverage_ratio": 0.846,
+      "minimum_source_coverage": 0.6,
+      "severe_score_threshold": 25.0,
+      "minimum_severe_pillars": 2,
+      "available_pillar_count": 3,
+      "severe_pillars": [],
+      "pillar_evaluations": [
+        {
+          "pillar": "funding_microstructure",
+          "score": 41.0,
+          "state": "Neutral",
+          "available": true,
+          "fresh": true,
+          "fresh_source_count": 4,
+          "required_fresh_source_count": 2,
+          "fresh_subset_source_count": 3,
+          "required_fresh_subset_source_count": 2,
+          "source_statuses": {
+            "repo_dvp_rate": "fresh",
+            "repo_dvp_volume": "fresh",
+            "repo_gcf_rate": "fresh",
+            "repo_triparty_rate": "fresh"
+          },
+          "severe": false,
+          "reasons": [
+            "repo rate dispersion 7.0 bp",
+            "largest short-term rate move 3.0 bp"
+          ]
+        },
+        {
+          "pillar": "dealer_absorption",
+          "score": 50.0,
+          "state": "Neutral",
+          "available": false,
+          "fresh": false,
+          "fresh_source_count": 1,
+          "required_fresh_source_count": 2,
+          "fresh_subset_source_count": 0,
+          "required_fresh_subset_source_count": 0,
+          "source_statuses": {
+            "dealer_treasury_fails": "fresh",
+            "dealer_treasury_financing": "stale",
+            "dealer_treasury_positions": "unavailable"
+          },
+          "severe": false,
+          "reasons": [
+            "settlement fails z -0.55"
+          ]
+        },
+        {
+          "pillar": "fiscal_cash_flow",
+          "score": 82.8,
+          "state": "Supportive",
+          "available": true,
+          "fresh": true,
+          "fresh_source_count": 2,
+          "required_fresh_source_count": 2,
+          "fresh_subset_source_count": 0,
+          "required_fresh_subset_source_count": 0,
+          "source_statuses": {
+            "treasury_cash_flows": "fresh",
+            "treasury_operating_cash": "fresh"
+          },
+          "severe": false,
+          "reasons": [
+            "5d private cash effect +93.8 bn",
+            "5d operating-cash change -46.9 bn"
+          ]
+        },
+        {
+          "pillar": "auction_absorption",
+          "score": 50.5,
+          "state": "Neutral",
+          "available": true,
+          "fresh": true,
+          "fresh_source_count": 1,
+          "required_fresh_source_count": 1,
+          "fresh_subset_source_count": 0,
+          "required_fresh_subset_source_count": 0,
+          "source_statuses": {
+            "treasury_auction_absorption": "fresh"
+          },
+          "severe": false,
+          "reasons": [
+            "same-tenor bid-to-cover delta +0.08",
+            "dealer share delta +0.2 pp",
+            "indirect share delta -0.1 pp"
+          ]
+        }
+      ]
+    },
+    "liquidity_plumbing_guard_active": false,
+    "liquidity_plumbing_guard_reliable": true,
+    "historical_evidence_state": "Contradictory",
+    "historical_evidence_by_horizon": {
+      "4w": "Weak/Mixed",
+      "13w": "Contradictory",
+      "26w": "Contradictory"
+    },
+    "historical_evidence_reason": "contradictory historical evidence at 13w, 26w",
+    "historical_evidence_exposure_cap": 0.0,
+    "new_report_observed": true,
+    "previous_report_date": "2026-08-25",
+    "weekly_signal_change": "COT signal little changed",
+    "weekly_signal_material": true,
+    "previous_structural_score": -1.0,
+    "structural_score_change": 0.0,
+    "previous_tactical_modifier": 0.225,
+    "tactical_modifier_change": -0.1193,
+    "previous_adjusted_cot_score": -1.0,
+    "adjusted_cot_score_change": 0.0,
+    "noncommercial_percentile_change": -1.62,
+    "asset_manager_percentile_change": -2.85,
+    "position_changes": [
+      {
+        "key": "legacy_noncommercial",
+        "label": "Legacy Non-commercial",
+        "current_net": 228124.0,
+        "previous_net": 243334.0,
+        "delta_net": -15210.0,
+        "current_net_oi_pct": 54.9437,
+        "previous_net_oi_pct": 56.8595,
+        "delta_net_oi_pct": -1.9158
+      },
+      {
+        "key": "managed_money",
+        "label": "Managed Money",
+        "current_net": 136771.0,
+        "previous_net": 144747.0,
+        "delta_net": -7976.0,
+        "current_net_oi_pct": 32.9413,
+        "previous_net_oi_pct": 33.8228,
+        "delta_net_oi_pct": -0.8815
+      },
+      {
+        "key": "swap_dealer",
+        "label": "Swap Dealer",
+        "current_net": -233429.0,
+        "previous_net": -245027.0,
+        "delta_net": 11598.0,
+        "current_net_oi_pct": -56.2214,
+        "previous_net_oi_pct": -57.2551,
+        "delta_net_oi_pct": 1.0337
+      },
+      {
+        "key": "producer_merchant",
+        "label": "Producer/Merchant",
+        "current_net": -31289.0,
+        "previous_net": -34558.0,
+        "delta_net": 3269.0,
+        "current_net_oi_pct": -7.536,
+        "previous_net_oi_pct": -8.0751,
+        "delta_net_oi_pct": 0.5392
+      },
+      {
+        "key": "other_reportables",
+        "label": "Other Reportables",
+        "current_net": 91353.0,
+        "previous_net": 98587.0,
+        "delta_net": -7234.0,
+        "current_net_oi_pct": 22.0024,
+        "previous_net_oi_pct": 23.0367,
+        "delta_net_oi_pct": -1.0343
+      },
+      {
+        "key": "nonreportables",
+        "label": "Nonreportables",
+        "current_net": 36594.0,
+        "previous_net": 36251.0,
+        "delta_net": 343.0,
+        "current_net_oi_pct": 8.8137,
+        "previous_net_oi_pct": 8.4707,
+        "delta_net_oi_pct": 0.343
+      }
+    ]
+  }
+]

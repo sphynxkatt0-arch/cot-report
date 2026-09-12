@@ -1,0 +1,199 @@
+{
+  "actor_predictors": {
+    "delta_1w_net_oi_pp": {
+      "description": "weekly change in actor net/OI position in percentage points",
+      "family": "oi_normalized_flow",
+      "scale_sensitive": false
+    },
+    "delta_long_contracts": {
+      "description": "weekly change in actor raw long contracts",
+      "family": "raw_position_flow",
+      "scale_sensitive": true
+    },
+    "delta_net_contracts": {
+      "description": "weekly change in actor raw net contracts",
+      "family": "raw_position_flow",
+      "scale_sensitive": true
+    },
+    "delta_short_contracts": {
+      "description": "weekly change in actor raw short contracts",
+      "family": "raw_position_flow",
+      "scale_sensitive": true
+    },
+    "long_contracts": {
+      "description": "actor gross long position in raw contracts",
+      "family": "raw_position_level",
+      "scale_sensitive": true
+    },
+    "long_oi_pct": {
+      "description": "actor gross long contracts as percent of open interest",
+      "family": "oi_normalized_position",
+      "scale_sensitive": false
+    },
+    "net_contracts": {
+      "description": "actor net position in raw contracts",
+      "family": "raw_position_level",
+      "scale_sensitive": true
+    },
+    "net_contracts_percentile": {
+      "description": "expanding historical percentile of actor raw net contracts",
+      "family": "raw_position_level_normalized",
+      "scale_sensitive": false
+    },
+    "net_oi_pct": {
+      "description": "actor net position as percent of open interest",
+      "family": "oi_normalized_position",
+      "scale_sensitive": false
+    },
+    "position_percentile": {
+      "benchmark_from_prior_study": true,
+      "description": "expanding historical percentile of actor net/OI position",
+      "family": "oi_normalized_position",
+      "scale_sensitive": false
+    },
+    "short_contracts": {
+      "description": "actor gross short position in raw contracts",
+      "family": "raw_position_level",
+      "scale_sensitive": true
+    },
+    "short_oi_pct": {
+      "description": "actor gross short contracts as percent of open interest",
+      "family": "oi_normalized_position",
+      "scale_sensitive": false
+    },
+    "signed_change_percentile": {
+      "benchmark_from_prior_study": true,
+      "description": "expanding percentile of abs weekly net/OI change with ADD/CUT sign",
+      "family": "oi_normalized_flow",
+      "scale_sensitive": false
+    },
+    "signed_delta_net_contracts_percentile": {
+      "description": "expanding percentile of absolute weekly raw-net change with ADD/CUT sign",
+      "family": "raw_position_flow_normalized",
+      "scale_sensitive": false
+    }
+  },
+  "actor_series_count": 59,
+  "augmented_model_specs": {
+    "net_oi_flow_plus_oi_pct": [
+      "delta_1w_net_oi_pp",
+      "delta_open_interest_pct"
+    ],
+    "position_ratio_plus_oi_level": [
+      "net_oi_pct",
+      "open_interest_percentile"
+    ],
+    "raw_net_flow_plus_oi_pct": [
+      "delta_net_contracts",
+      "delta_open_interest_pct"
+    ],
+    "signed_flow_percentiles": [
+      "signed_change_percentile",
+      "signed_delta_open_interest_percentile"
+    ]
+  },
+  "continuous_metric_count": 12915,
+  "files": {
+    "full_json_gzip": {
+      "bytes": 6312870,
+      "sha256": "f6f331f4faa58f4e9aec4511735ecee66a86f94ac8ad2fae1c199a798582bb09"
+    },
+    "full_json_uncompressed": {
+      "bytes": 74119013,
+      "canonical_sha256_excluding_generated_at_utc": "614b54fd1878fb8322769f933e71a4bcddf6e44e50fb3c1c452d383fb49dcf36",
+      "sha256": "b95deeb381d2f6b7a34fe756b5325590aab936a1a6b06c503eec7c56348e615c"
+    },
+    "gold_managed_money_json": {
+      "bytes": 180468,
+      "canonical_sha256": "a145996237c7576b649e5dfd37523775a203fcf84b424b95dc718cd942f5fce0",
+      "sha256": "7b57b8ad9c7c3e74bcb16f922198ae9a3d113ad26f362fa42bf1ac9bab2f2225"
+    },
+    "summary_json": {
+      "bytes": 2607739,
+      "canonical_sha256": "206713d0c5bf644899f6d330d52a8d29e53134edffe6223b97e01be5b613cc37",
+      "sha256": "b5b604d571ab4b0b0463a8f55a4a50aeb4f7681949b2a70cef1b0130ea7f0ee4"
+    }
+  },
+  "forecast_contract": {
+    "discovery": "pre-2022",
+    "holdout": "2022+ untouched",
+    "multiplicity": "Benjamini-Hochberg on approximate Fisher-z p-values of non-overlapping Spearman; global and pre-specified predictor-family q-values",
+    "oos_model": "univariate or pre-specified two-feature OLS fit only on discovery and frozen in holdout",
+    "overlap_control": "greedy non-overlapping forward episodes",
+    "raw_level_caution": "raw position and raw OI levels are scale-sensitive/nonstationary; percentile and OI-normalized variants are retained as confirmation controls",
+    "tail_cutoffs": "discovery q10/q90 frozen before holdout"
+  },
+  "gh_pages_source_ref_sha": "1857310199f6607195cab43650b5502e9a5b3495",
+  "horizons": [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "1w",
+    "2w",
+    "3w",
+    "4w",
+    "6w",
+    "8w",
+    "13w",
+    "26w",
+    "39w",
+    "52w"
+  ],
+  "information_contract": {
+    "cot_snapshot": "Tuesday",
+    "lookahead_safe": true,
+    "percentiles": "expanding history only; current report may enter its own rank but no future report is visible",
+    "public_availability": "Friday = report date + 3 calendar days",
+    "release_anchor": "first market close on/after Friday release target"
+  },
+  "interaction_contract": {
+    "actor_direction": "sign of weekly delta_net_contracts",
+    "joint_extreme_filter": "both expanding absolute-change percentiles >= P75",
+    "oi_direction": "sign of weekly delta_open_interest",
+    "status": "research-only interaction screen; not promoted from mean-edge alone"
+  },
+  "main_ref_sha": "6d8d98f001794f875929411a248a6228b837ddd0",
+  "market_oi_series_count": 7,
+  "oi_predictors": {
+    "delta_open_interest": {
+      "description": "weekly change in total open interest contracts",
+      "family": "open_interest_flow",
+      "scale_sensitive": true
+    },
+    "delta_open_interest_pct": {
+      "description": "weekly percent change in total open interest",
+      "family": "open_interest_flow_normalized",
+      "scale_sensitive": false
+    },
+    "open_interest": {
+      "description": "total market open interest in raw contracts",
+      "family": "open_interest_level",
+      "scale_sensitive": true
+    },
+    "open_interest_percentile": {
+      "description": "expanding historical percentile of total open interest",
+      "family": "open_interest_level_normalized",
+      "scale_sensitive": false
+    },
+    "signed_delta_open_interest_percentile": {
+      "description": "expanding percentile of absolute weekly OI change with sign",
+      "family": "open_interest_flow_normalized",
+      "scale_sensitive": false
+    }
+  },
+  "production_changes": false,
+  "purpose": "Frozen raw contract-count, open-interest, interaction, and incremental-OI predictive-power verification baseline.",
+  "research_branch": "research/full-actor-cross-instrument-20260810",
+  "research_head_before_snapshot_commit": "bd039e033ddc06353fd956f1d87a811a3d8c8fc2",
+  "snapshot_id": "cot-raw-position-oi-predictive-power-2026-08-11",
+  "strict_counts": {
+    "FAMILY_FDR10_OOS": 1,
+    "NO_OOS_GAIN": 9559,
+    "OVERLAP_CONFIRMED_NOT_FDR": 376,
+    "POSITIVE_OOS_GAIN_NOT_OVERLAP_CONFIRMED": 2979
+  },
+  "verification_rule": "Raw hashes prove stored-file integrity. For identical source-state SHAs/code, compare canonical JSON hashes excluding only generated_at_utc. When source data advances, preserve this snapshot and compare only the frozen historical boundary.",
+  "workflow_run_id": "31438979915"
+}

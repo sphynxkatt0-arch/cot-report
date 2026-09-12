@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>S&P 500 and Nasdaq-100 COT Read</title>
+  <style>
+    :root { --bg:#faf8f5; --panel:#fff; --ink:#171411; --muted:#5f5750; --line:#ddd6ce; --blue:#2E4780; --orange:#804126; }
+    * { box-sizing:border-box; }
+    body { font-family:Inter,"Segoe UI",system-ui,sans-serif; margin:0; background:var(--bg); color:var(--ink); }
+    main { max-width:1080px; margin:0 auto; padding:42px 24px 72px; }
+    header, section { margin-bottom:36px; }
+    h1 { font-size:38px; line-height:1.08; margin:0 0 8px; letter-spacing:-0.03em; }
+    h2 { font-size:25px; line-height:1.2; margin:0 0 14px; letter-spacing:-0.02em; }
+    h3 { font-size:18px; margin:24px 0 10px; }
+    p, li { line-height:1.58; }
+    .eyebrow { color:var(--muted); font-size:14px; }
+    .executive-summary-box { padding:22px 26px; background:linear-gradient(180deg,#f6f0e8 0%,#efe7dc 100%); border:1px solid #ddd1c2; border-radius:18px; box-shadow:0 12px 28px rgba(23,20,17,.06); }
+    .executive-summary-box ul { margin:0; padding-left:22px; }
+    .executive-summary-box li + li { margin-top:10px; }
+    .callout { padding:18px 20px; background:#f2ede6; border-radius:12px; border-left:4px solid var(--orange); }
+    .definition { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+    .definition div { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
+    .definition strong { display:block; margin-bottom:4px; }
+    figure { margin:24px 0; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px; }
+    figure img { width:100%; height:auto; display:block; }
+    figcaption { color:var(--muted); font-size:14px; margin-top:10px; }
+    .table-wrap { overflow-x:auto; border:1px solid var(--line); border-radius:12px; background:var(--panel); }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th,td { padding:10px 11px; border-bottom:1px solid #eee8e1; text-align:right; white-space:nowrap; }
+    th:first-child,td:first-child,th:nth-child(2),td:nth-child(2) { text-align:left; }
+    th { background:#f4f1ed; color:#403a35; position:sticky; top:0; }
+    tr:last-child td { border-bottom:none; }
+    .tag { display:inline-block; padding:3px 8px; border-radius:999px; background:#eaf1fe; color:var(--blue); font-size:12px; font-weight:600; }
+    @media (max-width:760px) { main { padding:28px 14px 48px; } h1 { font-size:30px; } .definition { grid-template-columns:1fr; } figure { padding:8px; } }
+  </style>
+</head>
+<body>
+<main data-report-audience="product stakeholders" data-report-date="2026-06-16"
+      data-source-tff="https://www.cftc.gov/dea/newcot/FinFutWk.txt"
+      data-source-legacy="https://www.cftc.gov/dea/newcot/deafut.txt">
+  <header data-contract-section="title">
+    <h1>S&P 500 and Nasdaq-100 COT Read</h1>
+    <div class="eyebrow">Positions dated June 16, 2026 · released June 19 · first actionable session June 22</div>
+  </header>
+
+  <section class="executive-summary-box" data-contract-section="executive-summary">
+    <h2>Executive Summary</h2>
+    <ul>
+      <li><strong>Nasdaq has the clearer contrarian upside setup, but it is a squeeze setup—not clean risk-on.</strong> Legacy non-commercials are net short 20,866 contracts, only the 6.8th percentile of the 2016–2026 history, which triggers the local model’s +2.5 Risk-On signal. TFF simultaneously shows asset managers cutting net exposure by 13,304 contracts and non-reportables at the 87.5th percentile, so sponsorship is weaker and retail crowding is higher.</li>
+      <li><strong>S&amp;P positioning is neutral-to-mixed.</strong> Asset managers remain heavily net long (+986,577; 37.6% of OI), while leveraged funds added 64,192 net shorts. Dealers became 59,630 contracts less net short and Legacy non-commercials covered 14,411 net shorts, but non-reportables are already at the 89.7th percentile.</li>
+      <li><strong>Do not over-read the sharp net/OI percentage moves this week.</strong> Consolidated open interest jumped 17.1% in S&amp;P and 12.1% in Nasdaq during quarterly expiry/roll week. Absolute long/short changes are the cleaner conviction read.</li>
+    </ul>
+  </section>
+
+  <section data-contract-section="definitions">
+    <h2>What this report measures</h2>
+    <div class="definition">
+      <div><strong>TFF</strong>Dealer, asset-manager, leveraged-fund, other-reportable, and non-reportable futures-only positions.</div>
+      <div><strong>Legacy</strong>Non-commercial, commercial, and non-reportable futures-only positions.</div>
+      <div><strong>Percentile</strong>Expanding 2016–2026 percentile in the local regime model; 10/90 mark extreme zones.</div>
+    </div>
+  </section>
+
+  <section data-contract-section="key-findings">
+    <h2>S&amp;P: institutions still own the trend, but the marginal flow is conflicted</h2>
+    <p><strong>TFF is not giving a clean directional signal.</strong> Asset managers barely changed their absolute net (+986,838 to +986,577), so their apparent 6.4-point collapse as a share of OI is almost entirely a rollover-denominator effect. The real weekly move was leveraged money: longs fell 11,546 while shorts rose 52,647, worsening the net short by 64,192. Dealer positioning moved the opposite way as dealer shorts fell 45,918.</p>
+    <p><strong>Legacy confirms short covering, not fresh speculative buying.</strong> Non-commercial longs fell 5,510, but shorts fell more—19,921—so net positioning improved by 14,411 while remaining net short 180,143. Non-reportables added 17,757 net longs and sit at the 89.7th percentile, just below the model’s 90th-percentile crowding threshold.</p>
+    <div class='table-wrap'><table><thead><tr><th>Report</th><th>Participant</th><th>Net contracts</th><th>Net / OI</th><th>Weekly net change</th><th>Long change</th><th>Short change</th><th>Hist. percentile</th></tr></thead><tbody><tr><td>TFF</td><td>Asset Manager</td><td>986,577</td><td>+37.6%</td><td>-261</td><td>-5,366</td><td>-5,105</td><td>76.5</td></tr><tr><td>TFF</td><td>Dealer</td><td>-609,648</td><td>-23.2%</td><td>+59,630</td><td>+13,712</td><td>-45,918</td><td>27.1</td></tr><tr><td>TFF</td><td>Leveraged Money</td><td>-523,882</td><td>-20.0%</td><td>-64,192</td><td>-11,545</td><td>+52,647</td><td>9.2</td></tr><tr><td>TFF</td><td>Other Reportable</td><td>22,697</td><td>+0.9%</td><td>-12,934</td><td>-8,430</td><td>+4,504</td><td>84.9</td></tr><tr><td>TFF</td><td>Non-reportable</td><td>124,255</td><td>+4.7%</td><td>+17,757</td><td>+21,918</td><td>+4,161</td><td>89.7</td></tr><tr><td>Legacy</td><td>Non-commercial</td><td>-180,143</td><td>-6.9%</td><td>+14,411</td><td>-5,510</td><td>-19,921</td><td>19.1</td></tr><tr><td>Legacy</td><td>Commercial</td><td>55,887</td><td>+2.1%</td><td>-32,169</td><td>+338,692</td><td>+370,861</td><td>71.2</td></tr><tr><td>Legacy</td><td>Non-reportable</td><td>124,255</td><td>+4.7%</td><td>+17,757</td><td>+21,918</td><td>+4,161</td><td>89.7</td></tr></tbody></table></div>
+  </section>
+
+  <section data-contract-section="key-findings">
+    <h2>Nasdaq: short crowding supports a squeeze, while TFF sponsorship weakens</h2>
+    <p><strong>Legacy gives the strongest signal in the four-way comparison.</strong> Non-commercials added 9,885 net shorts, driven by a 10,748 increase in shorts against only 863 added longs. Net exposure is -5.6% of OI and at the 6.8th percentile, a historically crowded short position. Commercials became 6,390 contracts more net long, adding contrarian support.</p>
+    <p><strong>TFF blocks a simple bullish conclusion.</strong> Asset managers cut longs and added shorts, reducing net by 13,304. Leveraged funds covered 6,037 shorts and improved net by 5,286, but non-reportables added 3,495 net longs and remain above the TFF model’s 85th-percentile risk threshold. The result is a <span class="tag">TFF Mixed, score -1.0</span> against a <span class="tag">Legacy Risk-On, score +2.5</span>.</p>
+    <div class='table-wrap'><table><thead><tr><th>Report</th><th>Participant</th><th>Net contracts</th><th>Net / OI</th><th>Weekly net change</th><th>Long change</th><th>Short change</th><th>Hist. percentile</th></tr></thead><tbody><tr><td>TFF</td><td>Asset Manager</td><td>71,133</td><td>+19.0%</td><td>-13,304</td><td>-7,357</td><td>+5,947</td><td>61.7</td></tr><tr><td>TFF</td><td>Dealer</td><td>-31,125</td><td>-8.3%</td><td>+3,828</td><td>+10,003</td><td>+6,175</td><td>45.6</td></tr><tr><td>TFF</td><td>Leveraged Money</td><td>-51,468</td><td>-13.7%</td><td>+5,286</td><td>-751</td><td>-6,037</td><td>26.2</td></tr><tr><td>TFF</td><td>Other Reportable</td><td>-2,700</td><td>-0.7%</td><td>+696</td><td>-597</td><td>-1,293</td><td>59.9</td></tr><tr><td>TFF</td><td>Non-reportable</td><td>14,160</td><td>+3.8%</td><td>+3,495</td><td>+7,977</td><td>+4,482</td><td>87.5</td></tr><tr><td>Legacy</td><td>Non-commercial</td><td>-20,866</td><td>-5.6%</td><td>-9,885</td><td>+863</td><td>+10,748</td><td>6.8</td></tr><tr><td>Legacy</td><td>Commercial</td><td>6,706</td><td>+1.8%</td><td>+6,390</td><td>+19,031</td><td>+12,641</td><td>79.7</td></tr><tr><td>Legacy</td><td>Non-reportable</td><td>14,160</td><td>+3.8%</td><td>+3,495</td><td>+7,977</td><td>+4,482</td><td>87.5</td></tr></tbody></table></div>
+  </section>
+
+  <section data-contract-section="visual-evidence">
+    <h2>Positioning is more polarized in S&amp;P; Nasdaq is more asymmetric</h2>
+    <p>S&amp;P shows the classic TFF split between long asset managers and short leveraged funds/dealers. Nasdaq is less extreme in those TFF buckets, but its Legacy speculative short is historically compressed enough to create squeeze fuel.</p>
+    <figure>
+      <img src="current_net_oi.png" alt="Current net positions as a percent of open interest for S&P 500 and Nasdaq-100 in TFF and Legacy reports">
+      <figcaption>Net position as a share of open interest. Positive bars are net long; negative bars are net short. Source: CFTC futures-only consolidated reports.</figcaption>
+    </figure>
+  </section>
+
+  <section data-contract-section="visual-evidence">
+    <h2>The actionable extremes are Nasdaq non-commercial shorts and elevated retail longs</h2>
+    <p>The percentile view separates ordinary net positions from historically stretched ones. Nasdaq Legacy non-commercials are below the 10th percentile, while Nasdaq and S&amp;P non-reportables sit close to the upper extreme zone.</p>
+    <figure>
+      <img src="positioning_percentiles.png" alt="Historical percentiles of COT positioning for S&P 500 and Nasdaq-100">
+      <figcaption>Expanding-window percentile through June 16, 2026; dotted reference lines mark the 10th and 90th percentiles.</figcaption>
+    </figure>
+  </section>
+
+  <section data-contract-section="recommended-next-steps">
+    <h2>Trading read and next confirmation points</h2>
+    <ol>
+      <li><strong>Relative bias: Nasdaq over S&amp;P for upside asymmetry.</strong> The crowded Legacy short can fuel a squeeze, but require price acceptance above the June 16/22 area because TFF asset managers are not confirming.</li>
+      <li><strong>S&amp;P: stay neutral until one side resolves.</strong> A better long setup needs leveraged-fund short covering without non-reportables pushing decisively above the 90th percentile. A bearish setup needs asset-manager net selling in absolute contracts, not only a lower net/OI ratio.</li>
+      <li><strong>Next COT checkpoint:</strong> watch whether Nasdaq non-commercial shorts unwind and whether asset managers stabilize. If both occur together, the squeeze becomes a broader risk-on signal; if shorts remain crowded while asset managers keep selling, expect volatility rather than a clean trend.</li>
+    </ol>
+  </section>
+
+  <section data-contract-section="further-questions">
+    <h2>What would change the call</h2>
+    <p>A decisive shift would be synchronized institutional flow: Nasdaq asset managers adding net longs while Legacy non-commercials cover shorts, or S&amp;P leveraged funds covering while asset managers hold their absolute net exposure. Until then, the report argues for relative positioning and confirmation, not an outright index-level forecast.</p>
+  </section>
+
+  <section data-contract-section="caveats-and-assumptions">
+    <h2>Caveats and Assumptions</h2>
+    <div class="callout">
+      <p><strong>Quarterly roll week is the main caveat.</strong> Consolidated open interest rose sharply, so net/OI changes mechanically exaggerate shifts. COT positions are Tuesday snapshots released Friday, not live Monday flow. TFF and Legacy categories overlap economically and should not be added together. Percentile and regime labels are historical associations, not causal forecasts; short-horizon regime differences are weak in the local backtest.</p>
+    </div>
+  </section>
+</main>
+</body>
+</html>

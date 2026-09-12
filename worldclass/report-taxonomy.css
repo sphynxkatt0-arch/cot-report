@@ -1,0 +1,21 @@
+.report-taxonomy-control{display:flex;align-items:center;gap:7px;flex:0 0 auto;padding-left:8px;border-left:1px solid var(--border,rgba(148,163,184,.14))}
+.report-taxonomy-label{font-size:8px;font-weight:850;letter-spacing:.07em;text-transform:uppercase;color:var(--muted,#8fa2b7);white-space:nowrap}
+.report-taxonomy-buttons{display:flex;align-items:center;gap:2px;padding:2px;border:1px solid var(--border,rgba(148,163,184,.14));border-radius:7px}
+.report-taxonomy-buttons button{min-height:32px;padding:6px 9px!important;font-size:10px!important}
+.report-taxonomy-buttons button.active{background:var(--accent-soft,rgba(53,186,242,.14))!important;color:var(--cyan,#35baf2)!important}
+.report-taxonomy-locked{display:inline-flex;align-items:center;min-height:32px;padding:6px 9px;border:1px solid var(--border,rgba(148,163,184,.14));border-radius:7px;color:var(--text,#f3f7fb);font-size:10px;font-weight:800;white-space:nowrap}
+html[data-theme="light"] .report-taxonomy-locked{color:#172033;background:#fff;border-color:#dce3eb}
+
+@media(max-width:900px){
+  .decision-nav{flex-wrap:wrap}
+  .report-taxonomy-control{order:3;width:100%;padding:6px 0 0;border-left:0;border-top:1px solid var(--border,rgba(148,163,184,.12))}
+  .report-taxonomy-buttons{margin-left:auto}
+  .report-taxonomy-locked{margin-left:auto}
+}
+
+@media(max-width:700px){
+  .report-taxonomy-control{order:3}
+  .report-taxonomy-buttons button,.report-taxonomy-locked{min-height:44px}
+  .report-taxonomy-buttons{display:grid;grid-template-columns:1fr 1fr;min-width:168px}
+  .report-taxonomy-label{font-size:9px}
+}
