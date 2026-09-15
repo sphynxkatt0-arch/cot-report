@@ -1,66 +1,66 @@
 {
   "schema_version": 1,
   "model_version": "macro-liquidity-control-room-v1.2",
-  "generated_at_utc": "2026-09-14T23:27:18.179062+00:00",
+  "generated_at_utc": "2026-09-15T22:30:08.387999+00:00",
   "role": "descriptive risk and plumbing context; does not create or reverse COT direction",
   "source_coverage_ratio": 0.769,
   "source_coverage_label": "Good",
   "existing_macro_latest": {
-    "date": "2026-09-14",
+    "date": "2026-09-15",
     "walcl": 6740.619,
     "tga": 843.705,
-    "rrp": 1.42,
+    "rrp": 0.7,
     "bank_reserves": 2991.31,
     "bank_treasury_agency": 4800.255,
     "bank_assets": 19565.889,
     "reserves_to_bank_assets_pct": 15.288,
     "slr_balance_sheet_load": 7791.565,
-    "net_liquidity": 5895.494,
-    "net_liquidity_4w_change": 95.199,
-    "net_liquidity_13w_change": -28.238,
+    "net_liquidity": 5896.214,
+    "net_liquidity_4w_change": 95.819,
+    "net_liquidity_13w_change": -17.378,
     "bank_reserves_4w_change": 47.251,
     "bank_treasury_agency_4w_change": -8.985,
     "slr_balance_sheet_load_4w_change": 38.266,
     "reserves_to_bank_assets_4w_change": 0.218,
     "tga_4w_change": -115.7,
-    "rrp_4w_change": 1.165,
+    "rrp_4w_change": 0.545,
     "sofr": 3.62,
     "effr": 3.63,
     "iorb": 3.65,
     "sofr_iorb_spread": -0.03,
     "effr_iorb_spread": -0.02,
-    "sofr_iorb_spread_4w_change": -0.04,
+    "sofr_iorb_spread_4w_change": -0.03,
     "effr_iorb_spread_4w_change": 0.0,
-    "real_yield_10y": 2.6,
-    "real_yield_5y": 2.4,
-    "real_yield_4w_change": 0.16,
-    "real_yield_5y_4w_change": 0.27,
-    "nominal_yield_10y": 4.97,
-    "nominal_yield_2y": 4.65,
+    "real_yield_10y": 2.62,
+    "real_yield_5y": 2.42,
+    "real_yield_4w_change": 0.21,
+    "real_yield_5y_4w_change": 0.32,
+    "nominal_yield_10y": 5.0,
+    "nominal_yield_2y": 4.67,
     "nominal_yield_3m": 4.11,
-    "nominal_yield_30y": 5.34,
-    "nominal_yield_30y_4w_change": 0.03,
-    "yield_curve_10y_2y": 0.32,
-    "yield_curve_10y_3m": 0.86,
-    "yield_curve_30y_10y": 0.37,
-    "hy_oas": 2.65,
+    "nominal_yield_30y": 5.36,
+    "nominal_yield_30y_4w_change": 0.08,
+    "yield_curve_10y_2y": 0.33,
+    "yield_curve_10y_3m": 0.89,
+    "yield_curve_30y_10y": 0.36,
+    "hy_oas": 2.71,
     "ig_oas": 0.8,
-    "hy_oas_4w_change": -0.05,
-    "ig_oas_4w_change": -0.01,
+    "hy_oas_4w_change": -0.04,
+    "ig_oas_4w_change": -0.02,
     "dollar_index": 118.213,
-    "dollar_4w_change": -0.601,
-    "vix": 17.1,
-    "vix_4w_change": 1.91,
-    "sp500": 7619.98,
-    "nasdaq": 29127.158,
-    "sp500_13w_change_pct": 0.87,
+    "dollar_4w_change": -0.77,
+    "vix": 17.2,
+    "vix_4w_change": 1.36,
+    "sp500": 7585.73,
+    "nasdaq": 28937.838,
+    "sp500_13w_change_pct": 0.99,
     "sp500_forward_5d": null,
     "sp500_forward_10d": null,
-    "treasury_issuance_7d": 493.0,
-    "treasury_issuance_28d": 2394.0,
-    "treasury_issuance_next_7d": 625.0,
-    "liquidity_plumbing_score": 60.137,
-    "liquidity_score": 47.989,
+    "treasury_issuance_7d": 612.0,
+    "treasury_issuance_28d": 2478.0,
+    "treasury_issuance_next_7d": 506.0,
+    "liquidity_plumbing_score": 59.956,
+    "liquidity_score": 47.331,
     "regime_label": "Neutral",
     "sp500_forward_20d": null,
     "sp500_forward_60d": null,
@@ -88,55 +88,55 @@
     "tsp_equity_ift_m": 3444.0,
     "retirement_flow_signal": 6687.0,
     "credit_override": false,
-    "score_net_liquidity": 62.874,
-    "score_bank_reserves": 58.667,
+    "score_net_liquidity": 63.015,
+    "score_bank_reserves": 58.72,
     "score_treasury_supply": 0.0,
-    "score_repo_spread": 59.97,
-    "score_slr_load": 46.355,
-    "score_real_yield": 34.46,
-    "score_credit": 52.475,
-    "score_dollar": 54.773,
-    "score_vix": 42.846,
-    "macro_regime_score": -0.08,
+    "score_repo_spread": 58.374,
+    "score_slr_load": 46.321,
+    "score_real_yield": 28.714,
+    "score_credit": 52.132,
+    "score_dollar": 56.672,
+    "score_vix": 45.007,
+    "macro_regime_score": -0.11,
     "macro_regime_score_label": "Neutral / transition",
     "confidence_score": 39,
     "confidence_label": "low"
   },
   "treasury_cash_context": {
-    "latest_operating_cash_bn": 822.2,
-    "operating_cash_change_5d_bn": -81.72799999999995,
-    "operating_cash_change_20d_bn": -144.38699999999994,
-    "latest_flow_date": "2026-09-11",
-    "daily_private_cash_flow_bn": -8.181999999999995,
-    "private_cash_flow_5d_bn": 163.45899999999992,
-    "private_cash_flow_20d_bn": 288.768,
-    "deposits_5d_bn": 1319.8960000000002,
-    "withdrawals_5d_bn": 1483.355,
-    "tax_deposits_5d_bn": 111.929,
+    "latest_operating_cash_bn": 871.224,
+    "operating_cash_change_5d_bn": -17.698999999999955,
+    "operating_cash_change_20d_bn": -87.95999999999992,
+    "latest_flow_date": "2026-09-14",
+    "daily_private_cash_flow_bn": -98.05000000000001,
+    "private_cash_flow_5d_bn": 35.401999999999894,
+    "private_cash_flow_20d_bn": 175.90999999999997,
+    "deposits_5d_bn": 1436.308,
+    "withdrawals_5d_bn": 1471.71,
+    "tax_deposits_5d_bn": 168.618,
     "top_cash_flow_categories_5d": [
       {
         "category": "Public Debt Cash Redemp. (Table IIIB)",
-        "private_cash_effect_bn": 604.72
+        "private_cash_effect_bn": 592.09
       },
       {
         "category": "Public Debt Cash Issues (Table IIIB)",
-        "private_cash_effect_bn": -535.36
-      },
-      {
-        "category": "Other",
-        "private_cash_effect_bn": 81.73
+        "private_cash_effect_bn": -535.0
       },
       {
         "category": "Taxes - Withheld Individual/FICA",
-        "private_cash_effect_bn": -62.11
+        "private_cash_effect_bn": -75.73
+      },
+      {
+        "category": "Taxes - Non Withheld Ind/SECA Electronic",
+        "private_cash_effect_bn": -43.51
+      },
+      {
+        "category": "Taxes - Corporate Income",
+        "private_cash_effect_bn": -36.63
       },
       {
         "category": "SSA - Benefits Payments",
-        "private_cash_effect_bn": 33.47
-      },
-      {
-        "category": "HHS - Grants to States for Medicaid",
-        "private_cash_effect_bn": 25.81
+        "private_cash_effect_bn": 33.48
       }
     ],
     "sign_convention": "positive = Treasury withdrawal / private-sector cash injection; negative = Treasury deposit / private-sector cash drain"
@@ -145,11 +145,34 @@
     "score": 53.5,
     "state": "Neutral",
     "coverage": 7,
-    "latest_auction_date": "2026-09-10",
-    "average_bid_to_cover_delta": 0.06767857142857141,
-    "average_dealer_share_delta_pp": 0.2555368393449946,
-    "average_indirect_share_delta_pp": 5.01558313437201,
+    "latest_auction_date": "2026-09-15",
+    "average_bid_to_cover_delta": 0.07589285714285714,
+    "average_dealer_share_delta_pp": 1.0919158795849204,
+    "average_indirect_share_delta_pp": 4.654808808819658,
     "recent_coupon_auctions": [
+      {
+        "auction_date": "2026-09-15",
+        "security_type": "Bond",
+        "security_term": "20-Year",
+        "term_key": "bond|20-year",
+        "bid_to_cover_ratio": 2.57,
+        "total_accepted": 13000008600.0,
+        "primary_dealer_share_pct": 16.74215046288508,
+        "indirect_share_pct": 52.121797827118364,
+        "direct_share_pct": 30.481395220000085,
+        "high_yield": 5.42,
+        "high_discount_rate": null,
+        "offering_amt": 13000000000.0,
+        "cusip": "912810UX4",
+        "same_term_prior_n": 8,
+        "bid_to_cover_prior_avg": 2.64125,
+        "bid_to_cover_delta": -0.07125000000000004,
+        "dealer_share_prior_avg_pct": 10.04905398897532,
+        "dealer_share_delta_pp": 6.693096473909758,
+        "indirect_share_prior_avg_pct": 60.572124384093144,
+        "indirect_share_delta_pp": -8.45032655697478,
+        "quality_score": 40.5
+      },
       {
         "auction_date": "2026-09-10",
         "security_type": "Bond",
@@ -287,47 +310,24 @@
         "indirect_share_prior_avg_pct": 57.986308672304865,
         "indirect_share_delta_pp": -3.63725694987167,
         "quality_score": 48.9
-      },
-      {
-        "auction_date": "2026-08-19",
-        "security_type": "Bond",
-        "security_term": "20-Year",
-        "term_key": "bond|20-year",
-        "bid_to_cover_ratio": 2.53,
-        "total_accepted": 18056928100.0,
-        "primary_dealer_share_pct": 10.934279568848702,
-        "indirect_share_pct": 55.09209011027739,
-        "direct_share_pct": 21.525576656640727,
-        "high_yield": 5.204,
-        "high_discount_rate": null,
-        "offering_amt": 16000000000.0,
-        "cusip": "912810UX4",
-        "same_term_prior_n": 8,
-        "bid_to_cover_prior_avg": 2.65875,
-        "bid_to_cover_delta": -0.12875000000000014,
-        "dealer_share_prior_avg_pct": 10.095836376618424,
-        "dealer_share_delta_pp": 0.8384431922302777,
-        "indirect_share_prior_avg_pct": 61.01699638838571,
-        "indirect_share_delta_pp": -5.924906278108317,
-        "quality_score": 43.3
       }
     ],
     "reasons": [
-      "same-tenor bid-to-cover delta +0.07",
-      "dealer share delta +0.3 pp",
-      "indirect share delta +5.0 pp"
+      "same-tenor bid-to-cover delta +0.08",
+      "dealer share delta +1.1 pp",
+      "indirect share delta +4.7 pp"
     ],
     "definition": "same-tenor relative demand; lower bid-to-cover, higher dealer share, and lower indirect share reduce the score"
   },
   "pillars": {
     "macro_regime": {
       "label": "Macro risk regime",
-      "score": 47.989,
+      "score": 47.331,
       "state": "Neutral"
     },
     "net_liquidity": {
       "label": "Net liquidity impulse",
-      "value": 95.199,
+      "value": 95.819,
       "unit": "USD bn / 4w",
       "state": "Supportive"
     },
@@ -339,7 +339,7 @@
     },
     "treasury_supply": {
       "label": "Treasury settlement pressure",
-      "value": 625.0,
+      "value": 506.0,
       "unit": "USD bn / 7d",
       "state": "High"
     },
@@ -351,23 +351,23 @@
     },
     "funding_microstructure": {
       "label": "Funding microstructure",
-      "score": 46.4,
+      "score": 40.4,
       "state": "Neutral",
-      "coverage": 0.75,
-      "repo_rate_dispersion_bp": 0.0,
-      "largest_rate_move_bp": 6.0,
+      "coverage": 1.0,
+      "repo_rate_dispersion_bp": 6.0,
+      "largest_rate_move_bp": 5.0,
       "reasons": [
-        "repo rate dispersion 0.0 bp",
-        "largest short-term rate move 6.0 bp"
+        "repo rate dispersion 6.0 bp",
+        "largest short-term rate move 5.0 bp"
       ]
     },
     "dealer_absorption": {
       "label": "Dealer absorption",
-      "score": 50.0,
-      "state": "Neutral",
-      "coverage": 0.333,
+      "score": null,
+      "state": "Unavailable",
+      "coverage": 0.0,
       "reasons": [
-        "settlement fails z -0.25"
+        "Primary-dealer series unavailable"
       ]
     },
     "money_market_allocation": {
@@ -383,17 +383,17 @@
     },
     "fiscal_cash_flow": {
       "label": "Daily fiscal cash flow",
-      "score": 90.0,
+      "score": 62.4,
       "state": "Supportive",
       "coverage": 1.0,
-      "private_cash_flow_5d_bn": 163.45899999999992,
-      "private_cash_flow_20d_bn": 288.768,
-      "operating_cash_change_5d_bn": -81.72799999999995,
-      "tax_deposits_5d_bn": 111.929,
+      "private_cash_flow_5d_bn": 35.401999999999894,
+      "private_cash_flow_20d_bn": 175.90999999999997,
+      "operating_cash_change_5d_bn": -17.698999999999955,
+      "tax_deposits_5d_bn": 168.618,
       "reasons": [
-        "5d private cash effect +163.5 bn",
-        "5d operating-cash change -81.7 bn",
-        "5d tax deposits 111.9 bn"
+        "5d private cash effect +35.4 bn",
+        "5d operating-cash change -17.7 bn",
+        "5d tax deposits 168.6 bn"
       ]
     },
     "auction_absorption": {
@@ -402,13 +402,13 @@
       "state": "Neutral",
       "coverage": 7,
       "reasons": [
-        "same-tenor bid-to-cover delta +0.07",
-        "dealer share delta +0.3 pp",
-        "indirect share delta +5.0 pp"
+        "same-tenor bid-to-cover delta +0.08",
+        "dealer share delta +1.1 pp",
+        "indirect share delta +4.7 pp"
       ],
-      "average_bid_to_cover_delta": 0.06767857142857141,
-      "average_dealer_share_delta_pp": 0.2555368393449946,
-      "average_indirect_share_delta_pp": 5.01558313437201
+      "average_bid_to_cover_delta": 0.07589285714285714,
+      "average_dealer_share_delta_pp": 1.0919158795849204,
+      "average_indirect_share_delta_pp": 4.654808808819658
     }
   },
   "sources": [
@@ -421,12 +421,12 @@
       "status": "fresh",
       "mnemonic": "REPO-DVP_AR_OO-P",
       "resolution": "configured",
-      "latest_date": "2026-09-11",
+      "latest_date": "2026-09-14",
       "latest_value": 3.61,
-      "change_short": -0.06000000000000005,
-      "change_medium": -0.020000000000000018,
-      "zscore": -0.9365361240137396,
-      "age_days": 3,
+      "change_short": -0.050000000000000266,
+      "change_medium": -0.03000000000000025,
+      "zscore": -0.9248496789457149,
+      "age_days": 1,
       "error": null
     },
     {
@@ -435,15 +435,15 @@
       "dataset": "repo",
       "source": "Office of Financial Research STFM",
       "unit": "%",
-      "status": "stale",
+      "status": "fresh",
       "mnemonic": "REPO-GCF_AR_OO-P",
       "resolution": "configured",
-      "latest_date": "2026-09-04",
-      "latest_value": 3.7,
-      "change_short": 0.020000000000000018,
-      "change_medium": 0.03000000000000025,
-      "zscore": -0.8666282620786717,
-      "age_days": 10,
+      "latest_date": "2026-09-14",
+      "latest_value": 3.67,
+      "change_short": -0.020000000000000018,
+      "change_medium": 0.0,
+      "zscore": -0.9282000443814525,
+      "age_days": 1,
       "error": null
     },
     {
@@ -455,11 +455,11 @@
       "status": "fresh",
       "mnemonic": "REPO-TRI_AR_OO-P",
       "resolution": "configured",
-      "latest_date": "2026-09-10",
+      "latest_date": "2026-09-11",
       "latest_value": 3.61,
-      "change_short": -0.03000000000000025,
-      "change_medium": -0.010000000000000231,
-      "zscore": -0.4442853585964661,
+      "change_short": -0.040000000000000036,
+      "change_medium": 0.0,
+      "zscore": -0.4401334518841685,
       "age_days": 4,
       "error": null
     },
@@ -472,12 +472,12 @@
       "status": "fresh",
       "mnemonic": "REPO-DVP_TV_OO-P",
       "resolution": "configured; scaled raw OFR dollars by 1e+09",
-      "latest_date": "2026-09-11",
-      "latest_value": 2722.46078613333,
-      "change_short": -25.757003248560068,
-      "change_medium": 64.36472878421,
-      "zscore": -1.1911795847687994,
-      "age_days": 3,
+      "latest_date": "2026-09-14",
+      "latest_value": 2687.4243370762597,
+      "change_short": -39.54970151382031,
+      "change_medium": 19.431780401499964,
+      "zscore": -1.453871222624903,
+      "age_days": 1,
       "error": null
     },
     {
@@ -511,7 +511,7 @@
       "change_short": -9373.0,
       "change_medium": -19539.0,
       "zscore": null,
-      "age_days": 1720,
+      "age_days": 1721,
       "error": null
     },
     {
@@ -520,7 +520,7 @@
       "dataset": "nypd",
       "source": "Office of Financial Research STFM",
       "unit": "USD mn",
-      "status": "fresh",
+      "status": "stale",
       "mnemonic": "NYPD-PD_AFtD_T-A",
       "resolution": "configured; scaled raw OFR dollars by 1e+06",
       "latest_date": "2026-09-02",
@@ -528,7 +528,7 @@
       "change_short": 10752.0,
       "change_medium": -10146.0,
       "zscore": -0.24796117999905798,
-      "age_days": 12,
+      "age_days": 13,
       "error": null
     },
     {
@@ -545,7 +545,7 @@
       "change_short": 6808.871559269959,
       "change_medium": 25560.102474089712,
       "zscore": 2.1079377224045097,
-      "age_days": 45,
+      "age_days": 46,
       "error": null
     },
     {
@@ -562,7 +562,7 @@
       "change_short": 171342.84838445997,
       "change_medium": 270896.8014772404,
       "zscore": 1.5538980583294768,
-      "age_days": 45,
+      "age_days": 46,
       "error": null
     },
     {
@@ -579,7 +579,7 @@
       "change_short": -117616.64396681986,
       "change_medium": -74116.08696026984,
       "zscore": -0.022980188971168405,
-      "age_days": 45,
+      "age_days": 46,
       "error": null
     },
     {
@@ -591,12 +591,12 @@
       "status": "fresh",
       "mnemonic": null,
       "resolution": "official fiscaldata API; deterministic TGA closing-balance selection",
-      "latest_date": "2026-09-11",
-      "latest_value": 822.2,
-      "change_short": -81.72799999999995,
-      "change_medium": -144.38699999999994,
-      "zscore": -0.9428775602620174,
-      "age_days": 3,
+      "latest_date": "2026-09-14",
+      "latest_value": 871.224,
+      "change_short": -17.698999999999955,
+      "change_medium": -87.95999999999992,
+      "zscore": -0.34389295851411367,
+      "age_days": 1,
       "error": null
     },
     {
@@ -608,12 +608,12 @@
       "status": "fresh",
       "mnemonic": null,
       "resolution": "official fiscaldata API",
-      "latest_date": "2026-09-11",
-      "latest_value": -8.181999999999995,
-      "change_short": 163.45899999999992,
-      "change_medium": 288.768,
-      "zscore": -0.09355173114004091,
-      "age_days": 3,
+      "latest_date": "2026-09-14",
+      "latest_value": -98.05000000000001,
+      "change_short": 35.401999999999894,
+      "change_medium": 175.90999999999997,
+      "zscore": -1.3679917542586648,
+      "age_days": 1,
       "error": null
     },
     {
@@ -625,12 +625,12 @@
       "status": "fresh",
       "mnemonic": null,
       "resolution": "official fiscaldata API",
-      "latest_date": "2026-09-10",
+      "latest_date": "2026-09-15",
       "latest_value": 53.5,
-      "change_short": 0.06767857142857141,
-      "change_medium": 0.2555368393449946,
+      "change_short": 0.07589285714285714,
+      "change_medium": 1.0919158795849204,
       "zscore": null,
-      "age_days": 4,
+      "age_days": 0,
       "error": null
     }
   ],
