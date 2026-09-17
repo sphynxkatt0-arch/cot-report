@@ -262,13 +262,15 @@
       section.id = "wcCrossActorPanel";
       section.className = "wc-cross-actor";
       section.setAttribute("aria-label", "Cross-instrument actor positioning comparison");
-      const positioning = $("#positioningColumns");
-      const weekly = $("#weeklyChangePanel");
-      const decision = $("#currentEdgeCommand");
-      const command = $("#wcCommandCenter");
-      const anchor = positioning || weekly || decision || command || $(".instrument-bar");
-      if (!anchor) return;
-      anchor.insertAdjacentElement("afterend", section);
+      const researchWorkspace = $("#researchWorkspace");
+      if (researchWorkspace) researchWorkspace.appendChild(section);
+      else {
+        const decision = $("#currentEdgeCommand");
+        const instrument = $(".instrument-bar");
+        const anchor = decision || instrument;
+        if (!anchor) return;
+        anchor.insertAdjacentElement("afterend", section);
+      }
     }
     render(base);
   }

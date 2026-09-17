@@ -17,14 +17,17 @@
   function ensureRoot() {
     let root = document.getElementById("liveTrackRecordPanel");
     if (root) return root;
-    const anchor = document.getElementById("headlineCards");
-    if (!anchor) return null;
     root = document.createElement("section");
     root.id = "liveTrackRecordPanel";
     root.className = "panel live-track-panel";
     root.setAttribute("aria-label", "Immutable prospective live model track record");
-    const sentiment = document.getElementById("marketSentimentPanel");
-    (sentiment || anchor).insertAdjacentElement("afterend", root);
+    const workspace = document.getElementById("liveWorkspace");
+    if (workspace) workspace.appendChild(root);
+    else {
+      const anchor = document.getElementById("currentEdgeCommand") || document.querySelector(".instrument-bar") || document.getElementById("headlineCards");
+      if (!anchor) return null;
+      anchor.insertAdjacentElement("afterend", root);
+    }
     return root;
   }
 

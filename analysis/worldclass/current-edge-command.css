@@ -174,43 +174,70 @@ html,body{max-width:100%;overflow-x:hidden;overflow-x:clip}
 .decision-empty strong,.decision-loading strong{display:block;color:var(--text,#f3f7fb);margin-bottom:4px}
 .decision-empty span,.decision-loading span{font-size:10px}
 
-/* Keep one surface visible at a time. The analytical workbench remains live and is
-   exposed deliberately through Charts & data instead of being permanently hidden. */
+/* One shell, one content workspace. Older implementations toggled more than a
+   dozen unrelated main children with route-specific !important rules. That made
+   changing tabs equivalent to swapping applications. The shell now owns exactly
+   three specialist workspaces and leaves their internal layout to each module. */
 #wcCommandCenter,
-main>.controls-surface,
-main>#headlineCards,
-main>.workbench-panel,
-main>#weeklyChangePanel,
-main>.section-heading,
-main>.two-column,
-main>#macroCards,
-main>.methodology,
-main>#cotIntelligence,
-main>#wcForecastPanel,
-main>#wcAdvancedPositioning,
-main>#wcMacroControl,
-main>#wcCrossActorPanel,
-main>#wcTaxonomyBanner,
-main>#marketSentimentPanel{display:none!important}
+main>.dashboard-workspace{display:none!important}
 
-html[data-cot-decision-view="data"] main>.controls-surface,
-html[data-cot-decision-view="data"] main>.workbench-panel,
-html[data-cot-decision-view="data"] main>#weeklyChangePanel,
-html[data-cot-decision-view="data"] main>.section-heading,
-html[data-cot-decision-view="data"] main>#wcForecastPanel,
-html[data-cot-decision-view="data"] main>#wcAdvancedPositioning,
-html[data-cot-decision-view="data"] main>#wcMacroControl,
-html[data-cot-decision-view="data"] main>#wcCrossActorPanel,
-html[data-cot-decision-view="data"] main>#marketSentimentPanel,
-html[data-cot-decision-view="data"] main>#wcTaxonomyBanner:not([hidden]){display:block!important}
-html[data-cot-decision-view="data"] main>#headlineCards,
-html[data-cot-decision-view="data"] main>#macroCards{display:grid!important}
-html[data-cot-decision-view="data"] main>.two-column,
-html[data-cot-decision-view="data"] main>.methodology{display:grid!important}
-html[data-cot-decision-view="research"] main>#cotIntelligence,
-html[data-cot-decision-view="research"] main>#wcCrossActorPanel,
-html[data-cot-decision-view="research"] main>#wcTaxonomyBanner:not([hidden]),
-html[data-cot-decision-view="today"] main>#wcTaxonomyBanner:not([hidden]){display:block!important}
+html[data-cot-decision-view="data"] main>#dataWorkspace{display:block!important}
+
+html[data-cot-decision-view="research"] main>#researchWorkspace{
+  display:grid!important;
+  gap:10px;
+}
+
+/* Research is a workspace inside the shared shell, not a second application.
+   The primary Research summary remains first; the specialist explorer below it
+   reuses the same panel geometry and exposes only its evidence sub-navigation. */
+#researchWorkspace>#cotIntelligence{
+  margin:0;
+  border-radius:9px;
+  border-color:var(--border,rgba(148,163,184,.16));
+  background:var(--panel,#0d1828);
+  box-shadow:none;
+}
+#researchWorkspace>#cotIntelligence>.cot-intel-head{display:none!important}
+#researchWorkspace>#cotIntelligence>.cot-intel-tabs{
+  min-height:50px;
+  align-items:center;
+  gap:4px;
+  padding:8px 10px;
+  border-bottom:1px solid var(--border,rgba(148,163,184,.14));
+  background:transparent;
+}
+#researchWorkspace>#cotIntelligence>.cot-intel-tabs::before{
+  content:"Evidence explorer";
+  flex:0 0 auto;
+  margin:0 10px 0 2px;
+  color:var(--muted,#8fa2b7);
+  font-size:9px;
+  font-weight:850;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+}
+#researchWorkspace>#cotIntelligence>.cot-intel-tabs button{
+  min-height:34px;
+  padding:7px 10px;
+  border-radius:6px;
+  font-size:10px;
+  letter-spacing:0;
+  text-transform:none;
+}
+#researchWorkspace>#cotIntelligence>.cot-intel-body{
+  padding:16px;
+  background:transparent;
+}
+#researchWorkspace>#wcCrossActorPanel{
+  margin:0;
+  border-radius:9px;
+  border-color:var(--border,rgba(148,163,184,.16));
+  background:var(--panel,#0d1828);
+  box-shadow:none;
+}
+#researchWorkspace>#wcCrossActorPanel .wc-cross-actor-head{padding:15px 16px 13px}
+#researchWorkspace>#wcCrossActorPanel .wc-cross-actor-head h2{font-size:16px}
 
 .decision-data-intro{padding:16px}
 .decision-data-intro b{color:var(--text,#f3f7fb)}
@@ -220,8 +247,9 @@ html[data-cot-decision-view="today"] main>#wcTaxonomyBanner:not([hidden]){displa
 .decision-data-meta span{display:block;font-size:8px;font-weight:850;letter-spacing:.07em;text-transform:uppercase;color:var(--muted,#8fa2b7)}
 .decision-data-meta strong{display:block;margin-top:4px;font-size:11px}
 
-html[data-cot-decision-view]:not([data-cot-decision-view="live"]) main>#liveTrackRecordPanel{display:none!important}
-html[data-cot-decision-view="live"] main>#liveTrackRecordPanel{display:block!important;margin-top:10px}
+html[data-cot-decision-view]:not([data-cot-decision-view="live"]) main>#liveWorkspace{display:none!important}
+html[data-cot-decision-view="live"] main>#liveWorkspace{display:block!important}
+#liveWorkspace>#liveTrackRecordPanel{display:block!important;margin:0}
 
 html[data-theme="light"] .decision-header-meta b,
 html[data-theme="light"] .current-edge-command{color:#172033}
@@ -303,6 +331,11 @@ html[data-theme="light"] .decision-why-grid>div{background:#fff}
   .decision-week-path{grid-template-columns:1fr}.decision-week-path article{display:grid;grid-template-columns:70px 90px 1fr;align-items:center;border-right:0;border-bottom:1px solid var(--border,rgba(148,163,184,.09));padding:9px 5px}.decision-week-path article:last-child{border-bottom:0}.decision-week-path strong{margin:0;font-size:17px}.decision-week-path small{margin:0}.decision-week-path i{display:none}
   .decision-forward-grid{grid-template-columns:1fr}.decision-forward-grid>div{display:grid;grid-template-columns:48px 80px 1fr;align-items:center;border-right:0;border-bottom:1px solid var(--border,rgba(148,163,184,.08));padding:8px 4px}.decision-forward-grid strong,.decision-forward-grid small{margin:0}
   .decision-research-group>summary{padding:11px}.decision-research-body{padding:0 10px 10px}.decision-research-meta{grid-template-columns:1fr 1fr}
+  #researchWorkspace>#cotIntelligence>.cot-intel-tabs{overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap}
+  #researchWorkspace>#cotIntelligence>.cot-intel-tabs::-webkit-scrollbar{display:none}
+  #researchWorkspace>#cotIntelligence>.cot-intel-tabs::before{display:none}
+  #researchWorkspace>#cotIntelligence>.cot-intel-tabs button{flex:0 0 auto;min-height:44px;padding:8px 10px}
+  #researchWorkspace>#cotIntelligence>.cot-intel-body{padding:12px}
   .decision-live-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
   .decision-data-meta{grid-template-columns:1fr 1fr}
   .decision-data-meta>div:nth-child(2){border-right:0}

@@ -447,7 +447,6 @@
         root.innerHTML = `<div class="decision-loading">Loading governed COT decision layer…</div>`;
         return;
       }
-      M().state.market = M().selectedMarket();
       const summary = M().summary();
       headerMeta();
       document.documentElement.dataset.cotDecisionView = state.view;

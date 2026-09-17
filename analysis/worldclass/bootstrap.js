@@ -94,12 +94,14 @@
   function loadEnhancements() {
     addStylesheet("worldclass/enhancements.css", "data-worldclass-enhancements");
     addStylesheet("worldclass/kpi-accent.css", "data-worldclass-kpi-accent");
-    addStylesheet("worldclass/terminal-v3.css", "data-worldclass-terminal-v3");
     addStylesheet("worldclass/cross-actor.css", "data-worldclass-cross-actor");
     addStylesheet("worldclass/sentiment-panel.css", "data-worldclass-sentiment");
     addScript("worldclass/enhancements.js");
     addScript("worldclass/sentiment-panel.js");
-    addScript("worldclass/terminal-v3.js", () => addScript("worldclass/cross-actor.js"));
+    // The old terminal-v3 command center duplicated the canonical decision shell
+    // and was permanently hidden by current-edge-command.css. Keep the useful
+    // cross-actor research module, but do not boot a second top-level dashboard.
+    addScript("worldclass/cross-actor.js");
     scheduleDeepIntelligence();
   }
 

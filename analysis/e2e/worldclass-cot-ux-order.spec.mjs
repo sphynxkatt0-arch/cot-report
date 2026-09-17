@@ -166,6 +166,7 @@ test('Research restores the deep evidence surface without reopening chart contro
 
   await expect(page.locator('[data-decision-view="research"]')).toHaveClass(/active/);
   await expect(page.locator('[data-decision-surface="research"]')).toBeVisible();
+  await expect(page.locator('#researchWorkspace')).toBeVisible();
   await expect(page.locator('.decision-research-group')).toHaveCount(4);
   await expect(page.locator('[data-decision-surface="research"]')).toContainText('Positioning & actors');
   await expect(page.locator('[data-decision-surface="research"]')).toContainText('Backtests & regimes');
@@ -174,10 +175,51 @@ test('Research restores the deep evidence surface without reopening chart contro
 
   await expect(page.locator('#cotIntelligence')).toBeVisible();
   await expect(page.locator('#cotIntelligence')).toHaveAttribute('aria-hidden', 'false');
+  await expect(page.locator('#cotIntelligence .cot-intel-head')).toBeHidden();
   await expect(page.locator('.controls-surface')).toBeHidden();
   await expect(page.locator('.workbench-panel')).toBeHidden();
   await expect(page.locator('.methodology')).toBeHidden();
   await expect(page.locator('[data-decision-view]')).toHaveCount(4);
+
+  const architecture = await page.evaluate(() => ({
+    researchParent: document.querySelector('#cotIntelligence')?.parentElement?.id,
+    crossParent: document.querySelector('#wcCrossActorPanel')?.parentElement?.id,
+    shellTop: document.querySelector('#currentEdgeCommand')?.getBoundingClientRect().top ?? Infinity,
+    explorerTop: document.querySelector('#cotIntelligence')?.getBoundingClientRect().top ?? -Infinity,
+    primaryNavTop: document.querySelector('.decision-nav')?.getBoundingClientRect().top ?? Infinity
+  }));
+  expect(architecture.researchParent).toBe('researchWorkspace');
+  expect(architecture.crossParent).toBe('researchWorkspace');
+  expect(architecture.shellTop).toBeLessThan(architecture.explorerTop);
+  expect(architecture.primaryNavTop).toBeLessThan(architecture.explorerTop);
+});
+
+test('top-level tabs keep one shell and preserve selection state across workspaces', async ({ page }) => {
+  await open(page, '?market=nq&horizon=4w&view=today&model=macro');
+
+  await page.locator('[data-decision-view="research"]').click();
+  await expect(page).toHaveURL(/market=nq/);
+  await expect(page).toHaveURL(/horizon=4w/);
+  await expect(page).toHaveURL(/model=macro/);
+  await expect(page.locator('#researchWorkspace')).toBeVisible();
+  await expect(page.locator('#dataWorkspace')).toBeHidden();
+  await expect(page.locator('#liveWorkspace')).toBeHidden();
+
+  await page.locator('[data-decision-view="data"]').click();
+  await expect(page.locator('#dataWorkspace')).toBeVisible();
+  await expect(page.locator('#researchWorkspace')).toBeHidden();
+  await expect(page.locator('.controls-surface')).toBeVisible();
+  expect(await page.locator('.controls-surface').evaluate(node => node.parentElement?.id)).toBe('dataWorkspace');
+
+  await page.locator('[data-decision-view="live"]').click();
+  await expect(page.locator('#liveWorkspace')).toBeVisible();
+  await expect(page.locator('#liveTrackRecordPanel')).toBeVisible();
+  expect(await page.locator('#liveTrackRecordPanel').evaluate(node => node.parentElement?.id)).toBe('liveWorkspace');
+
+  await page.locator('[data-decision-view="today"]').click();
+  await expect(page.locator('#instrumentTabs [data-market="nq"]')).toHaveClass(/active/);
+  await expect(page.locator('[data-model-family="macro"]')).toHaveClass(/active/);
+  await expect(page.locator('[data-decision-horizon="4w"]')).toHaveClass(/active/);
 });
 
 test('Charts & data restores holdings history, controls and analytical components', async ({ page }) => {

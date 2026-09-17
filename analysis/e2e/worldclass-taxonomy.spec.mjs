@@ -12,10 +12,11 @@ test('metal taxonomy copy is driven by v1.3 governed weights', async ({ page }) 
     body: JSON.stringify({ schema_version: 1, forecast_count: 0, entry_count: 0, outcome_count: 0, weekly_vintage_count: 0, matured_signal_count: 0, complete_signal_count: 0, open_signal_count: 0, current_predictions: [], model_comparison: [], model_versions: [], ledger: { integrity: 'PASS', latest_manifest_hash: 'GENESIS' } })
   }));
 
-  await page.goto('/worldclass_dashboard.html');
+  await page.goto('/worldclass_dashboard.html?view=data');
   await page.waitForFunction(() => window.__COT_WORLDCLASS_BASE__?.MODEL_SPEC?.model_version === '1.3.0');
   await page.locator('#instrumentTabs [data-market="gold"]').click();
 
+  await expect(page.locator('#dataWorkspace')).toBeVisible();
   const banner = page.locator('#wcTaxonomyBanner');
   await expect(banner).toBeVisible();
   await expect(banner).not.toContainText('modeled inversely');

@@ -40,7 +40,7 @@ test('decision-first scanner renders every market and follows the canonical mode
   await openDashboard(page);
 
   await expect(page.locator('.decision-scanner-list [data-decision-market]')).toHaveCount(7);
-  await expect(page.locator('#wcCommandCenter')).toBeHidden();
+  await expect(page.locator('#wcCommandCenter')).toHaveCount(0);
 
   const weights = await page.evaluate(() => window.__COT_WORLDCLASS_BASE__.MODEL_SPEC.score_models);
   expect(weights.tff.category_weights.other_reportable).toBe(0);
@@ -62,7 +62,7 @@ test('decision-layer market selection synchronizes with instrument tabs and deep
   await expect(page.locator('.decision-current')).toContainText(/GOLD/i);
 });
 
-test('delayed CFTC health is preserved in diagnostics and surfaced as a check state', async ({ page }) => {
+test('delayed CFTC health is surfaced without mounting the retired command center', async ({ page }) => {
   const delayed = {
     ...liveRelease,
     state: 'DELAYED',
@@ -73,8 +73,7 @@ test('delayed CFTC health is preserved in diagnostics and surfaced as a check st
   };
   await openDashboard(page, delayed, healthyTrack);
 
-  await expect(page.locator('#wcCommandCenter .wc-v3-integrity')).toContainText('DELAYED');
-  await expect(page.locator('#wcCommandCenter')).toBeHidden();
+  await expect(page.locator('#wcCommandCenter')).toHaveCount(0);
   await expect(page.locator('#wcDataHealthButton')).toContainText(/CHECK|FRESH/, { timeout: 10000 });
 });
 
