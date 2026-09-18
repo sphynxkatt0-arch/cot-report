@@ -194,7 +194,7 @@
     toolbar.innerHTML = `
       <div class="wc-chart-preset-group" role="group" aria-label="Chart view presets">
         <span class="wc-chart-group-label">Views</span>
-        <button class="wc-chart-tool wc-chart-preset active" data-wc-preset="cot_price" type="button">COT + Price</button>
+        <button class="wc-chart-tool wc-chart-preset" data-wc-preset="cot_price" type="button">COT + Price</button>
         <button class="wc-chart-tool wc-chart-preset" data-wc-preset="weekly_flow" type="button">Weekly Flow</button>
         <button class="wc-chart-tool wc-chart-preset" data-wc-preset="position_only" type="button">Positions Only</button>
         <button class="wc-chart-tool wc-chart-preset" data-wc-preset="macro_context" type="button">Macro Context</button>
