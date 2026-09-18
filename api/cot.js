@@ -230,6 +230,14 @@ function buildMarket(market, tffRows, legacyRows) {
         'change_in_noncomm_short_all',
         legacy,
       ),
+      nonReportable: category(
+        latestLegacy,
+        'nonrept_positions_long_all',
+        'nonrept_positions_short_all',
+        'change_in_nonrept_long_all',
+        'change_in_nonrept_short_all',
+        legacy,
+      ),
       commercial: category(
         latestLegacy,
         'comm_positions_long_all',
@@ -261,7 +269,10 @@ export default async function handler(request, response) {
     const reportDates = Object.values(markets).map((market) => market.reportDate).filter(Boolean);
     const latestReportDate = reportDates.sort().at(-1) ?? null;
 
-    response.setHeader('Cache-Control', 'public, s-maxage=82800, stale-while-revalidate=3600');
+    // This endpoint is the runtime freshness authority for the dashboard. A
+    // near-day edge cache can pin the previous Tuesday report across Friday's
+    // CFTC release, so keep the shared cache deliberately short.
+    response.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=60');
     response.setHeader('Access-Control-Allow-Origin', '*');
     return response.status(200).json({
       source: {

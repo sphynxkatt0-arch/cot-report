@@ -20,10 +20,28 @@ REPORT_TAXONOMY_RUNTIME=ROOT/"worldclass"/"report-taxonomy.js"
 UX_HARDENING_CSS=ROOT/"worldclass"/"ux-hardening.css"
 UX_HARDENING_RUNTIME=ROOT/"worldclass"/"ux-hardening.js"
 def digest(path:Path)->str:return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+def read_html(path:Path)->str:
+    raw=path.read_bytes()
+    try:return raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        # Some Windows worktrees have historically contained isolated CP-1252
+        # punctuation bytes inside otherwise UTF-8 HTML. Do not let that block
+        # a COT data deployment: repair only invalid bytes, then always write
+        # canonical UTF-8 below.
+        text=raw.decode("utf-8",errors="surrogateescape")
+        repaired=[]
+        for char in text:
+            code=ord(char)
+            if 0xDC80<=code<=0xDCFF:
+                byte=bytes([code-0xDC00])
+                repaired.append(byte.decode("cp1252",errors="replace"))
+            else:repaired.append(char)
+        print(f"WARNING: repaired non-UTF-8 dashboard byte(s) while installing shell assets: {exc}")
+        return "".join(repaired)
 def main()->None:
     for path in (HTML,JS,CSS,LIGHT_CSS,CURRENT_EDGE_MODEL,CURRENT_EDGE_JS,CURRENT_EDGE_CSS,MOBILE_UX_CSS,MOBILE_UX_RUNTIME,WORLDCLASS_UX_CSS,WORLDCLASS_UX_RUNTIME,REPORT_TAXONOMY_CSS,REPORT_TAXONOMY_RUNTIME,UX_HARDENING_CSS,UX_HARDENING_RUNTIME):
         if not path.exists() or path.stat().st_size<=0: raise FileNotFoundError(path)
-    text=HTML.read_text(encoding="utf-8")
+    text=read_html(HTML)
     lines=[line for line in text.splitlines() if 'data-cot-intelligence-asset=' not in line]
     text="\n".join(lines)+("\n" if text.endswith("\n") else "")
     css_tag=f'<link rel="stylesheet" href="worldclass/cot-intelligence.css?v={digest(CSS)}" data-cot-intelligence-asset="css">'

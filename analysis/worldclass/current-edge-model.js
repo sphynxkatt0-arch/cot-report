@@ -30,7 +30,16 @@
   function currentRows(market=state.market){
     return Object.values(state.current?.actor_states||{}).filter(r=>r?.market===market).sort((a,b)=>(ROLE_ORDER[a.actor_role]??9)-(ROLE_ORDER[b.actor_role]??9)||String(a.actor_label||"").localeCompare(String(b.actor_label||"")));
   }
-  function activeRows(market=state.market){return state.active?.by_market?.[market]?.active_thresholds||[]}
+  function activeRows(market=state.market){
+    const rows=state.active?.by_market?.[market]?.active_thresholds||[];
+    return rows.filter(row=>{
+      const current=state.current?.actor_states?.[row.series];
+      if(!current)return false;
+      const threshold=finite(row.selected_threshold);
+      const magnitude=finite(current.change_magnitude_percentile);
+      return current.direction===row.direction&&threshold!==null&&magnitude!==null&&magnitude>=threshold;
+    });
+  }
   function metricFor(row,horizon){return (row?.metrics||[]).find(m=>m?.horizon===horizon)||null}
   function evidenceStatus(row,metric){return String(metric?.evidence_status||row?.evidence_status||row?.historical_classification||"DISCOVERY_ONLY")}
   function evidenceGrade(status){const s=String(status||"");if(s==="PROSPECTIVE_CONFIRMED"||s==="GLOBAL_FDR"||s==="FAMILY_FDR")return{grade:"A",label:EVIDENCE_LABEL[s]||s,tone:"strong"};if(s==="NONOVERLAP_CONFIRMED"||s==="HOLDOUT_DIRECTION_CONFIRMED")return{grade:"B",label:EVIDENCE_LABEL[s]||s,tone:"supported"};if(s==="DISCOVERY_ONLY"||s==="OOS_ONLY"||s==="OOS_PLUS_OVERLAP")return{grade:"C",label:EVIDENCE_LABEL[s]||s,tone:"mixed"};return{grade:"D",label:EVIDENCE_LABEL[s]||s,tone:"weak"}}
@@ -46,6 +55,42 @@
   function corePrediction(market=state.market){const rows=(state.live?.current_predictions||[]).filter(r=>r?.market===market),combined=rows.filter(r=>r?.model_family==="combined");return(combined.length?combined:rows).at(-1)||null}
   function actorLivePredictions(market=state.market){return(state.live?.edge_evidence?.current_predictions||[]).filter(r=>r?.market===market)}
   function reportDates(market=state.market){const rows=currentRows(market),report=[...new Set(rows.map(r=>r.report_date_tuesday).filter(Boolean))].sort().at(-1)||null,release=[...new Set(rows.map(r=>r.release_date_friday).filter(Boolean))].sort().at(-1)||null;return{report,release}}
+
+  const ACTOR_ROLES={tff:{asset_mgr:"PRIMARY_DIRECTIONAL",dealer:"INTERMEDIARY_CONTEXT",lev_money:"PRIMARY_DIRECTIONAL",non_reportable:"SECONDARY_DIRECTIONAL",other_reportable:"SECONDARY_DIRECTIONAL"},legacy:{commercial:"OPPOSITE_SIDE_CONTEXT",noncommercial:"PRIMARY_DIRECTIONAL",nonreportable:"SECONDARY_DIRECTIONAL",total_reportable:"AGGREGATE_CONTEXT"}};
+  const percentileRank=(values,current)=>{const clean=values.map(finite).filter(v=>v!==null).sort((a,b)=>a-b);if(!clean.length||current===null)return null;let left=0,equal=0;for(const value of clean){if(value<current)left++;else if(value===current)equal++}return(left+Math.max(equal,1)/2)/clean.length*100};
+  const actionType=(dl,ds,dn)=>{if(dl===null||ds===null)return dn>0?"NET_ADD":dn<0?"NET_CUT":"FLAT";if(dl>0&&ds<0)return"LONG_ADD_SHORT_COVER";if(dl<0&&ds>0)return"LONG_LIQUIDATE_SHORT_ADD";if(dl>0&&ds>=0)return dn>0?"BOTH_SIDES_ADD_LONG_DOMINANT":"BOTH_SIDES_ADD_SHORT_DOMINANT";if(dl<=0&&ds<0)return dn>0?"BOTH_SIDES_CUT_SHORT_DOMINANT":"BOTH_SIDES_CUT_LONG_DOMINANT";if(dl>0)return"LONG_ADD";if(dl<0)return"LONG_LIQUIDATE";if(ds>0)return"SHORT_ADD";if(ds<0)return"SHORT_COVER";return"FLAT"};
+  function overlayRuntimeCurrent(current){
+    const base=window.__COT_WORLDCLASS_BASE__,api=window.__COT_LIVE_API__;
+    if(!base?.COT_DATA||!api?.markets)return current;
+    current=current&&typeof current==="object"?current:{actor_states:{}};
+    current.actor_states={...(current.actor_states||{})};
+    for(const market of ["sp500","nq"]){
+      const apiMarket=api.markets?.[market],reportDate=String(apiMarket?.reportDate||"").slice(0,10);
+      if(!reportDate)continue;
+      for(const dataset of ["tff","legacy"]){
+        const payload=base.COT_DATA?.[dataset]?.[market],records=(payload?.records||[]).filter(r=>r?.date);
+        if(records.length<2)continue;
+        const row=records.at(-1),prev=records.at(-2);
+        for(const [actor,label] of Object.entries(payload.categories||{})){
+          const level=finite(row[`${actor}_net_oi_pct`]),previousLevel=finite(prev[`${actor}_net_oi_pct`]);
+          const longNow=finite(row[`${actor}_long`]),shortNow=finite(row[`${actor}_short`]),netNow=finite(row[`${actor}_net`]);
+          const longPrev=finite(prev[`${actor}_long`]),shortPrev=finite(prev[`${actor}_short`]),netPrev=finite(prev[`${actor}_net`]);
+          if(level===null||previousLevel===null||netNow===null||netPrev===null)continue;
+          const delta=level-previousLevel,dl=longNow!==null&&longPrev!==null?longNow-longPrev:null,ds=shortNow!==null&&shortPrev!==null?shortNow-shortPrev:null,dn=netNow-netPrev;
+          const levels=[],magnitudes=[];
+          for(let i=1;i<records.length;i++){
+            const value=finite(records[i][`${actor}_net_oi_pct`]),before=finite(records[i-1][`${actor}_net_oi_pct`]);
+            if(value===null||before===null)continue;
+            levels.push(value);magnitudes.push(Math.abs(value-before));
+          }
+          const oi=finite(row.open_interest),prevOi=finite(prev.open_interest),series=`${dataset}:${market}:${actor}`,existing=current.actor_states[series]||{};
+          current.actor_states[series]={...existing,series,dataset,market,actor,actor_label:label,actor_role:ACTOR_ROLES?.[dataset]?.[actor]||existing.actor_role||"UNCLASSIFIED",report_date_tuesday:reportDate,release_date_friday:String(api.fetchedAt||"").slice(0,10)||existing.release_date_friday,availability_at_utc:api.fetchedAt||existing.availability_at_utc,availability_source_type:"RUNTIME_API_OBSERVED",signal_date:String(api.fetchedAt||"").slice(0,10)||existing.signal_date,direction:Math.abs(delta)<=1e-12?"FLAT":delta>0?"ADD":"CUT",action_type:actionType(dl,ds,dn),long_contracts:longNow,short_contracts:shortNow,net_contracts:netNow,open_interest:oi,long_oi_pct:oi?longNow/oi*100:null,short_oi_pct:oi?shortNow/oi*100:null,net_oi_pct:level,position_percentile:percentileRank(levels,level),delta_long_contracts:dl,delta_short_contracts:ds,delta_net_contracts:dn,delta_net_oi_pp:delta,change_magnitude_percentile:percentileRank(magnitudes,Math.abs(delta)),delta_open_interest:oi!==null&&prevOi!==null?oi-prevOi:null,delta_open_interest_pct:oi!==null&&prevOi?((oi/prevOi)-1)*100:null,runtime_authority:"/api/cot"};
+        }
+      }
+    }
+    current.runtime_cot_api={latest_report_date:String(api.latestReportDate||"").slice(0,10)||null,fetched_at:api.fetchedAt||null,authority:"/api/cot"};
+    return current;
+  }
   function edgeExplanation(item){if(!item)return"";const m=item.metric,status=evidenceStatus(item.row,m),edge=finite(m?.excess_vs_baseline_pp),n=finite(m?.independent_n??m?.n),base=finite(m?.baseline_return_pct),conditional=finite(m?.conditional_return_pct);const pieces=[`${EVIDENCE_LABEL[status]||status}`];if(edge!==null)pieces.push(`historical excess ${edge>=0?"+":""}${edge.toFixed(2)} pp vs baseline`);if(conditional!==null&&base!==null)pieces.push(`conditional ${conditional.toFixed(2)}% vs baseline ${base.toFixed(2)}%`);if(n!==null)pieces.push(`independent N ${Math.trunc(n)}`);return pieces.join(" · ")}
 
   function directionalRead(market=state.market,horizon=state.horizon){
@@ -132,10 +177,11 @@
 
   function selectedMarket(){const m=document.querySelector("#instrumentTabs [data-market].active")?.dataset.market;return MARKETS[m]?m:state.market}
   async function load(){
+    if(window.__COT_APP_DATA_READY__)await window.__COT_APP_DATA_READY__;
     const[current,active,live,registry,sentiment]=await Promise.all([
       fetchJson("worldclass/cot-current-state.json"),fetchJson("worldclass/cot-active-edges.json"),fetchJson("worldclass/live-track-record.json",true),fetchJson("worldclass/cot-edge-registry.json"),fetchJson("worldclass/market-sentiment.json",true)
     ]);
-    state.current=current;state.active=active;state.live=live||{};state.registry=registry;state.sentiment=sentiment||{};state.market=selectedMarket();return state;
+    state.current=overlayRuntimeCurrent(current);state.active=active;state.live=live||{};state.registry=registry;state.sentiment=sentiment||{};state.market=selectedMarket();return state;
   }
 
   function edgeGrade(metric){return metric?evidenceGrade(evidenceStatus(null,metric)):null}

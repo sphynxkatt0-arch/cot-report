@@ -8,6 +8,15 @@ import fetch_release_corrected_snapshot_v2 as remote_snapshot
 ROOT=Path(__file__).resolve().parent;WC=ROOT/'worldclass';RESEARCH=WC/'research';SNAP=RESEARCH/'snapshots'/'2026-08-11-release-corrected-v2';V2_REG=WC/'cot-edge-registry-v2.json';CANON_REG=WC/'cot-edge-registry.json';CANON_ACTIVE=WC/'cot-active-edges.json';CANON_CROSS=WC/'cot-cross-market.json';CANON_DETAILS=WC/'cot-edge-details';COPY_JS=WC/'cot-intelligence-v2-copy.js';HTML=ROOT/'worldclass_dashboard.html'
 def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
 def short_sha(path):return sha(path)[:12]
+def read_html(path):
+ raw=path.read_bytes()
+ try:return raw.decode('utf-8')
+ except UnicodeDecodeError:
+  text=raw.decode('utf-8',errors='surrogateescape');out=[]
+  for char in text:
+   code=ord(char)
+   out.append(bytes([code-0xDC00]).decode('cp1252',errors='replace') if 0xDC80<=code<=0xDCFF else char)
+  return ''.join(out)
 def load(path):
  p=json.loads(path.read_text(encoding='utf-8'))
  if not isinstance(p,dict):raise RuntimeError(path)
@@ -29,7 +38,7 @@ def extract_gz(src,dst):
 def run(script):subprocess.run([sys.executable,str(ROOT/script)],cwd=ROOT,check=True)
 def install_copy_asset():
  if not COPY_JS.exists() or not HTML.exists():return
- text=HTML.read_text(encoding='utf-8');text='\n'.join(line for line in text.splitlines() if 'data-cot-intelligence-asset="v2-copy-js"' not in line)+('\n' if text.endswith('\n') else '');tag=f'<script defer src="worldclass/cot-intelligence-v2-copy.js?v={short_sha(COPY_JS)}" data-cot-intelligence-asset="v2-copy-js"></script>'
+ text=read_html(HTML);text='\n'.join(line for line in text.splitlines() if 'data-cot-intelligence-asset="v2-copy-js"' not in line)+('\n' if text.endswith('\n') else '');tag=f'<script defer src="worldclass/cot-intelligence-v2-copy.js?v={short_sha(COPY_JS)}" data-cot-intelligence-asset="v2-copy-js"></script>'
  if '</body>' not in text:raise RuntimeError('dashboard HTML missing </body>')
  HTML.write_text(text.replace('</body>',f'  {tag}\n</body>',1),encoding='utf-8')
 def main():
