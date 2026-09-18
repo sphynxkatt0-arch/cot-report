@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from cftc_release_calendar import release_date
 ROOT=Path(__file__).resolve().parent;WC=ROOT/'worldclass';CURRENT=WC/'cot-current-state.json';REGISTRY=WC/'cot-edge-registry.json';ACTIVE=WC/'cot-active-edges.json';CROSS=WC/'cot-cross-market.json';PROV=WC/'cot-research-provenance.json';POLICY=ROOT/'config'/'cot_edge_promotion_policy.json';HTML=ROOT/'worldclass_dashboard.html';LIGHT_CSS=WC/'cot-intelligence-light.css';EDGE_MODEL=WC/'current-edge-model.js';EDGE_JS=WC/'current-edge-command.js';EDGE_CSS=WC/'current-edge-command.css';MOBILE_CSS=WC/'mobile-ux.css';MOBILE_RUNTIME=WC/'mobile-ux-runtime.js';REPORT_TAXONOMY_JS=WC/'report-taxonomy.js';REPORT_TAXONOMY_CSS=WC/'report-taxonomy.css'
-HORIZONS=['monday','tuesday','wednesday','thursday','friday','1w','2w','3w','4w','6w','8w','13w','26w','39w','52w'];MARKETS=['sp500','nq','vix','rty','dow','gold','silver'];WEEKDAYS={'monday','tuesday','wednesday','thursday','friday'};FORWARD={'1w','2w','4w','13w','26w'}
+HORIZONS=['monday','tuesday','wednesday','thursday','friday','1w','2w','3w','4w','6w','8w','13w','26w','39w','52w'];MARKETS=['sp500','nq','vix','rty','dow','gold','silver'];WEEKDAYS={'monday','tuesday','wednesday','thursday','friday'};FORWARD={'1w','2w','4w','13w','26w'};PRIMARY_DATASET={'sp500':'tff','nq':'tff','vix':'tff','rty':'tff','dow':'tff','gold':'disaggregated','silver':'disaggregated'};NONREPORTABLE_ACTORS={'non_reportable','nonreportable'}
 def load(path):assert path.exists() and path.stat().st_size>100,path;return json.loads(path.read_text(encoding='utf-8'))
 def close(a,b,tol=1e-5):return abs(float(a)-float(b))<=tol*max(1.0,abs(float(a)),abs(float(b)))
 def main():
@@ -28,10 +28,11 @@ def main():
    if n<15:assert metric.get('evidence_status')=='INSUFFICIENT_N'
    assert metric.get('sample_grade') in {'FULL','SAMPLE_WARNING','RESEARCH_ONLY','INSUFFICIENT'}
  assert detail_cells==885 and oi_cells==105 and len(detail_series)==59
- assert active['schema_version']==5;assert active['governance']['automatic_promotion_allowed'] is False;assert active['governance']['nested_threshold_policy'].startswith('one evidence-best crossed threshold')
+ assert active['schema_version']==5;assert active['governance']['automatic_promotion_allowed'] is False;assert active['governance']['nested_threshold_policy'].startswith('one evidence-best crossed threshold');assert 'aggregate mirror rows are excluded' in active['governance']['mechanical_dependency_policy']
  total_active=0;seen=set()
- for block in (active.get('by_market') or {}).values():
+ for market,block in (active.get('by_market') or {}).items():
   for row in block.get('active_thresholds') or []:
+   actor=row['series'].rsplit(':',1)[-1];assert row.get('actor_role')!='AGGREGATE_CONTEXT';assert actor not in NONREPORTABLE_ACTORS or row.get('dataset')==PRIMARY_DATASET[market]
    total_active+=1;assert row['series'] not in seen;seen.add(row['series']);assert float(row['current_change_percentile'])>=float(row['selected_threshold']);assert row['direction'] in {'ADD','CUT'}
    metrics={m['horizon']:m for m in row.get('metrics') or []};assert FORWARD<=set(metrics);assert set(metrics)<=WEEKDAYS|FORWARD
    for h,m in metrics.items():
