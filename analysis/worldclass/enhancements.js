@@ -265,12 +265,12 @@
   }
 
   function setToolbarMode(mode) {
-    $("#wcChartToolbar [data-wc-chart='pan'], #wcChartToolbar [data-wc-chart='zoom']")
+    document.querySelectorAll("#wcChartToolbar [data-wc-chart='pan'], #wcChartToolbar [data-wc-chart='zoom']")
       .forEach(button => button.classList.toggle("active", button.dataset.wcChart === mode));
   }
 
   function setPresetMode(preset) {
-    $("#wcChartToolbar [data-wc-preset]")
+    document.querySelectorAll("#wcChartToolbar [data-wc-preset]")
       .forEach(button => button.classList.toggle("active", button.dataset.wcPreset === preset));
   }
 
@@ -309,8 +309,8 @@
         dragmode: "pan"
       });
       autoFitY = true;
-      $("#wcChartToolbar [data-wc-chart='autoy']").forEach(item => item.classList.add("active"));
-      $("#wcChartToolbar [data-wc-chart='timeline']").forEach(item => item.classList.remove("active"));
+      document.querySelectorAll("#wcChartToolbar [data-wc-chart='autoy']").forEach(item => item.classList.add("active"));
+      document.querySelectorAll("#wcChartToolbar [data-wc-chart='timeline']").forEach(item => item.classList.remove("active"));
       setToolbarMode("pan");
     }
   }
