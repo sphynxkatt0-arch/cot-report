@@ -8,6 +8,13 @@ ROOT=Path(__file__).resolve().parent;WC=ROOT/'worldclass';CURRENT=WC/'cot-curren
 HORIZONS=['monday','tuesday','wednesday','thursday','friday','1w','2w','3w','4w','6w','8w','13w','26w','39w','52w'];MARKETS=['sp500','nq','vix','rty','dow','gold','silver'];WEEKDAYS={'monday','tuesday','wednesday','thursday','friday'};FORWARD={'1w','2w','4w','13w','26w'};PRIMARY_DATASET={'sp500':'tff','nq':'tff','vix':'tff','rty':'tff','dow':'tff','gold':'disaggregated','silver':'disaggregated'};NONREPORTABLE_ACTORS={'non_reportable','nonreportable'}
 def load(path):assert path.exists() and path.stat().st_size>100,path;return json.loads(path.read_text(encoding='utf-8'))
 def close(a,b,tol=1e-5):return abs(float(a)-float(b))<=tol*max(1.0,abs(float(a)),abs(float(b)))
+def active_event_fingerprint(row):
+ metric=next((m for m in row.get('metrics') or [] if m.get('horizon')=='1w'),{})
+ def num(value,absolute=False):
+  if value is None:return None
+  value=round(float(value),8)
+  return abs(value) if absolute else value
+ return (num(row.get('current_delta_net_contracts'),True),num(row.get('current_delta_net_oi_pp'),True),num(row.get('current_change_percentile')),int(row.get('selected_threshold') or 0),num(metric.get('conditional_return_pct')),num(metric.get('baseline_return_pct')),num(metric.get('excess_vs_baseline_pp')),int(metric.get('n') or 0),int(metric.get('independent_n') or 0))
 def main():
  current=load(CURRENT);registry=load(REGISTRY);active=load(ACTIVE);cross=load(CROSS);prov=load(PROV);policy=load(POLICY)
  assert current['information_contract']['lookahead_safe'] is True;assert current['information_contract']['strict_release_alignment'] is True;assert current['production_model_changed'] is False
@@ -29,10 +36,11 @@ def main():
    assert metric.get('sample_grade') in {'FULL','SAMPLE_WARNING','RESEARCH_ONLY','INSUFFICIENT'}
  assert detail_cells==885 and oi_cells==105 and len(detail_series)==59
  assert active['schema_version']==5;assert active['governance']['automatic_promotion_allowed'] is False;assert active['governance']['nested_threshold_policy'].startswith('one evidence-best crossed threshold');assert 'aggregate mirror rows are excluded' in active['governance']['mechanical_dependency_policy']
- total_active=0;seen=set()
+ total_active=0;seen=set();event_fingerprints={}
  for market,block in (active.get('by_market') or {}).items():
   for row in block.get('active_thresholds') or []:
    actor=row['series'].rsplit(':',1)[-1];assert row.get('actor_role')!='AGGREGATE_CONTEXT';assert actor not in NONREPORTABLE_ACTORS or row.get('dataset')==PRIMARY_DATASET[market]
+   fingerprint=(market,active_event_fingerprint(row));assert fingerprint not in event_fingerprints,(market,event_fingerprints.get(fingerprint),row['series']);event_fingerprints[fingerprint]=row['series']
    total_active+=1;assert row['series'] not in seen;seen.add(row['series']);assert float(row['current_change_percentile'])>=float(row['selected_threshold']);assert row['direction'] in {'ADD','CUT'}
    metrics={m['horizon']:m for m in row.get('metrics') or []};assert FORWARD<=set(metrics);assert set(metrics)<=WEEKDAYS|FORWARD
    for h,m in metrics.items():
@@ -45,7 +53,7 @@ def main():
  report_taxonomy_js=REPORT_TAXONOMY_JS.read_text(encoding='utf-8');report_taxonomy_css=REPORT_TAXONOMY_CSS.read_text(encoding='utf-8')
  assert 'financialDataset' in report_taxonomy_js and 'disaggregated' in report_taxonomy_js and 'transformRegime' in report_taxonomy_js and 'transformDetail' in report_taxonomy_js
  assert 'report-taxonomy-control' in report_taxonomy_css and 'data-report-dataset' not in report_taxonomy_css
- edge_model=EDGE_MODEL.read_text(encoding='utf-8');assert 'GLOBAL_FDR' in edge_model and 'NONOVERLAP_CONFIRMED' in edge_model and 'historical excess' in edge_model
+ edge_model=EDGE_MODEL.read_text(encoding='utf-8');assert 'GLOBAL_FDR' in edge_model and 'NONOVERLAP_CONFIRMED' in edge_model and 'historical excess' in edge_model;assert 'PRIMARY_DATASET' in edge_model and 'NONREPORTABLE_ACTORS' in edge_model and 'isCanonicalActiveRow' in edge_model
  mobile_runtime=MOBILE_RUNTIME.read_text(encoding='utf-8');mobile_css=MOBILE_CSS.read_text(encoding='utf-8')
  assert 'mobileUxReady' in mobile_runtime and 'repeat(4, minmax(0, 1fr))' in mobile_css
  assert '100vw' not in mobile_runtime and '100vw' not in mobile_css, 'Mobile panels must fit their container, including gutters and scrollbars'
