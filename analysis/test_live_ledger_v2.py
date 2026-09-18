@@ -6,6 +6,7 @@ from pathlib import Path
 
 from live import ledger as legacy
 from live import ledger_v2 as v2
+from live import apply_live_forecasts_v2 as apply_v2
 from cftc_release_calendar import calendar_hash,release_date
 
 HASH='a'*64
@@ -35,5 +36,18 @@ def main()->None:
         try:v2.write_immutable_forecast(p,changed)
         except legacy.LedgerError:pass
         else:raise AssertionError('immutable v2 collision was not rejected')
+    # Production retries preserve the first immutable forecast instead of
+    # failing the whole dashboard deployment when refreshed inputs produce a
+    # different payload for the same deterministic signal id.
+    with tempfile.TemporaryDirectory() as tmp:
+        root=Path(tmp);staging=root/'staging';ledger_root=root/'ledger';meta=root/'meta.json'
+        relative=v2.forecast_relative_path(new);source=staging/relative;source.parent.mkdir(parents=True,exist_ok=True)
+        source.write_bytes(v2.canonical_json_bytes(changed))
+        destination=ledger_root/relative;destination.parent.mkdir(parents=True,exist_ok=True);destination.write_bytes(v2.canonical_json_bytes(new))
+        plan={'schema_version':1,'model_version':new['model_version'],'model_spec_hash':new['model_spec_hash'],'forecasts':[{'signal_id':new['signal_id'],'relative_path':relative.as_posix(),'forecast_hash':legacy.sha256_file(source),'created_at_utc':changed['created_at_utc']}]}
+        (staging/'plan.json').write_bytes(v2.canonical_json_bytes(plan))
+        result=apply_v2.apply(staging,ledger_root,meta)
+        assert result['new_count']==0 and result['preserved_existing_count']==1,result
+        assert destination.read_bytes()==v2.canonical_json_bytes(new),'existing immutable forecast was modified'
     print('Mixed legacy/v2 live ledger timing and immutability PASS')
 if __name__=='__main__':main()

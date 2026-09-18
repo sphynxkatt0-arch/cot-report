@@ -7,7 +7,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ledger import LedgerError, atomic_write_json, sha256_file, validate_forecast
+try:
+    from .ledger import LedgerError, atomic_write_json, sha256_file, validate_forecast
+except ImportError:  # direct script execution from analysis/live
+    from ledger import LedgerError, atomic_write_json, sha256_file, validate_forecast
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -17,13 +20,20 @@ def load_json(path: Path) -> dict[str, Any]:
     return payload
 
 
-def apply(staging: Path, ledger_root: Path, metadata_out: Path) -> dict[str, Any]:
+def apply(
+    staging: Path,
+    ledger_root: Path,
+    metadata_out: Path,
+    *,
+    preserve_existing_conflicts: bool = False,
+) -> dict[str, Any]:
     plan_path = staging / "plan.json"
     if not plan_path.exists():
         raise LedgerError(f"staging plan missing: {plan_path}")
     plan = load_json(plan_path)
     new_items: list[dict[str, Any]] = []
     unchanged: list[dict[str, Any]] = []
+    preserved_existing: list[dict[str, Any]] = []
 
     for item in plan.get("forecasts") or []:
         relative_text = str(item.get("relative_path") or "")
@@ -44,7 +54,35 @@ def apply(staging: Path, ledger_root: Path, metadata_out: Path) -> dict[str, Any
         destination = ledger_root / relative_text
         if destination.exists():
             if destination.read_bytes() != source.read_bytes():
-                raise LedgerError(f"immutable forecast overwrite refused: {relative_text}")
+                if not preserve_existing_conflicts:
+                    raise LedgerError(f"immutable forecast overwrite refused: {relative_text}")
+                existing = load_json(destination)
+                validate_forecast(existing)
+                identity_fields = (
+                    "signal_id",
+                    "report_date",
+                    "market",
+                    "dataset",
+                    "model_family",
+                    "model_version",
+                    "model_spec_hash",
+                )
+                mismatched = [
+                    field for field in identity_fields
+                    if existing.get(field) != forecast.get(field)
+                ]
+                if mismatched:
+                    raise LedgerError(
+                        "immutable forecast identity collision refused: "
+                        f"{relative_text} ({', '.join(mismatched)})"
+                    )
+                preserved_existing.append({
+                    **item,
+                    "existing_forecast_hash": sha256_file(destination),
+                    "staged_forecast_hash": actual_hash,
+                    "preservation_reason": "immutable forecast already recorded for signal_id",
+                })
+                continue
             unchanged.append(item)
             continue
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -57,8 +95,13 @@ def apply(staging: Path, ledger_root: Path, metadata_out: Path) -> dict[str, Any
         "source_model_spec_hash": plan.get("model_spec_hash"),
         "new_forecasts": sorted(new_items, key=lambda value: value["relative_path"]),
         "unchanged_forecasts": sorted(unchanged, key=lambda value: value["relative_path"]),
+        "preserved_existing_forecasts": sorted(
+            preserved_existing,
+            key=lambda value: value["relative_path"],
+        ),
         "new_count": len(new_items),
         "unchanged_count": len(unchanged),
+        "preserved_existing_count": len(preserved_existing),
     }
     atomic_write_json(metadata_out, metadata)
     return metadata
@@ -77,7 +120,8 @@ def main() -> None:
     result = apply(args.staging, args.ledger_root, args.metadata_out)
     print(
         f"Ledger append preparation · new={result['new_count']} · "
-        f"unchanged={result['unchanged_count']}"
+        f"unchanged={result['unchanged_count']} · "
+        f"preserved-existing={result['preserved_existing_count']}"
     )
 
 
