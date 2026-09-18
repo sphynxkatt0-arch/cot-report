@@ -230,7 +230,10 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add analysis/index.html analysis/directional_cot_report.html analysis/worldclass analysis/model_output
           if ! git diff --cached --quiet; then
-            git commit -m "data(cot): Weekly CFTC data refresh [skip ci]"
+            # Do not use [skip ci] here: Vercel uses the main-branch commit as
+            # its production deployment trigger. Skipping CI left cotmacro.vercel.app
+            # pinned to an older static dashboard even after gh-pages refreshed.
+            git commit -m "data(cot): Weekly CFTC data refresh"
             git push origin HEAD:main
             echo "Synced release to main branch for Vercel deployment"
           else

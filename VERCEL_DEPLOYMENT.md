@@ -5,7 +5,9 @@ This repository root is a Vercel-native COT dashboard.
 - `/` serves the S&P 500 and Nasdaq-100 consolidated futures report.
 - `/api/cot` queries the official CFTC Public Reporting Environment.
 - `vercel.json` calls `/api/cot` every day at 20:35 UTC.
-- Responses are cached at the Vercel edge for 23 hours with one hour of stale-while-revalidate.
+- `/api/cot` is the runtime freshness authority for the S&P 500 and Nasdaq-100 dashboard.
+- API responses use a short 5-minute shared cache with 1 minute of stale-while-revalidate so a Friday release cannot be pinned behind a near-day cache entry.
+- The validated GitHub refresh sync commit must not contain `[skip ci]`, because that commit is also the Vercel production deployment trigger.
 
 ## Data
 
