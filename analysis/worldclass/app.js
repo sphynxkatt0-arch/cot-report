@@ -298,6 +298,18 @@
     return n === null ? "n/a" : `${n.toFixed(digits)}%`;
   }
 
+  function ordinal(value) {
+    const n = finite(value);
+    if (n === null) return "n/a";
+    const r = Math.round(n);
+    const rem10 = r % 10;
+    const rem100 = r % 100;
+    const suffix = rem10 === 1 && rem100 !== 11 ? "st"
+      : rem10 === 2 && rem100 !== 12 ? "nd"
+      : rem10 === 3 && rem100 !== 13 ? "rd" : "th";
+    return `${r}${suffix}`;
+  }
+
   function signedClass(value, neutral = 0) {
     const n = finite(value);
     if (n === null || Math.abs(n) <= neutral) return "value-muted";
@@ -515,16 +527,36 @@
   }
 
   function renderInstrumentTabs() {
-    $("#instrumentTabs").innerHTML = Object.entries(MARKET_META).map(([key, meta]) => {
+    const host = $("#instrumentTabs");
+    if (!host) return;
+    const entries = Object.entries(MARKET_META);
+    let nodes = Array.from(host.querySelectorAll("button.instrument-tab[data-market]"));
+    const structureMatches = nodes.length === entries.length
+      && entries.every(([key], index) => nodes[index].dataset.market === key);
+    if (!structureMatches) {
+      host.innerHTML = entries.map(([key]) => `<button class="instrument-tab" data-market="${key}" type="button">
+        <span class="instrument-tab-name"></span>
+        <span class="instrument-tab-meta"><b></b></span>
+      </button>`).join("");
+      nodes = Array.from(host.querySelectorAll("button.instrument-tab[data-market]"));
+    }
+    entries.forEach(([key, meta], index) => {
+      const button = nodes[index];
       const available = marketAvailable(key);
       const displayedDataset = key === state.market
         ? chooseDatasetForMarket(key, state.dataset)
         : chooseDatasetForMarket(key);
-      return `<button class="instrument-tab ${state.market === key ? "active" : ""}" data-market="${key}" type="button" ${available ? "" : "disabled"}>
-        <span class="instrument-tab-name">${escapeHtml(meta.short)}</span>
-        <span class="instrument-tab-meta"><b data-dataset="${escapeHtml(displayedDataset)}">${escapeHtml(DATASET_SHORT_LABELS[displayedDataset] || displayedDataset.toUpperCase())}</b></span>
-      </button>`;
-    }).join("");
+      button.classList.toggle("active", state.market === key);
+      button.disabled = !available;
+      const nameEl = button.querySelector(".instrument-tab-name");
+      if (nameEl && nameEl.textContent !== meta.short) nameEl.textContent = meta.short;
+      const datasetEl = button.querySelector(".instrument-tab-meta b");
+      if (datasetEl) {
+        const label = DATASET_SHORT_LABELS[displayedDataset] || displayedDataset.toUpperCase();
+        if (datasetEl.textContent !== label) datasetEl.textContent = label;
+        if (datasetEl.dataset.dataset !== displayedDataset) datasetEl.dataset.dataset = displayedDataset;
+      }
+    });
   }
 
   function controlMarkup() {
@@ -906,7 +938,7 @@
         <div class="position-label">${escapeHtml(categoryMap()[key] || key)}<small>${escapeHtml(zone)} · weight ${component?.weight > 0 ? "+" : ""}${number(component?.weight, 2)}</small></div>
         <div class="position-number ${signedClass(value)}">${pct(value)}</div>
         <div class="percentile-track"><div class="percentile-fill" style="width:${rank === null ? 0 : Math.max(1, Math.min(100, rank))}%"></div></div>
-        <div class="percentile-label">${rank === null ? "n/a" : `${rank.toFixed(0)}th`}</div>
+        <div class="percentile-label">${rank === null ? "n/a" : ordinal(rank)}</div>
       </div>`;
     }).join("");
   }
@@ -930,7 +962,7 @@
         const direction = contribution > .001 ? "value-positive" : contribution < -.001 ? "value-negative" : "value-muted";
         const relationship = item.weight < 0 ? "inverse" : item.weight > 0 ? "positive" : "excluded";
         return `<div class="score-component">
-          <div class="score-component-name">${escapeHtml(item.label)}<small>${relationship} association · ${item.percentile === null ? "n/a" : `${item.percentile.toFixed(0)}th percentile`} · weight ${item.weight > 0 ? "+" : ""}${number(item.weight, 2)}</small></div>
+          <div class="score-component-name">${escapeHtml(item.label)}<small>${relationship} association · ${item.percentile === null ? "n/a" : `${ordinal(item.percentile)} percentile`} · weight ${item.weight > 0 ? "+" : ""}${number(item.weight, 2)}</small></div>
           <div class="score-component-value ${direction}">${contribution > 0 ? "+" : ""}${contribution.toFixed(2)}</div>
         </div>`;
       }).join("")}

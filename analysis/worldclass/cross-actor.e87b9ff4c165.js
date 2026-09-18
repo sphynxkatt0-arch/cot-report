@@ -17,6 +17,18 @@
     return Number.isFinite(number) ? number : null;
   }
 
+  function ordinal(value) {
+    const n = finite(value);
+    if (n === null) return "n/a";
+    const r = Math.round(n);
+    const rem10 = r % 10;
+    const rem100 = r % 100;
+    const suffix = rem10 === 1 && rem100 !== 11 ? "st"
+      : rem10 === 2 && rem100 !== 12 ? "nd"
+      : rem10 === 3 && rem100 !== 13 ? "rd" : "th";
+    return `${r}${suffix}`;
+  }
+
   function esc(value) {
     return String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -210,7 +222,7 @@
       <td class="${tone(snapshot.flow4)}">${signed(snapshot.flow4, 1)}</td>
       <td class="${tone(snapshot.trend13)}">${signed(snapshot.trend13, 1)}</td>
       <td class="${tone(snapshot.trend26)}">${signed(snapshot.trend26, 1)}</td>
-      <td><span class="wc-cross-actor-rank ${rankClass(snapshot.trend13Rank)}">${snapshot.trend13Rank === null ? "n/a" : `${snapshot.trend13Rank.toFixed(0)}th`}</span></td>
+      <td><span class="wc-cross-actor-rank ${rankClass(snapshot.trend13Rank)}">${snapshot.trend13Rank === null ? "n/a" : ordinal(snapshot.trend13Rank)}</span></td>
     </tr>`;
   }
 

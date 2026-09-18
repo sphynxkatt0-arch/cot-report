@@ -533,6 +533,7 @@ def build_market_dataset(
 
 def build() -> dict[str, Any]:
     base = json.loads(BASE.read_text(encoding="utf-8"))
+    cot_bt.ensure_full_history_base(base, BASE)
     cot_data = base.get("COT_DATA") or {}
     prices = base.get("PRICE_DATA") or {}
     if METALS.exists():

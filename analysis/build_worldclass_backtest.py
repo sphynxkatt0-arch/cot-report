@@ -40,6 +40,18 @@ MARKET_LABELS = {
 }
 
 
+def ensure_full_history_base(base: dict[str, Any], source: Path) -> None:
+    """Refuse the truncated browser bundle so backtests never silently lose COT history."""
+    weeks = (base.get("bundle_meta") or {}).get("cot_history_weeks")
+    if weeks:
+        raise RuntimeError(
+            f"{source} is the truncated browser bundle (COT history capped at {weeks} "
+            "weeks). Backtests must run on full history; use "
+            "build_worldclass_research_artifacts.py, which points BASE at an "
+            "untruncated research base derived from interactive_cot_dashboard.html."
+        )
+
+
 def first_price_index_on_or_after(prices: list[dict[str, Any]], target) -> int | None:
     """Compatibility API for older research modules.
 
@@ -290,6 +302,7 @@ def build() -> dict[str, Any]:
     if not BASE.exists():
         raise FileNotFoundError(f"Missing {BASE}; run build_worldclass_bundle.py first")
     base = json.loads(BASE.read_text(encoding="utf-8"))
+    ensure_full_history_base(base, BASE)
     cot_data = base.get("COT_DATA") or {}
     prices = base.get("PRICE_DATA") or {}
     if METALS.exists():

@@ -41,12 +41,32 @@
 
   function predictionRows(payload) {
     const rows = Array.isArray(payload?.current_predictions) ? payload.current_predictions : [];
+    const history = Array.isArray(payload?.signal_history) ? payload.signal_history : [];
+    const vintageById = new Map();
+    for (const entry of history) {
+      if (entry?.signal_id && entry?.report_date) vintageById.set(entry.signal_id, String(entry.report_date));
+    }
     const combined = rows.filter(row => row?.model_family === "combined");
     const selected = combined.length ? combined : rows;
-    return selected
-      .slice()
-      .sort((a, b) => String(a.market || "").localeCompare(String(b.market || "")))
-      .slice(0, 10);
+    const vintageOf = row => vintageById.get(row?.signal_id) || payload?.latest_forecast_vintage || "";
+    const latestVintage = selected.reduce((max, row) => {
+      const vintage = vintageOf(row);
+      return vintage > max ? vintage : max;
+    }, "");
+    const current = latestVintage ? selected.filter(row => vintageOf(row) === latestVintage) : selected.slice();
+    const datasetPreference = ["tff", "disaggregated", "legacy"];
+    const datasetRank = value => {
+      const index = datasetPreference.indexOf(value);
+      return index === -1 ? datasetPreference.length : index;
+    };
+    const byMarket = new Map();
+    for (const row of current) {
+      const key = String(row?.market || "");
+      const existing = byMarket.get(key);
+      if (!existing || datasetRank(row?.dataset) < datasetRank(existing?.dataset)) byMarket.set(key, row);
+    }
+    return [...byMarket.values()]
+      .sort((a, b) => String(a.market || "").localeCompare(String(b.market || "")));
   }
 
   function latestComparison(payload) {
