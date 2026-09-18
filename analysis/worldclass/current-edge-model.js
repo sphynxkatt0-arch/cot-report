@@ -176,11 +176,27 @@
   }
 
   function selectedMarket(){const m=document.querySelector("#instrumentTabs [data-market].active")?.dataset.market;return MARKETS[m]?m:state.market}
+  async function waitForRuntimeCot(timeoutMs=8000){
+    const started=Date.now();
+    while(Date.now()-started<timeoutMs){
+      if(window.__COT_WORLDCLASS_BASE__?.COT_DATA&&window.__COT_LIVE_API__?.markets)return true;
+      if(window.__COT_BOOTSTRAP_ERROR__)return false;
+      await new Promise(resolve=>window.setTimeout(resolve,50));
+    }
+    return Boolean(window.__COT_WORLDCLASS_BASE__?.COT_DATA&&window.__COT_LIVE_API__?.markets);
+  }
   async function load(){
-    if(window.__COT_APP_DATA_READY__)await window.__COT_APP_DATA_READY__;
+    // bootstrap.js is injected asynchronously after the release-status probe,
+    // while this model is a defer script. On a fast page load the model can
+    // therefore start before __COT_APP_DATA_READY__ even exists. Waiting only
+    // when that promise is already present races the live /api/cot overlay and
+    // leaves the decision header/current actor table on the previous report.
+    // Wait explicitly for the runtime COT authority instead.
+    const runtimeReady=waitForRuntimeCot();
     const[current,active,live,registry,sentiment]=await Promise.all([
       fetchJson("worldclass/cot-current-state.json"),fetchJson("worldclass/cot-active-edges.json"),fetchJson("worldclass/live-track-record.json",true),fetchJson("worldclass/cot-edge-registry.json"),fetchJson("worldclass/market-sentiment.json",true)
     ]);
+    await runtimeReady;
     state.current=overlayRuntimeCurrent(current);state.active=active;state.live=live||{};state.registry=registry;state.sentiment=sentiment||{};state.market=selectedMarket();return state;
   }
 
