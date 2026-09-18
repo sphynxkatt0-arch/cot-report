@@ -12,11 +12,20 @@ import json
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
-ROOT=Path(__file__).resolve().parent;WC=ROOT/'worldclass';RESEARCH=WC/'research';CURRENT=WC/'cot-current-state.json';REGISTRY=WC/'cot-edge-registry-v2.json';INFERENCE=RESEARCH/'cot-threshold-inference-v2.json';ACTOR=RESEARCH/'cot-actor-event-research.json';OUT=WC/'cot-active-edges-v2.json';WEEKDAYS=('monday','tuesday','wednesday','thursday','friday');FORWARD=('1w','2w','4w','13w','26w');ACTIVE_HORIZONS=WEEKDAYS+FORWARD;RANK={'GLOBAL_FDR':5,'FAMILY_FDR':4,'NONOVERLAP_CONFIRMED':3,'HOLDOUT_DIRECTION_CONFIRMED':2,'DISCOVERY_ONLY':1}
+ROOT=Path(__file__).resolve().parent;WC=ROOT/'worldclass';RESEARCH=WC/'research';CURRENT=WC/'cot-current-state.json';REGISTRY=WC/'cot-edge-registry-v2.json';INFERENCE=RESEARCH/'cot-threshold-inference-v2.json';ACTOR=RESEARCH/'cot-actor-event-research.json';OUT=WC/'cot-active-edges-v2.json';WEEKDAYS=('monday','tuesday','wednesday','thursday','friday');FORWARD=('1w','2w','4w','13w','26w');ACTIVE_HORIZONS=WEEKDAYS+FORWARD;RANK={'GLOBAL_FDR':5,'FAMILY_FDR':4,'NONOVERLAP_CONFIRMED':3,'HOLDOUT_DIRECTION_CONFIRMED':2,'DISCOVERY_ONLY':1};PRIMARY_DATASET={'sp500':'tff','nq':'tff','vix':'tff','rty':'tff','dow':'tff','gold':'disaggregated','silver':'disaggregated'};NONREPORTABLE_ACTORS={'non_reportable','nonreportable'}
 def load(path):
  payload=json.loads(path.read_text(encoding='utf-8'))
  if not isinstance(payload,dict):raise RuntimeError(path)
  return payload
+def actor_key(row):return str(row.get('series') or '').rsplit(':',1)[-1]
+def canonical_active_rows(market,rows):
+ primary=PRIMARY_DATASET.get(market);out=[]
+ for row in rows:
+  role=str(row.get('actor_role') or '');actor=actor_key(row)
+  if role=='AGGREGATE_CONTEXT':continue
+  if actor in NONREPORTABLE_ACTORS and primary and str(row.get('dataset') or '')!=primary:continue
+  out.append(row)
+ return out
 def presentation(actor,series,direction,threshold,horizon):
  grid=((((actor.get('individual_actor_thresholds') or {}).get(series) or {}).get(direction) or {}).get('threshold_grid') or {}).get(str(threshold)) or {};m=((grid.get('holdout_2022_plus') or {}).get(horizon) or {});return {'n':m.get('n'),'conditional_return_pct':m.get('mean_pct'),'median_return_pct':m.get('median_pct'),'positive_rate_pct':m.get('positive_rate_pct'),'baseline_return_pct':m.get('unconditional_mean_pct'),'excess_vs_baseline_pp':m.get('edge_vs_unconditional_pct'),'avg_drawdown_pct':m.get('avg_drawdown_pct'),'worst_drawdown_pct':m.get('worst_drawdown_pct')}
 def metric_payload(actor,series,direction,threshold,horizon,inf):
@@ -42,8 +51,9 @@ def main():
    inf=evidence.get(horizon)
    if inf:metrics.append(metric_payload(actor,series,direction,threshold,horizon,inf))
   cls=str(edge.get('best_classification') or 'DISCOVERY_ONLY');row={'series':series,'dataset':edge.get('dataset'),'actor_label':state.get('actor_label'),'actor_role':edge.get('actor_role'),'direction':direction,'current_position_percentile':state.get('position_percentile'),'current_change_percentile':state.get('change_magnitude_percentile'),'current_delta_net_contracts':state.get('delta_net_contracts'),'current_delta_net_oi_pp':state.get('delta_net_oi_pp'),'selected_threshold':threshold,'historical_classification':cls,'evidence_status':cls,'metrics':metrics};by_market[str(edge.get('market'))].append(row)
- output={'schema_version':5,'research_generation':'release-corrected-v2','information_contract_version':'cftc-public-availability-v2','source_registry':'cot-edge-registry-v2.json','pp_definition':'percentage points versus unconditional holdout return, not an absolute price forecast','governance':{'production_model_changed':False,'automatic_promotion_allowed':False,'nested_threshold_policy':'one evidence-best crossed threshold per actor series; evidence rank first then highest crossed percentile','weekday_metric_schema':'horizon,n,conditional_return_pct,excess_vs_baseline_pp','forward_metric_schema':'full ledger/display fields for 1w,2w,4w,13w,26w','materialized_horizons':list(ACTIVE_HORIZONS),'continuous_metrics':'full 15-horizon context remains lazy in corrected detail payloads'},'by_market':{},'active_edge_count':0,'active_threshold_count':0,'production_model_changed':False,'automatic_promotion_allowed':False}
+ output={'schema_version':5,'research_generation':'release-corrected-v2','information_contract_version':'cftc-public-availability-v2','source_registry':'cot-edge-registry-v2.json','pp_definition':'percentage points versus unconditional holdout return, not an absolute price forecast','governance':{'production_model_changed':False,'automatic_promotion_allowed':False,'nested_threshold_policy':'one evidence-best crossed threshold per actor series; evidence rank first then highest crossed percentile','mechanical_dependency_policy':'aggregate mirror rows are excluded from independent active-condition counts; non-reportable uses the canonical market dataset only','weekday_metric_schema':'horizon,n,conditional_return_pct,excess_vs_baseline_pp','forward_metric_schema':'full ledger/display fields for 1w,2w,4w,13w,26w','materialized_horizons':list(ACTIVE_HORIZONS),'continuous_metrics':'full 15-horizon context remains lazy in corrected detail payloads'},'by_market':{},'active_edge_count':0,'active_threshold_count':0,'production_model_changed':False,'automatic_promotion_allowed':False}
  for market,rows in sorted(by_market.items()):
+  rows=canonical_active_rows(market,rows)
   def rank_key(row):
    cls=RANK.get(str(row.get('evidence_status') or 'DISCOVERY_ONLY'),0);one_week=next((m for m in row.get('metrics') or [] if m.get('horizon')=='1w'),{});edge=abs(float(one_week.get('excess_vs_baseline_pp') or 0));return (-cls,-edge,-float(row.get('current_change_percentile') or 0),str(row.get('series')))
   rows.sort(key=rank_key);output['by_market'][market]={'active_thresholds':rows,'continuous_context':[]};output['active_edge_count']+=len(rows)
