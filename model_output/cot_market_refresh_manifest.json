@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-09-04T21:07:15.179524+00:00",
+  "start_year": 2016,
+  "end_year": 2026,
+  "markets": [
+    {
+      "market": "russell2000",
+      "label": "Russell 2000",
+      "secondary_report": "tff",
+      "selection_mode": "primary_contract_exact",
+      "selection_note": "CFTC does not publish a Russell 2000 consolidated parent row in the financial futures-only file. The exact primary E-mini row 239742 is used; Micro, annual-dividend, and Russell 1000 rows are excluded.",
+      "legacy_contract_name": "RUSSELL E-MINI - CHICAGO MERCANTILE EXCHANGE",
+      "legacy_cftc_code": "239742",
+      "secondary_contract_name": "RUSSELL E-MINI - CHICAGO MERCANTILE EXCHANGE",
+      "secondary_cftc_code": "239742",
+      "price_series": "RUSSELL2000",
+      "price_symbol": "^RUT",
+      "outputs": [
+        {
+          "report": "tff",
+          "market": "russell2000",
+          "latest_date": "2026-09-01T00:00:00",
+          "source_latest_date": "2026-09-01T00:00:00",
+          "latest_price": 2968.27002,
+          "latest_open_interest": 424663,
+          "latest_asset_mgr_net": 17498,
+          "latest_asset_mgr_net_oi_pct": 4.120443740095087,
+          "highest_date": "2024-11-12T00:00:00",
+          "highest_asset_mgr_net_oi_pct": 34.45219467355452,
+          "lowest_date": "2022-05-10T00:00:00",
+          "lowest_asset_mgr_net_oi_pct": -23.157106690364206,
+          "data_csv": "A:\\work\\trading\\cot-report-main\\analysis\\cot_exact_output\\russell2000_exact_consolidated_data_2016_2026.csv",
+          "correlations_csv": "A:\\work\\trading\\cot-report-main\\analysis\\cot_exact_output\\russell2000_exact_consolidated_correlations_2016_2026.csv",
+          "extremes_csv": "A:\\work\\trading\\cot-report-main\\analysis\\cot_exact_output\\russell2000_exact_consolidated_extremes_2016_2026.csv",
+          "overlay_png": "A:\\work\\trading\\cot-report-main\\analysis\\cot_exact_output\\russell2000_exact_consolidated_overlay_2016_2026.png",
+          "rebased_png": "A:\\work\\trading\\cot-report-main\\analysis\\cot_exact_output\\russell2000_exact_consolidated_rebased_2016_2026.png"
+        },
+        {
+          "report": "legacy",
+          "market": "russell2000",
+          "latest_date": "2026-09-01T00:00:00",
+          "source_latest_date": "2026-09-01T00:00:00",
+          "latest_price": 2968.27002,
+          "latest_open_interest": 424663,
+          "latest_noncommercial_net_oi_pct": -16.875263444189866,
+          "latest_commercial_net_oi_pct": 16.036480691748515,
+          "latest_nonreportable_net_oi_pct": 0.8387827524413477,
+          "data_csv": "A:\\work\\trading\\cot-report-main\\analysis\\cot_legacy_output\\russell2000_legacy_data_2016_2026.csv",
+          "correlations_csv": "A:\\work\\trading\\cot-report-main\\analysis\\cot_legacy_output\\russell2000_legacy_correlations_2016_2026.csv",
+          "extremes_csv": "A:\\work\\trading\\cot-report-main\\analysis\\cot_legacy_output\\russell2000_legacy_extremes_2016_2026.csv",
+          "overlay_png": "A:\\work\\trading\\cot-report-main\\analysis\\cot_legacy_output\\russell2000_legacy_net_oi_overlay_2016_2026.png",
+          "heatmap_png": "A:\\work\\trading\\cot-report-main\\analysis\\cot_legacy_output\\russell2000_legacy_forward_corr_heatmap_2016_2026.png"
+        }
+      ]
+    },
+    {
+      "market": "dow",
+      "label": "Dow Jones",
+      "secondary_report": "tff",
+      "selection_mode": "consolidated_exact",
+      "selection_note": "Exact CFTC consolidated parent row; component, E-mini, Micro, dividend, and TR rows are excluded.",
+      "legacy_contract_name": "DJIA Consolidated - CHICAGO BOARD OF TRADE",
+      "legacy_cftc_code": "12460+",
+      "secondary_contract_name": "DJIA Consolidated - CHICAGO BOARD OF TRADE",
+      "secondary_cftc_code": "12460+",
+      "price_series": "DJIA",
+      "price_symbol": "^DJI",
+      "outputs": [
+        {
+          "report": "tff",
+          "market": "dow",
+          "latest_date": "2026-09-01T00:00:00",
+          "source_latest_date": "2026-09-01T00:00:00",
+          "latest_price": 52766.87890625,
+          "latest_open_interest": 91196,
+          "latest_asset_mgr_net": 5527,
+          "latest_asset_mgr_net_oi_pct": 6.0605728321417605,
+          "highest_date": "2019-07-16T00:00:00",
+          "highest_asset_mgr_net_oi_pct": 39.09922071546911,
+          "lowest_date": "2022-05-24T00:00:00",
+          "lowest_asset_mgr_net_oi_pct": -18.63647313900265,
+          "data_csv": "A:\\work\\trading\\cot-report-main\\analysis\\cot_exact_output\\dow_exact_consolidated_data_2016_2026.csv",
+          "correlations_csv": "A:\\work\\trading\\cot-report-main\\analysis\\cot_exact_output\\dow_exact_consolidated_correlations_2016_2026.csv",
+          "extremes_csv": "A:\\work\\trading\\cot-report-main\\analysis\\cot_exact_output\\dow_exact_consolidated_extremes_2016_2026.csv",
+          "overlay_png": "A:\\work\\trading\\cot-report-main\\analysis\\cot_exact_output\\dow_exact_consolidated_overlay_2016_2026.png",
+          "rebased_png": "A:\\work\\trading\\cot-report-main\\analysis\\cot_exact_output\\dow_exact_consolidated_rebased_2016_2026.png"
+        },
+        {
+          "report": "legacy",
+          "market": "dow",
+          "latest_date": "2026-09-01T00:00:00",
+          "source_latest_date": "2026-09-01T00:00:00",
+          "latest_price": 52766.87890625,
+          "latest_open_interest": 91196,
+          "latest_noncommercial_net_oi_pct": 19.326505548488967,
+          "latest_commercial_net_oi_pct": -25.219307864380013,
+          "latest_nonreportable_net_oi_pct": 5.893898855212948,
+          "data_csv": "A:\\work\\trading\\cot-report-main\\analysis\\cot_legacy_output\\dow_legacy_data_2016_2026.csv",
+          "correlations_csv": "A:\\work\\trading\\cot-report-main\\analysis\\cot_legacy_output\\dow_legacy_correlations_2016_2026.csv",
+          "extremes_csv": "A:\\work\\trading\\cot-report-main\\analysis\\cot_legacy_output\\dow_legacy_extremes_2016_2026.csv",
+          "overlay_png": "A:\\work\\trading\\cot-report-main\\analysis\\cot_legacy_output\\dow_legacy_net_oi_overlay_2016_2026.png",
+          "heatmap_png": "A:\\work\\trading\\cot-report-main\\analysis\\cot_legacy_output\\dow_legacy_forward_corr_heatmap_2016_2026.png"
+        }
+      ]
+    },
+    {
+      "market": "gold",
+      "label": "Gold",
+      "secondary_report": "disaggregated",
+      "selection_mode": "primary_contract_exact",
+      "selection_note": "Exact COMEX Gold futures-only row 088691; Micro Gold and other metals are excluded.",
+      "legacy_contract_name": "GOLD - COMMODITY EXCHANGE INC.",
+      "legacy_cftc_code": "088691",
+      "secondary_contract_name": "GOLD - COMMODITY EXCHANGE INC.",
+      "secondary_cftc_code": "088691",
+      "price_series": "GOLD",
+      "price_symbol": "GC=F",
+      "outputs": [
+        {
+          "report": "legacy",
+          "market": "gold",
+          "latest_date": "2026-09-01T00:00:00",
+          "source_latest_date": "2026-09-01T00:00:00",
+          "latest_price": 4348.0,
+          "latest_open_interest": 415196,
+          "latest_noncommercial_net_oi_pct": 54.94368924556113,
+          "latest_commercial_net_oi_pct": -63.75735797069336,
+          "latest_nonreportable_net_oi_pct": 8.813668725132228,
+          "data_csv": "A:\\work\\trading\\cot-report-main\\analysis\\cot_legacy_output\\gold_legacy_data_2016_2026.csv",
+          "correlations_csv": "A:\\work\\trading\\cot-report-main\\analysis\\cot_legacy_output\\gold_legacy_correlations_2016_2026.csv",
+          "extremes_csv": "A:\\work\\trading\\cot-report-main\\analysis\\cot_legacy_output\\gold_legacy_extremes_2016_2026.csv",
+          "overlay_png": "A:\\work\\trading\\cot-report-main\\analysis\\cot_legacy_output\\gold_legacy_net_oi_overlay_2016_2026.png",
+          "heatmap_png": "A:\\work\\trading\\cot-report-main\\analysis\\cot_legacy_output\\gold_legacy_forward_corr_heatmap_2016_2026.png"
+        },
+        {
+          "market": "gold",
+          "report": "disaggregated",
+          "latest_date": "2026-09-01T00:00:00",
+          "source_latest_date": "2026-09-01T00:00:00",
+          "latest_price": 4348.0,
+          "latest_open_interest": 415196,
+          "latest_managed_money_net_oi_pct": 32.94130964652839,
+          "data_csv": "A:\\work\\trading\\cot-report-main\\analysis\\cot_disaggregated_output\\gold_disaggregated_data_2016_2026.csv",
+          "correlations_csv": "A:\\work\\trading\\cot-report-main\\analysis\\cot_disaggregated_output\\gold_disaggregated_correlations_2016_2026.csv",
+          "extremes_csv": "A:\\work\\trading\\cot-report-main\\analysis\\cot_disaggregated_output\\gold_disaggregated_extremes_2016_2026.csv",
+          "overlay_png": "A:\\work\\trading\\cot-report-main\\analysis\\cot_disaggregated_output\\gold_exact_consolidated_overlay_2016_2026.png",
+          "rebased_png": "A:\\work\\trading\\cot-report-main\\analysis\\cot_disaggregated_output\\gold_exact_consolidated_rebased_2016_2026.png"
+        }
+      ]
+    }
+  ]
+}
