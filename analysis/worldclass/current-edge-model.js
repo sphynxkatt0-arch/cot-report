@@ -5,6 +5,8 @@
   const MARKET_ORDER=Object.keys(MARKETS);
   const ROLE_ORDER={PRIMARY_DIRECTIONAL:0,SECONDARY_DIRECTIONAL:1,INTERMEDIARY_CONTEXT:2,HEDGER_CONTEXT:2,OPPOSITE_SIDE_CONTEXT:2,AGGREGATE_CONTEXT:2};
   const ROLE_LABEL={PRIMARY_DIRECTIONAL:"Primary",SECONDARY_DIRECTIONAL:"Secondary",INTERMEDIARY_CONTEXT:"Intermediary",HEDGER_CONTEXT:"Hedger",OPPOSITE_SIDE_CONTEXT:"Opposite-side",AGGREGATE_CONTEXT:"Aggregate"};
+  const PRIMARY_DATASET={sp500:"tff",nq:"tff",vix:"tff",rty:"tff",dow:"tff",gold:"disaggregated",silver:"disaggregated"};
+  const NONREPORTABLE_ACTORS=new Set(["non_reportable","nonreportable"]);
   const EVIDENCE_ORDER={PROSPECTIVE_CONFIRMED:8,GLOBAL_FDR:7,FAMILY_FDR:6,NONOVERLAP_CONFIRMED:5,HOLDOUT_DIRECTION_CONFIRMED:4,OOS_PLUS_OVERLAP:3,OOS_ONLY:3,DISCOVERY_ONLY:2,DESCRIPTIVE_ONLY:1,INSUFFICIENT_N:0};
   const EVIDENCE_LABEL={PROSPECTIVE_CONFIRMED:"Live confirmed",GLOBAL_FDR:"Global FDR",FAMILY_FDR:"Family FDR",NONOVERLAP_CONFIRMED:"Non-overlap confirmed",HOLDOUT_DIRECTION_CONFIRMED:"Holdout direction",OOS_PLUS_OVERLAP:"OOS + overlap",OOS_ONLY:"OOS only",DISCOVERY_ONLY:"Discovery only",DESCRIPTIVE_ONLY:"Descriptive",INSUFFICIENT_N:"Insufficient independent N"};
   const FORWARD=["1w","2w","4w","13w","26w"];
@@ -30,9 +32,16 @@
   function currentRows(market=state.market){
     return Object.values(state.current?.actor_states||{}).filter(r=>r?.market===market).sort((a,b)=>(ROLE_ORDER[a.actor_role]??9)-(ROLE_ORDER[b.actor_role]??9)||String(a.actor_label||"").localeCompare(String(b.actor_label||"")));
   }
+  function actorKey(row){return String(row?.series||"").split(":").at(-1)||""}
+  function isCanonicalActiveRow(row,market){
+    if(String(row?.actor_role||"")==="AGGREGATE_CONTEXT")return false;
+    const primary=PRIMARY_DATASET[market],actor=actorKey(row);
+    if(primary&&NONREPORTABLE_ACTORS.has(actor)&&String(row?.dataset||"")!==primary)return false;
+    return true;
+  }
   function activeRows(market=state.market){
     const rows=state.active?.by_market?.[market]?.active_thresholds||[];
-    return rows.filter(row=>{
+    return rows.filter(row=>isCanonicalActiveRow(row,market)).filter(row=>{
       const current=state.current?.actor_states?.[row.series];
       if(!current)return false;
       const threshold=finite(row.selected_threshold);
