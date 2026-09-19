@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "model_version": "macro-liquidity-control-room-v1.2",
-  "generated_at_utc": "2026-09-19T21:45:59.393837+00:00",
+  "generated_at_utc": "2026-09-19T22:30:34.670035+00:00",
   "role": "descriptive risk and plumbing context; does not create or reverse COT direction",
   "source_coverage_ratio": 0.846,
   "source_coverage_label": "Good",
@@ -128,7 +128,7 @@
       },
       {
         "category": "Taxes - Non Withheld Ind/SECA Electronic",
-        "private_cash_effect_bn": -87.97
+        "private_cash_effect_bn": -87.98
       },
       {
         "category": "Taxes - Corporate Income",
