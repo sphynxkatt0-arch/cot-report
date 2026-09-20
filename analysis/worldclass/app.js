@@ -64,14 +64,16 @@
   };
 
   const FINANCIAL_MARKETS = new Set(["sp500", "nq", "vix", "rty", "dow"]);
+  const urlMarket = new URL(window.location.href).searchParams.get("market");
+  const initialMarket = MARKET_META[urlMarket] ? urlMarket : "sp500";
 
   const state = {
-    market: "sp500",
+    market: initialMarket,
     dataset: "tff",
     metric: "net_oi_pct",
     range: "all",
     activeCategories: new Set(),
-    priceOverlays: new Set(["sp500"]),
+    priceOverlays: new Set(),
     factorOverlays: new Set(["macro_score"]),
     theme: localStorage.getItem("cot-worldclass-theme") === "light" ? "light" : "dark"
   };
@@ -85,6 +87,8 @@
     MACRO_LENS: {},
     METADATA: {},
     MODEL_SPEC: {},
+    REGIME_BACKTEST: null,
+    COT_CURRENT_STATE: null,
     metals: null
   };
 
@@ -173,6 +177,20 @@
     }
     configureModelSpec();
 
+    for (const [key, path] of [
+      ["REGIME_BACKTEST", "worldclass/regime_backtest.json"],
+      ["COT_CURRENT_STATE", "worldclass/cot-current-state.json"]
+    ]) {
+      try {
+        const governedResponse = await fetch(`${path}?v=${Date.now()}`, { cache: "no-store" });
+        if (!governedResponse.ok) throw new Error(`${path} returned HTTP ${governedResponse.status}`);
+        db[key] = await governedResponse.json();
+      } catch (error) {
+        console.warn(`Governed COT source unavailable: ${path}`, error);
+        db[key] = null;
+      }
+    }
+
     try {
       const metalResponse = await fetch(`worldclass/metals.json?v=${Date.now()}`, { cache: "no-store" });
       if (metalResponse.ok) {
@@ -246,13 +264,11 @@
   }
 
   function requestedDatasetForMarket(market) {
+    const requested = new URL(window.location.href).searchParams.get("report");
+    if (requested === "legacy" || requested === "tff" || requested === "disaggregated") return requested;
     const taxonomy = window.__COT_REPORT_TAXONOMY__;
     const governed = taxonomy?.datasetForMarket?.(market);
     if (governed) return governed;
-    if (FINANCIAL_MARKETS.has(market)) {
-      const requested = new URL(window.location.href).searchParams.get("report");
-      if (requested === "legacy" || requested === "tff") return requested;
-    }
     return market === "gold" || market === "silver" ? "disaggregated" : null;
   }
 
@@ -275,6 +291,14 @@
   function currentPrior() {
     const rows = currentRows();
     return rows.at(-2) || {};
+  }
+
+  function governedRegimeCurrent(dataset = state.dataset, market = state.market) {
+    return db.REGIME_BACKTEST?.markets?.[market]?.datasets?.[dataset]?.current || null;
+  }
+
+  function governedActorState(category, dataset = state.dataset, market = state.market) {
+    return db.COT_CURRENT_STATE?.actor_states?.[`${dataset}:${market}:${category}`] || null;
   }
 
   function signed(value, digits = 0, suffix = "") {
@@ -324,38 +348,19 @@
     return "warning";
   }
 
-  function percentile(history, value) {
-    const current = finite(value);
-    const clean = history.map(finite).filter(v => v !== null).sort((a, b) => a - b);
-    if (current === null || !clean.length) return null;
-    let less = 0;
-    let equal = 0;
-    for (const item of clean) {
-      if (item < current) less += 1;
-      else if (item === current) equal += 1;
-    }
-    return ((less + Math.max(equal, 1) / 2) / clean.length) * 100;
-  }
-
   function cotScore() {
-    const rows = currentRows();
-    const latest = rows.at(-1) || {};
+    const latest = currentLatest();
+    const governed = governedRegimeCurrent();
     const weights = SCORE_WEIGHTS[state.dataset] || {};
-    let numerator = 0;
-    let denominator = 0;
     const components = [];
 
     for (const key of categoryKeys()) {
       const weight = finite(weights[key]) ?? 0;
       const field = fieldFor(key, "net_oi_pct");
       const value = finite(latest[field]);
-      const rank = percentile(rows.map(row => row[field]), value);
+      const rank = finite(governedActorState(key)?.position_percentile);
       const centered = rank === null ? null : (rank - 50) / 50;
       const contribution = centered === null ? 0 : weight * centered;
-      if (weight !== 0 && centered !== null) {
-        numerator += contribution;
-        denominator += Math.abs(weight);
-      }
       components.push({
         key,
         label: categoryMap()[key] || key,
@@ -366,14 +371,22 @@
       });
     }
 
-    const normalized = denominator ? 50 + 50 * (numerator / denominator) : 50;
-    const score = Math.max(0, Math.min(100, normalized));
-    let label = "Balanced";
-    if (score >= 65) label = "Bullish positioning";
-    else if (score >= 56) label = "Constructive";
-    else if (score <= 35) label = "Bearish positioning";
-    else if (score <= 44) label = "Cautious";
-    return { score, label, components };
+    const score = finite(governed?.cot_score);
+    const governedState = String(governed?.cot_state || "").toLowerCase();
+    const label = governedState === "bullish"
+      ? "BULLISH"
+      : governedState === "bearish"
+        ? "BEARISH"
+        : governedState === "neutral"
+          ? "NEUTRAL"
+          : score === null
+            ? "UNAVAILABLE"
+            : score >= 60
+              ? "BULLISH"
+              : score <= 40
+                ? "BEARISH"
+                : "NEUTRAL";
+    return { score, label, components, reportDate: governed?.report_date || null };
   }
 
   function flowClassification(longDelta, shortDelta, netDelta) {
@@ -504,9 +517,11 @@
 
   function setMarket(market) {
     if (!MARKET_META[market]) return;
+    const previousMarket = state.market;
     state.market = market;
     state.dataset = chooseDatasetForMarket(market, requestedDatasetForMarket(market) || state.dataset);
     state.activeCategories = new Set(categoryKeys());
+    if (previousMarket !== market) state.priceOverlays.delete(previousMarket);
     state.priceOverlays.add(market);
     renderAll();
   }
@@ -737,14 +752,31 @@
     };
   }
 
-  function indexedPriceRows(rows, startDate) {
-    const visible = startDate ? rows.filter(row => row.date >= startDate) : rows;
+  function indexedPriceRows(rows, commonBaseDate) {
+    const visible = commonBaseDate ? rows.filter(row => row.date >= commonBaseDate) : rows;
     const base = finite(visible[0]?.price);
     return visible.map(row => ({
       date: row.date,
       raw: finite(row.price),
       value: base && finite(row.price) !== null ? finite(row.price) / base * 100 : null
     })).filter(row => row.value !== null);
+  }
+
+  function commonPriceBaseDate(markets, startDate) {
+    const dateLists = markets
+      .map(market => priceRecords(market)
+        .filter(row => !startDate || row.date >= startDate)
+        .map(row => row.date))
+      .filter(rows => rows.length);
+    if (!dateLists.length) return null;
+    let common = new Set(dateLists[0]);
+    for (const dates of dateLists.slice(1)) {
+      const available = new Set(dates);
+      common = new Set([...common].filter(date => available.has(date)));
+      if (!common.size) break;
+    }
+    if (common.size) return [...common].sort()[0];
+    return null;
   }
 
   function rawPriceRows(rows, startDate) {
@@ -780,12 +812,15 @@
 
     const selectedPrices = [...state.priceOverlays].filter(key => priceRecords(key).length);
     const indexPrices = selectedPrices.length > 1;
+    const commonBaseDate = indexPrices ? commonPriceBaseDate(selectedPrices, startDate) : null;
     for (const market of selectedPrices) {
       const source = priceRecords(market);
-      const points = indexPrices ? indexedPriceRows(source, startDate) : rawPriceRows(source, startDate);
+      if (indexPrices && !commonBaseDate) continue;
+      const points = indexPrices ? indexedPriceRows(source, commonBaseDate) : rawPriceRows(source, startDate);
       traces.push({
         type: "scatter",
         mode: "lines",
+        uid: `price-${market}`,
         name: `${MARKET_META[market]?.short || market} price`,
         x: points.map(row => row.date),
         y: points.map(row => row.value),
@@ -825,12 +860,16 @@
 
     const t = plotTokens();
     const yTitle = METRIC_LABELS[state.metric];
-    const y2Title = indexPrices ? "Price (indexed = 100)" : "Price";
+    const y2Title = indexPrices && commonBaseDate ? "Price (common base = 100)" : "Price";
     const compactPlot = window.innerWidth <= 700;
     $("#workbenchTitle").textContent = `${MARKET_META[state.market].label} · ${DATASET_LABELS[state.dataset]} ${changeMetric ? "weekly holdings change" : "positioning"}`;
     $("#legendHint").textContent = changeMetric
       ? "Weekly change = current COT position minus the prior report"
-      : selectedPrices.length > 1 ? "Multiple price overlays are indexed to 100 for comparability" : "Hover any line for exact values";
+      : selectedPrices.length > 1
+        ? commonBaseDate
+          ? `Multiple price overlays share one base date (${commonBaseDate}) and are indexed to 100`
+          : "Selected price overlays have no shared trading date in this window"
+        : "Hover any line for exact values";
 
     Plotly.react("mainChart", traces, {
       paper_bgcolor: t.paper,
@@ -923,7 +962,6 @@
   }
 
   function renderPositioning() {
-    const rows = currentRows();
     const latest = currentLatest();
     const score = cotScore();
     const byKey = Object.fromEntries(score.components.map(item => [item.key, item]));
@@ -931,10 +969,10 @@
     $("#positioningPanel").innerHTML = categoryKeys().map(key => {
       const field = fieldFor(key, "net_oi_pct");
       const value = finite(latest[field]);
-      const rank = percentile(rows.map(row => row[field]), value);
+      const rank = finite(governedActorState(key)?.position_percentile);
       const component = byKey[key];
       const zone = rank === null ? "n/a" : rank >= 90 ? "Top 10%" : rank <= 10 ? "Bottom 10%" : rank >= 75 ? "Upper quartile" : rank <= 25 ? "Lower quartile" : "Middle";
-      return `<div class="position-row">
+      return `<div class="position-row" data-category="${escapeHtml(key)}">
         <div class="position-label">${escapeHtml(categoryMap()[key] || key)}<small>${escapeHtml(zone)} · weight ${component?.weight > 0 ? "+" : ""}${number(component?.weight, 2)}</small></div>
         <div class="position-number ${signedClass(value)}">${pct(value)}</div>
         <div class="percentile-track"><div class="percentile-fill" style="width:${rank === null ? 0 : Math.max(1, Math.min(100, rank))}%"></div></div>
@@ -945,15 +983,16 @@
 
   function renderCotScore() {
     const result = cotScore();
-    const tone = result.score >= 58 ? "#31d27c" : result.score <= 42 ? "#ff6675" : "#f4b64e";
+    const score = finite(result.score);
+    const tone = score !== null && score >= 60 ? "#31d27c" : score !== null && score <= 40 ? "#ff6675" : "#f4b64e";
     const inverseNames = result.components.filter(item => item.weight < 0).map(item => shortCategory(item.label));
     $("#cotScorePanel").innerHTML = `<div class="score-hero">
-      <div class="score-ring" style="--score-angle:${(result.score / 100 * 360).toFixed(1)}deg;--score-color:${tone}">
-        <div class="score-ring-inner"><div class="score-ring-value">${result.score.toFixed(0)}</div><div class="score-ring-label">COT score</div></div>
+      <div class="score-ring" style="--score-angle:${score === null ? "0.0" : (score / 100 * 360).toFixed(1)}deg;--score-color:${tone}">
+        <div class="score-ring-inner"><div class="score-ring-value">${score === null ? "n/a" : score.toFixed(0)}</div><div class="score-ring-label">COT score</div></div>
       </div>
       <div class="score-copy">
         <h4>${escapeHtml(result.label)}</h4>
-        <p>Historical percentile signal normalized to 0–100. ${inverseNames.length ? `${escapeHtml(inverseNames.join(", "))} contribute inversely.` : "Weights are shown below."}</p>
+        <p>Governed full-history percentile score${result.reportDate ? ` · report ${escapeHtml(result.reportDate)}` : ""}. ${inverseNames.length ? `${escapeHtml(inverseNames.join(", "))} contribute inversely.` : "Weights are shown below."}</p>
       </div>
     </div>
     <div class="score-components">
@@ -1154,6 +1193,7 @@
       await loadData();
       state.dataset = chooseDatasetForMarket(state.market, requestedDatasetForMarket(state.market) || "tff");
       state.activeCategories = new Set(categoryKeys());
+      state.priceOverlays.add(state.market);
       renderAll();
       $("#loadingOverlay").classList.add("done");
     } catch (error) {

@@ -244,6 +244,97 @@ test('Charts & data restores holdings history, controls and analytical component
   expect(chart.title).toMatch(/Nasdaq-100.*positioning/i);
 });
 
+test('Charts & data COT score and actor percentiles use the governed full-history artifacts', async ({ page }) => {
+  test.setTimeout(90_000);
+  const cases = [
+    { market: 'sp500' },
+    { market: 'nq' },
+    { market: 'dow' },
+    { market: 'rty' },
+    { market: 'sp500', report: 'legacy' },
+    { market: 'gold' },
+    { market: 'silver' }
+  ];
+
+  for (const { market, report } of cases) {
+    await page.goto(`/worldclass_dashboard.html?market=${market}&view=data${report ? `&report=${report}` : ''}`);
+    await page.waitForFunction(() => document.documentElement.classList.contains('cot-worldclass-ux-ready'));
+    await expect(page.locator('.instrument-bar')).toBeVisible();
+    await expect(page.locator('#cotScorePanel')).toBeVisible();
+
+    const expected = await page.evaluate(async ({ currentMarket, requestedReport }) => {
+      const [regime, current] = await Promise.all([
+        fetch('worldclass/regime_backtest.json', { cache: 'no-store' }).then(response => response.json()),
+        fetch('worldclass/cot-current-state.json', { cache: 'no-store' }).then(response => response.json())
+      ]);
+      const dataset = requestedReport
+        || window.__COT_REPORT_TAXONOMY__?.datasetForMarket?.(currentMarket)
+        || (currentMarket === 'gold' || currentMarket === 'silver' ? 'disaggregated' : 'tff');
+      const governed = regime?.markets?.[currentMarket]?.datasets?.[dataset]?.current;
+      const actorPrefix = `${dataset}:${currentMarket}:`;
+      const actorEntry = Object.entries(current?.actor_states || {})
+        .find(([key, value]) => key.startsWith(actorPrefix) && Number.isFinite(Number(value?.position_percentile)))
+        || null;
+      const actor = actorEntry?.[1] || null;
+      return {
+        dataset,
+        score: governed?.cot_score,
+        state: String(governed?.cot_state || '').toUpperCase(),
+        actorKey: actorEntry?.[0]?.slice(actorPrefix.length) || null,
+        actorLabel: actor?.actor_label || null,
+        actorPercentile: actor?.position_percentile ?? null
+      };
+    }, { currentMarket: market, requestedReport: report || null });
+
+    expect(Number.isFinite(Number(expected.score))).toBeTruthy();
+    await expect(page.locator('#cotScorePanel .score-ring-value')).toHaveText(String(Math.round(Number(expected.score))));
+    await expect(page.locator('#cotScorePanel .score-copy h4')).toHaveText(expected.state);
+    await expect(page.locator('#cotScorePanel .score-copy')).toContainText('Governed full-history percentile score');
+    await expect(page.locator('#workbenchTitle')).toContainText(expected.dataset === 'legacy' ? 'Legacy' : expected.dataset === 'disaggregated' ? 'Disaggregated' : 'TFF Detailed');
+
+    if (expected.actorKey && Number.isFinite(Number(expected.actorPercentile))) {
+      const row = page.locator(`#positioningPanel .position-row[data-category="${expected.actorKey}"]`);
+      await expect(row).toBeVisible();
+      if (expected.actorLabel) await expect(row).toContainText(expected.actorLabel);
+      const displayed = Number((await row.locator('.percentile-label').innerText()).match(/\d+/)?.[0]);
+      expect(displayed).toBe(Math.round(Number(expected.actorPercentile)));
+    }
+  }
+});
+
+test('price overlays follow the selected market and multi-market indexing uses one common base date', async ({ page }) => {
+  await open(page, '?market=nq&view=data');
+  await page.waitForFunction(() => Array.isArray(document.querySelector('#mainChart')?.data));
+
+  const priceTraceNames = () => page.evaluate(() => (document.querySelector('#mainChart')?.data || [])
+    .filter(trace => trace.yaxis === 'y2')
+    .map(trace => trace.name));
+  expect(await priceTraceNames()).toEqual(['NQ price']);
+
+  await page.locator('#instrumentTabs [data-market="sp500"]').click();
+  await page.waitForFunction(() => (document.querySelector('#mainChart')?.data || [])
+    .filter(trace => trace.yaxis === 'y2')
+    .map(trace => trace.name).join('|') === 'S&P price');
+  expect(await priceTraceNames()).toEqual(['S&P price']);
+
+  await page.locator('#instrumentTabs [data-market="nq"]').click();
+  await page.waitForFunction(() => (document.querySelector('#mainChart')?.data || [])
+    .filter(trace => trace.yaxis === 'y2')
+    .map(trace => trace.name).join('|') === 'NQ price');
+  expect(await priceTraceNames()).toEqual(['NQ price']);
+
+  await page.locator('#desktopControls [data-price-overlay="sp500"]').click();
+  await page.waitForFunction(() => (document.querySelector('#mainChart')?.data || []).filter(trace => trace.yaxis === 'y2').length === 2);
+
+  const indexed = await page.evaluate(() => (document.querySelector('#mainChart')?.data || [])
+    .filter(trace => trace.yaxis === 'y2')
+    .map(trace => ({ name: trace.name, firstDate: trace.x?.[0], firstValue: trace.y?.[0] })));
+  expect(indexed.map(item => item.name).sort()).toEqual(['NQ price', 'S&P price']);
+  expect(new Set(indexed.map(item => item.firstDate)).size).toBe(1);
+  for (const item of indexed) expect(Number(item.firstValue)).toBeCloseTo(100, 8);
+  await expect(page.locator('#legendHint')).toContainText('share one base date');
+});
+
 test('Charts & data uses the same governed edge as Opportunity Scanner and does not mount a second backtest', async ({ page }) => {
   for (const report of ['tff', 'legacy']) {
     await open(page, `?market=sp500&horizon=1w&view=today&report=${report}`);
