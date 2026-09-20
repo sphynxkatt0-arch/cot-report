@@ -174,13 +174,12 @@ html,body{max-width:100%;overflow-x:hidden;overflow-x:clip}
 .decision-empty strong,.decision-loading strong{display:block;color:var(--text,#f3f7fb);margin-bottom:4px}
 .decision-empty span,.decision-loading span{font-size:10px}
 
-/* One shell, one content workspace. Older implementations toggled more than a
-   dozen unrelated main children with route-specific !important rules. That made
-   changing tabs equivalent to swapping applications. The shell now owns exactly
-   three specialist workspaces and leaves their internal layout to each module. */
+/* One shell, one content workspace. Market combines the decision surface and
+   analytical workbench; only Research and Live Record remain separate views. */
 #wcCommandCenter,
 main>.dashboard-workspace{display:none!important}
 
+html[data-cot-decision-view="today"] main>#dataWorkspace,
 html[data-cot-decision-view="data"] main>#dataWorkspace{display:block!important}
 
 html[data-cot-decision-view="research"] main>#researchWorkspace{
@@ -188,9 +187,7 @@ html[data-cot-decision-view="research"] main>#researchWorkspace{
   gap:10px;
 }
 
-/* Research is a workspace inside the shared shell, not a second application.
-   The primary Research summary remains first; the specialist explorer below it
-   reuses the same panel geometry and exposes only its evidence sub-navigation. */
+/* Research is a workspace inside the shared shell, not a second application. */
 #researchWorkspace>#cotIntelligence{
   margin:0;
   border-radius:9px;
@@ -199,32 +196,6 @@ html[data-cot-decision-view="research"] main>#researchWorkspace{
   box-shadow:none;
 }
 #researchWorkspace>#cotIntelligence>.cot-intel-head{display:none!important}
-#researchWorkspace>#cotIntelligence>.cot-intel-tabs{
-  min-height:50px;
-  align-items:center;
-  gap:4px;
-  padding:8px 10px;
-  border-bottom:1px solid var(--border,rgba(148,163,184,.14));
-  background:transparent;
-}
-#researchWorkspace>#cotIntelligence>.cot-intel-tabs::before{
-  content:"Evidence explorer";
-  flex:0 0 auto;
-  margin:0 10px 0 2px;
-  color:var(--muted,#8fa2b7);
-  font-size:9px;
-  font-weight:850;
-  letter-spacing:.09em;
-  text-transform:uppercase;
-}
-#researchWorkspace>#cotIntelligence>.cot-intel-tabs button{
-  min-height:34px;
-  padding:7px 10px;
-  border-radius:6px;
-  font-size:10px;
-  letter-spacing:0;
-  text-transform:none;
-}
 #researchWorkspace>#cotIntelligence>.cot-intel-body{
   padding:16px;
   background:transparent;
@@ -337,10 +308,6 @@ html[data-theme="light"] .decision-why-grid>div{background:#fff}
   .decision-week-path{grid-template-columns:1fr}.decision-week-path article{display:grid;grid-template-columns:70px 90px 1fr;align-items:center;border-right:0;border-bottom:1px solid var(--border,rgba(148,163,184,.09));padding:9px 5px}.decision-week-path article:last-child{border-bottom:0}.decision-week-path strong{margin:0;font-size:17px}.decision-week-path small{margin:0}.decision-week-path i{display:none}
   .decision-forward-grid{grid-template-columns:1fr}.decision-forward-grid>div{display:grid;grid-template-columns:48px 80px 1fr;align-items:center;border-right:0;border-bottom:1px solid var(--border,rgba(148,163,184,.08));padding:8px 4px}.decision-forward-grid strong,.decision-forward-grid small{margin:0}
   .decision-research-group>summary{padding:11px}.decision-research-body{padding:0 10px 10px}.decision-research-meta{grid-template-columns:1fr 1fr}
-  #researchWorkspace>#cotIntelligence>.cot-intel-tabs{overflow-x:auto;scrollbar-width:none;flex-wrap:nowrap}
-  #researchWorkspace>#cotIntelligence>.cot-intel-tabs::-webkit-scrollbar{display:none}
-  #researchWorkspace>#cotIntelligence>.cot-intel-tabs::before{display:none}
-  #researchWorkspace>#cotIntelligence>.cot-intel-tabs button{flex:0 0 auto;min-height:44px;padding:8px 10px}
   #researchWorkspace>#cotIntelligence>.cot-intel-body{padding:12px}
   .decision-live-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
   .decision-data-meta{grid-template-columns:1fr 1fr}

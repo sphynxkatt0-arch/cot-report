@@ -3,10 +3,10 @@
 
   const M = () => window.__COT_CURRENT_EDGE_MODEL__;
   const HORIZONS = ["1w", "2w", "4w", "13w", "26w"];
-  const VIEWS = ["today", "data", "research", "live"];
+  const VIEWS = ["today", "research", "live"];
   const VIEW_ALIASES = {
     overview: "today", edges: "today", week: "today", today: "today",
-    data: "data", chart: "data", charts: "data", holdings: "data", positioning: "data",
+    data: "today", chart: "today", charts: "today", holdings: "today", positioning: "today", market: "today",
     research: "research", live: "live"
   };
   const MODEL_FAMILIES = ["combined", "cot", "macro"];
@@ -181,12 +181,10 @@
     return `<div class="decision-horizons decision-model-family" role="group" aria-label="Current model family">${MODEL_FAMILIES.map(family => `<button type="button" data-model-family="${family}" class="${state.family === family ? "active" : ""}" aria-pressed="${state.family === family}">${labels[family]}</button>`).join("")}</div>`;
   }
   function navigation() {
-    const labels = { today: "Today", data: "Charts & data", research: "Research", live: "Live Record" };
+    const labels = { today: "Market", research: "Research", live: "Live Record" };
     const pageLinks = state.view === "today"
-      ? `<nav class="decision-page-links" aria-label="On this page"><span>Explore this market</span><a href="#positionChanges">Position changes</a><a href="#modelEstimates">Model estimates</a><a href="#historicalPath">Historical path</a><a href="#triggerWatch">Trigger watch</a></nav>`
-      : state.view === "data"
-        ? `<nav class="decision-page-links" aria-label="Data sections"><span>Jump to</span><a href="#mainChart">Holdings history</a><a href="#weeklyChangePanel">Weekly changes</a><a href="#positioningColumns">Position regime</a><a href="#macroSectionHeading">Macro</a></nav>`
-        : "";
+      ? `<nav class="decision-page-links" aria-label="On this page"><span>Explore this market</span><a href="#positionChanges">Position changes</a><a href="#mainChart">Holdings chart</a><a href="#weeklyChangePanel">Weekly data</a><a href="#positioningColumns">Position regime</a><a href="#triggerWatch">Trigger watch</a></nav>`
+      : "";
     return `<div class="decision-nav"><nav aria-label="Dashboard sections">${VIEWS.map(v => `<button type="button" data-decision-view="${v}" class="${state.view === v ? "active" : ""}" aria-current="${state.view === v ? "page" : "false"}">${labels[v]}</button>`).join("")}</nav>${state.view === "today" ? horizonControls() : ""}</div>${pageLinks}`;
   }
 
@@ -282,7 +280,7 @@
     return `<section class="decision-overview" data-decision-surface="today-overview">
       <div class="decision-current"><div class="decision-title-row"><div><span class="decision-kicker">${esc(M().MARKETS[M().state.market])}</span><h2 class="${cot.tone}">${cot.label} COT POSITIONING</h2><p>Governed COT score <b>${scoreText}</b> / 100 · 4W score change ${signed(cot.delta4w, 1)}. ${condition}</p></div><div class="decision-grade ${grade?.tone || "weak"}"><span>Directional edge evidence</span><strong>${grade ? gradeText(grade) : "D — NO ACTIVE DIRECTIONAL EDGE"}</strong><small>${strongest ? `N ${integer(strongest.metric.independent_n ?? strongest.metric.n)}` : "Context actors excluded from headline"}</small></div></div>
         ${latestCotChanges(cot)}
-        <div id="modelEstimates" tabindex="-1" class="decision-semantics">${currentModelCard()}${liveProspectiveCard()}${historicalEdgeCard(strongest)}</div>
+        <div id="modelEstimates" tabindex="-1" class="decision-semantics">${currentModelCard()}${liveProspectiveCard()}</div>
         <div class="decision-driver-strip"><div class="${cot.tone}"><span>COT SCORE</span><strong>${cot.label}</strong><small>${scoreText} / 100</small></div><div class="${alignment.macro.tone}"><span>MACRO</span><strong>${esc(alignment.macro.label)}</strong><small>${alignment.macro.score === null ? "score unavailable" : `${Math.round(alignment.macro.score)} / 100`}</small></div><div class="${alignment.sentiment.tone}"><span>SENTIMENT</span><strong>${esc(alignment.sentiment.label)}</strong><small>${alignment.sentiment.index === null ? "not available" : `${Math.round(alignment.sentiment.index)} / 100`}</small></div><div class="neutral"><span>PRICE CONFIRM</span><strong>NOT GOVERNED</strong><small>no dedicated confirmation field</small></div></div>${expiryStrip()}
       </div>
       ${strongestPanel(strongest)}
@@ -399,7 +397,7 @@
   function liveIntro() {
     const live = M().state.live || {};
     const integrity = String(live?.ledger?.integrity || "UNKNOWN").toUpperCase();
-    return `<section class="decision-view-panel" data-decision-surface="live"><span class="decision-kicker">LIVE RECORD</span><h2>Frozen prospective forecasts and realized outcomes</h2><div class="decision-live-summary"><div><span>Ledger</span><strong>${esc(integrity)}</strong></div><div><span>Forecasts</span><strong>${integer(live.forecast_count || 0)}</strong></div><div><span>Matured signals</span><strong>${integer(live.matured_signal_count || 0)}</strong></div><div><span>Historical backfill</span><strong>DISALLOWED</strong></div></div><p>Only forecasts recorded before outcomes count as live evidence. Current model estimates on Today are not retroactively entered into the live ledger.</p></section>`;
+    return `<section class="decision-view-panel" data-decision-surface="live"><span class="decision-kicker">LIVE RECORD</span><h2>Frozen prospective forecasts and realized outcomes</h2><div class="decision-live-summary"><div><span>Ledger</span><strong>${esc(integrity)}</strong></div><div><span>Forecasts</span><strong>${integer(live.forecast_count || 0)}</strong></div><div><span>Matured signals</span><strong>${integer(live.matured_signal_count || 0)}</strong></div><div><span>Historical backfill</span><strong>DISALLOWED</strong></div></div><p>Only forecasts recorded before outcomes count as live evidence. Current model estimates on Market are not retroactively entered into the live ledger.</p></section>`;
   }
 
   function dataView() {
@@ -459,7 +457,7 @@
       const summary = M().summary();
       headerMeta();
       document.documentElement.dataset.cotDecisionView = state.view;
-      const content = state.view === "data" ? dataView() : state.view === "research" ? researchView(summary) : state.view === "live" ? liveIntro() : today(summary);
+      const content = state.view === "research" ? researchView(summary) : state.view === "live" ? liveIntro() : today(summary);
       root.innerHTML = `${navigation()}${content}`;
       writeUrl({ push: false });
     } finally {

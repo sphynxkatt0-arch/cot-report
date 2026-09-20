@@ -20,12 +20,13 @@ async function selectMarketWithActiveEdge(page) {
   return market;
 }
 
-test('decision layer separates current estimate, prospective record and historical edge', async ({ page }) => {
+test('decision layer separates model/prospective estimates from the single historical edge headline', async ({ page }) => {
   await open(page);
   const panel = page.locator('#currentEdgeCommand');
   await expect(panel).toContainText('CURRENT MODEL ESTIMATE');
   await expect(panel).toContainText('LIVE PROSPECTIVE');
-  await expect(panel).toContainText('ACTIVE HISTORICAL EDGE');
+  await expect(panel).not.toContainText('ACTIVE HISTORICAL EDGE');
+  await expect(page.locator('.decision-strongest')).toBeVisible();
   await expect(page.locator('#cotIntelligence')).toBeHidden();
   await expect(page.locator('#wcCommandCenter')).toBeHidden();
 });
@@ -114,7 +115,7 @@ test('live view never relabels historical research as prospective proof', async 
   const panel = page.locator('.decision-view-panel[data-decision-surface="live"]');
   await expect(panel).toContainText('Frozen prospective forecasts and realized outcomes');
   await expect(panel).toContainText('Only forecasts recorded before outcomes count as live evidence');
-  await expect(panel).toContainText('Current model estimates on Today are not retroactively entered into the live ledger');
+  await expect(panel).toContainText('Current model estimates on Market are not retroactively entered into the live ledger');
   await expect(panel).toContainText('DISALLOWED');
   await expect(page.locator('#liveTrackRecordPanel')).toBeVisible();
 });
