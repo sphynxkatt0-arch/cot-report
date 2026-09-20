@@ -246,6 +246,12 @@ html[data-cot-decision-view="research"] main>#researchWorkspace{
 .decision-data-meta>div:last-child{border-right:0}
 .decision-data-meta span{display:block;font-size:8px;font-weight:850;letter-spacing:.07em;text-transform:uppercase;color:var(--muted,#8fa2b7)}
 .decision-data-meta strong{display:block;margin-top:4px;font-size:11px}
+.decision-data-edge{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(180px,.4fr);gap:0;margin-top:12px;border:1px solid var(--border,rgba(148,163,184,.13));border-radius:7px;background:var(--surface-soft,rgba(15,29,46,.38));overflow:hidden}
+.decision-data-edge>div{padding:11px 12px}
+.decision-data-edge>div+div{border-left:1px solid var(--border,rgba(148,163,184,.1))}
+.decision-data-edge span{display:block;font-size:8px;font-weight:850;letter-spacing:.07em;text-transform:uppercase;color:var(--muted,#8fa2b7)}
+.decision-data-edge strong{display:block;margin-top:4px;font-size:13px}
+.decision-data-edge small{display:block;margin-top:4px;color:var(--muted,#8fa2b7);font-size:9px;line-height:1.4}
 
 html[data-cot-decision-view]:not([data-cot-decision-view="live"]) main>#liveWorkspace{display:none!important}
 html[data-cot-decision-view="live"] main>#liveWorkspace{display:block!important}
@@ -345,6 +351,8 @@ html[data-theme="light"] .decision-why-grid>div{background:#fff}
   .decision-data-intro{padding:13px}
   .decision-data-intro .decision-block-head h2{font-size:22px;line-height:1.05}
   .decision-data-intro .decision-block-head p{font-size:10px;line-height:1.45}
+  .decision-data-edge{grid-template-columns:1fr}
+  .decision-data-edge>div+div{border-left:0;border-top:1px solid var(--border,rgba(148,163,184,.1))}
 }
 
 @media (max-width:420px){

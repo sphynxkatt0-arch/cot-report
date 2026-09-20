@@ -244,6 +244,48 @@ test('Charts & data restores holdings history, controls and analytical component
   expect(chart.title).toMatch(/Nasdaq-100.*positioning/i);
 });
 
+test('Charts & data uses the same governed edge as Opportunity Scanner and does not mount a second backtest', async ({ page }) => {
+  for (const report of ['tff', 'legacy']) {
+    await open(page, `?market=sp500&horizon=1w&view=today&report=${report}`);
+
+    const scannerText = await page.locator('.decision-scanner [data-decision-market="sp500"]').innerText();
+    const expected = await page.evaluate(() => {
+      const model = window.__COT_CURRENT_EDGE_MODEL__;
+      const directional = new Set(['PRIMARY_DIRECTIONAL', 'SECONDARY_DIRECTIONAL']);
+      const top = model.rankedEdges(model.state.horizon, model.state.market)
+        .find(item => directional.has(item?.row?.actor_role)) || null;
+      return top ? {
+        actor: top.row.actor_label,
+        edge: Number(top.metric.excess_vs_baseline_pp),
+        grade: model.evidenceGrade(model.evidenceStatus(top.row, top.metric)).grade
+      } : null;
+    });
+
+    await page.locator('[data-decision-view="data"]').click();
+    await expect(page.locator('#dataWorkspace')).toBeVisible();
+    const dataEdge = page.locator('.decision-data-edge');
+    await expect(dataEdge).toBeVisible();
+    await expect(dataEdge).toContainText('SAME SOURCE AS OPPORTUNITY SCANNER + RESEARCH');
+
+    if (expected) {
+      await expect(dataEdge).toContainText(expected.actor);
+      await expect(dataEdge).toContainText(`Evidence ${expected.grade}`);
+      const normalized = (await dataEdge.innerText()).replaceAll('−', '-').replaceAll(',', '.');
+      const scannerNormalized = scannerText.replaceAll('−', '-').replaceAll(',', '.');
+      const edge = Math.abs(expected.edge).toFixed(2);
+      expect(normalized).toContain(edge);
+      expect(scannerNormalized).toContain(edge);
+    } else {
+      await expect(dataEdge).toContainText('NO ACTIVE DIRECTIONAL EDGE');
+      expect(scannerText).toContain('No edge');
+    }
+
+    await expect(page.locator('#wcForecastPanel')).toHaveCount(0);
+    await expect(page.locator('#wcDecisionLayer')).toHaveCount(0);
+    await expect(page.getByText('Backtest & forward expectancy', { exact: true })).toHaveCount(0);
+  }
+});
+
 test('holdings chart can plot historical weekly net changes with short date ranges', async ({ page }) => {
   await open(page, '?market=nq&view=data');
   const metric = page.locator('#desktopControls [data-control="metric"]');

@@ -40,6 +40,9 @@
 .decision-scanner-list span,
 .decision-scanner-list strong{font-size:12px}
 .decision-scanner-list small{font-size:12px}
+.decision-data-edge span{font-size:11px;line-height:1.35}
+.decision-data-edge strong{font-size:14px;line-height:1.35}
+.decision-data-edge small{font-size:12px;line-height:1.45}
 .decision-why summary,
 .decision-context>summary{min-height:34px;display:flex;align-items:center;font-size:12px;line-height:1.4}
 .decision-why-grid span{font-size:12px;line-height:1.35}

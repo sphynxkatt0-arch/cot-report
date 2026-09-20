@@ -128,6 +128,11 @@
   function directionalRanked(summary = M().summary()) { return (summary.ranked || []).filter(item => DIRECTIONAL_ROLES.has(item?.row?.actor_role)); }
   function contextRanked(summary = M().summary()) { return (summary.ranked || []).filter(item => !DIRECTIONAL_ROLES.has(item?.row?.actor_role)); }
   function strongestDirectional(summary = M().summary()) { return directionalRanked(summary)[0] || null; }
+  function governedMarketEdge(market = M().state.market) {
+    const top = M().rankedEdges(M().state.horizon, market).filter(item => DIRECTIONAL_ROLES.has(item?.row?.actor_role))[0] || null;
+    const dir = top ? M().edgeDirection(top.metric) : { tone: "neutral", label: "—" };
+    return { top, dir, grade: gradeFor(top) };
+  }
   function gradeFor(item) { return item ? M().evidenceGrade(M().evidenceStatus(item.row, item.metric)) : null; }
   function gradeText(grade) {
     if (!grade) return "No evidence";
@@ -299,10 +304,8 @@
 
   function opportunityScanner() {
     const rows = M().MARKET_ORDER.map(market => {
-      const ranked = M().rankedEdges(M().state.horizon, market).filter(item => DIRECTIONAL_ROLES.has(item?.row?.actor_role));
-      const top = ranked[0] || null;
-      const dir = top ? M().edgeDirection(top.metric) : { tone: "neutral", label: "—" };
-      return { market, top, dir, grade: gradeFor(top) };
+      const { top, dir, grade } = governedMarketEdge(market);
+      return { market, top, dir, grade };
     }).sort((a, b) => Boolean(b.top) - Boolean(a.top) || Math.abs(finite(b.top?.metric?.excess_vs_baseline_pp) || 0) - Math.abs(finite(a.top?.metric?.excess_vs_baseline_pp) || 0));
     return `<div class="decision-block-head"><div><span class="decision-kicker">OPPORTUNITY SCANNER</span><h3>Compare market edges</h3><p class="decision-scanner-note">${horizonLabel(M().state.horizon)} historical uplift versus normal return. Select a market to inspect its evidence.</p></div></div><div class="decision-scanner-list">${rows.map(item => `<button type="button" data-decision-market="${item.market}" aria-pressed="${item.market === M().state.market}" class="${item.market === M().state.market ? "active" : ""}"><span>${esc(M().MARKETS[item.market])}</span><strong class="${item.dir.tone}">${item.top ? signed(item.top.metric.excess_vs_baseline_pp, 2, " pp") : "No edge"}</strong><small>${item.grade ? item.grade.grade : "—"}</small></button>`).join("")}</div><p class="decision-scanner-note decision-scanner-legend">pp = percentage points · Letter = evidence grade.<br>Ranked by absolute uplift, not confidence.</p>`;
   }
@@ -402,9 +405,15 @@
   function dataView() {
     const dates = M().reportDates();
     const selected = window.__COT_REPORT_TAXONOMY__?.datasetForMarket?.(M().state.market) || "selected COT report";
+    const edge = governedMarketEdge();
+    const edgeText = edge.top ? `${edge.dir.label} · ${signed(edge.top.metric.excess_vs_baseline_pp, 2, " pp")}` : "NO ACTIVE DIRECTIONAL EDGE";
+    const edgeDetail = edge.top
+      ? `${edge.top.row.actor_label} · ${percentile(edge.top.row.current_change_percentile ?? edge.top.row.change_magnitude_percentile)} ${edge.top.row.direction} · trigger P${edge.top.row.selected_threshold} · Evidence ${edge.grade?.grade || "D"}`
+      : "No governed actor threshold is active for this market, report type and horizon.";
     return `<section class="decision-view-panel decision-data-intro" data-decision-surface="data">
       <div class="decision-block-head"><div><span class="decision-kicker">MARKET EXPLORER</span><h2>Holdings history, weekly change and macro context</h2><p>The full analytical workbench is restored below. Switch <b>Position metric</b> to <b>Weekly Δ net contracts</b> to see how each trader group changed its holdings through time, or use the level metrics for absolute positioning.</p></div><span class="decision-evidence-badge">${esc(String(selected).toUpperCase())}</span></div>
       <div class="decision-data-meta"><div><span>Market</span><strong>${esc(M().MARKETS[M().state.market])}</strong></div><div><span>Position report</span><strong>${esc(dates.report || "n/a")}</strong></div><div><span>Released</span><strong>${esc(dates.release || "n/a")}</strong></div><div><span>Chart tools</span><strong>Pan · Zoom · Fit · Timeline</strong></div></div>
+      <div class="decision-data-edge"><div><span>GOVERNED EDGE · SAME SOURCE AS OPPORTUNITY SCANNER + RESEARCH</span><strong class="${edge.dir.tone}">${esc(edgeText)}</strong><small>${esc(edgeDetail)}</small></div><div><span>Selected horizon</span><strong>${horizonLabel(M().state.horizon)}</strong><small>Charts below show raw positioning history; they do not run a separate backtest.</small></div></div>
     </section>`;
   }
 

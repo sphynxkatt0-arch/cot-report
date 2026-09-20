@@ -5,8 +5,6 @@
     sp500: "S&P 500", nq: "Nasdaq-100", vix: "VIX Futures",
     rty: "Russell 2000", dow: "Dow Jones", gold: "Gold", silver: "Silver"
   };
-  const DATASET_LABELS = { tff: "TFF Detailed", legacy: "Legacy", disaggregated: "Disaggregated" };
-  const HORIZON_ORDER = ["1w", "2w", "4w", "13w", "26w"];
   const METAL_ROLES = [
     ["Producer / Merchant / Processor / User", "Commercial physical hedgers; producers, processors and users of the commodity."],
     ["Swap Dealers", "Swap/intermediation books serving clients and carrying OTC-linked risk; not the same cohort as TFF Dealer/Intermediary."],
@@ -15,7 +13,6 @@
     ["Non-reportable", "Smaller traders below CFTC reporting thresholds; modeled inversely/contrarian in the dashboard score."]
   ];
 
-  let analytics = null;
   let autoFitY = true;
   let fittingAxes = false;
 
@@ -38,24 +35,6 @@
 
   function activeMarket() {
     return $("#instrumentTabs [data-market].active")?.dataset.market || "sp500";
-  }
-
-  function activeDataset() {
-    return $("#desktopControls [data-control='dataset']")?.value
-      || $("#mobileControlBody [data-control='dataset']")?.value
-      || (activeMarket() === "gold" || activeMarket() === "silver" ? "disaggregated" : "tff");
-  }
-
-  function signedPct(value, digits = 2) {
-    const n = finite(value);
-    if (n === null) return "n/a";
-    return `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(digits)}%`;
-  }
-
-  function tone(value) {
-    const n = finite(value);
-    if (n === null || Math.abs(n) < 1e-9) return "wc-neutral";
-    return n > 0 ? "wc-positive" : "wc-negative";
   }
 
   function ensureTaxonomyBanner() {
@@ -88,101 +67,20 @@
       </div>`;
   }
 
-  function ensureForecastShell() {
-    if ($("#wcForecastPanel")) return;
+  function removeLegacyForecastShell() {
+    // Charts & data used to load worldclass/backtest.json and render a second,
+    // score-nearest-neighbour backtest beside the governed threshold/regime
+    // evidence used by Today + Research. The two methodologies can legitimately
+    // produce different numbers, but presenting both as "the backtest" made the
+    // dashboard look internally inconsistent. Charts & data is now strictly the
+    // raw analytical workbench; governed historical evidence lives in the shared
+    // decision shell / Research view.
+    $("#wcForecastPanel")?.remove();
+    $$(".wc-forecast-heading").forEach(node => node.remove());
     const macroHeading = $$(".section-heading").find(section => section.querySelector("h2")?.textContent.trim() === "Macro liquidity");
-    if (!macroHeading) return;
-    const heading = document.createElement("section");
-    heading.className = "section-heading wc-forecast-heading";
-    heading.innerHTML = `<div><div class="section-number">02</div><div><h2>Backtest & forward expectancy</h2><p>Lookahead-safe historical analogs for the currently selected COT score.</p></div></div>`;
-    const panel = document.createElement("section");
-    panel.id = "wcForecastPanel";
-    panel.className = "panel wc-forecast-panel";
-    panel.innerHTML = `<div class="wc-forecast-note">Loading walk-forward backtest…</div>`;
-    macroHeading.parentNode.insertBefore(heading, macroHeading);
-    macroHeading.parentNode.insertBefore(panel, macroHeading);
-    // The original numbering called Macro "02". Shift subsequent section labels visually.
-    macroHeading.querySelector(".section-number").textContent = "03";
-    const later = $$(".section-heading").find(section => section.querySelector("h2")?.textContent.trim() === "Data integrity & methodology");
-    if (later) later.querySelector(".section-number").textContent = "04";
-  }
-
-  function activeBacktest() {
-    const market = activeMarket();
-    const dataset = activeDataset();
-    const marketPayload = analytics?.markets?.[market];
-    if (!marketPayload?.datasets) return null;
-    return marketPayload.datasets[dataset] || marketPayload.datasets[Object.keys(marketPayload.datasets)[0]] || null;
-  }
-
-  function renderForecast() {
-    const panel = $("#wcForecastPanel");
-    if (!panel) return;
-    if (!analytics) {
-      panel.innerHTML = `<div class="wc-forecast-note">Loading walk-forward backtest…</div>`;
-      return;
-    }
-    const payload = activeBacktest();
-    if (!payload) {
-      panel.innerHTML = `<div class="wc-forecast-note"><strong>No backtest is available for this report selection yet.</strong><br>The dashboard will keep the weekly position changes visible, but it will not manufacture a forward forecast without a validated price/COT history.</div>`;
-      return;
-    }
-
-    const horizons = payload.horizons || {};
-    const primary = horizons["4w"] || horizons["13w"] || horizons[Object.keys(horizons)[0]] || {};
-    const current = payload.current || {};
-    const primaryLabel = horizons["4w"] ? "4W" : horizons["13w"] ? "13W" : "Forward";
-    const expected = finite(primary.expected_return_pct);
-    const hitRate = finite(primary.hit_rate_pct);
-    const stats = [
-      ["Current COT score", finite(current.score)?.toFixed(0) ?? "n/a", `4W score momentum ${signedPct(current.score_delta_4w, 1)}`],
-      [`${primaryLabel} analog expectancy`, signedPct(expected), `vs unconditional ${signedPct(primary.unconditional_return_pct)}`],
-      ["Positive outcome rate", hitRate === null ? "n/a" : `${hitRate.toFixed(0)}%`, `${primary.observations || 0} nearest historical analogs`],
-      ["Release anchor", current.release_target_date || "n/a", "First close on/after Friday release target"]
-    ];
-
-    const rows = HORIZON_ORDER.filter(key => horizons[key]).map(key => {
-      const row = horizons[key];
-      return `<tr>
-        <td><strong>${key.toUpperCase()}</strong></td>
-        <td class="${tone(row.expected_return_pct)}"><strong>${signedPct(row.expected_return_pct)}</strong></td>
-        <td class="${tone(row.median_return_pct)}">${signedPct(row.median_return_pct)}</td>
-        <td>${finite(row.hit_rate_pct) === null ? "n/a" : `${finite(row.hit_rate_pct).toFixed(0)}%`}</td>
-        <td>${signedPct(row.q25_return_pct)} → ${signedPct(row.q75_return_pct)}</td>
-        <td class="wc-negative">${signedPct(row.worst_drawdown_pct)}</td>
-        <td class="${tone(row.edge_vs_unconditional_pct)}">${signedPct(row.edge_vs_unconditional_pct)}</td>
-        <td>${row.observations ?? 0}</td>
-        <td><span class="wc-confidence">${escapeHtml(row.confidence || "n/a")}</span></td>
-      </tr>`;
-    }).join("");
-
-    const analogs = (payload.closest_analogs || []).slice(0, 6).map(row => `<div class="wc-analog-row">
-      <span>${escapeHtml(row.report_date)}</span>
-      <span>Score ${finite(row.score)?.toFixed(0) ?? "n/a"}</span>
-      <span class="${tone(row.returns?.["4w"])}">4W ${signedPct(row.returns?.["4w"])}</span>
-      <span class="${tone(row.returns?.["13w"])}">13W ${signedPct(row.returns?.["13w"])}</span>
-    </div>`).join("");
-
-    panel.innerHTML = `
-      <div class="wc-forecast-top">
-        ${stats.map(([label, value, sub]) => `<div class="wc-forecast-stat"><div class="wc-forecast-label">${escapeHtml(label)}</div><div class="wc-forecast-value">${escapeHtml(value)}</div><div class="wc-forecast-sub">${escapeHtml(sub)}</div></div>`).join("")}
-      </div>
-      <div class="wc-forecast-grid">
-        <div class="wc-forecast-table-wrap">
-          <table class="wc-forecast-table">
-            <thead><tr><th>Horizon</th><th>Expected</th><th>Median</th><th>Hit rate</th><th>25–75% range</th><th>Worst DD</th><th>Edge vs base</th><th>N</th><th>Confidence</th></tr></thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>
-        <aside class="wc-analogs">
-          <h4>Closest historical analogs</h4>
-          <p>Matched on the current 0–100 COT score plus 4-week score momentum. Historical scores use only information available at that date.</p>
-          ${analogs || `<div class="wc-forecast-note">No completed analogs yet.</div>`}
-        </aside>
-      </div>
-      <div class="wc-forecast-note">
-        <strong>${escapeHtml(MARKET_LABELS[activeMarket()] || activeMarket())} · ${escapeHtml(DATASET_LABELS[activeDataset()] || activeDataset())}</strong> — statistical expectancy, not a deterministic target. COT signals are anchored after the Friday release to avoid using Tuesday positions before they were public. Macro liquidity remains a separate confirmation layer rather than being silently mixed into this backtest.
-      </div>`;
+    if (macroHeading) macroHeading.querySelector(".section-number").textContent = "02";
+    const methodologyHeading = $$(".section-heading").find(section => section.querySelector("h2")?.textContent.trim() === "Data integrity & methodology");
+    if (methodologyHeading) methodologyHeading.querySelector(".section-number").textContent = "03";
   }
 
   function ensureChartToolbar() {
@@ -296,22 +194,9 @@
 
   function sync() {
     ensureTaxonomyBanner();
-    ensureForecastShell();
+    removeLegacyForecastShell();
     ensureChartToolbar();
-    renderForecast();
     attachChartBehavior();
-  }
-
-  async function loadAnalytics() {
-    try {
-      const response = await fetch(`worldclass/backtest.json?v=${Date.now()}`, { cache: "no-store" });
-      if (!response.ok) throw new Error(`backtest.json HTTP ${response.status}`);
-      analytics = await response.json();
-    } catch (error) {
-      console.warn("Forward expectancy payload unavailable", error);
-      analytics = { markets: {} };
-    }
-    sync();
   }
 
   document.addEventListener("click", event => {
@@ -335,5 +220,5 @@
     if (attempts >= 20 || ($("#headlineCards")?.children.length && chartElement())) window.clearInterval(initialTimer);
   }, 300);
 
-  loadAnalytics();
+  sync();
 })();
