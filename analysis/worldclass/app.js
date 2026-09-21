@@ -67,6 +67,13 @@
   const urlMarket = new URL(window.location.href).searchParams.get("market");
   const initialMarket = MARKET_META[urlMarket] ? urlMarket : "sp500";
 
+  const CHART_PRESETS = {
+    cot_price: { label: "COT + Price", metric: "net_oi_pct", includePrice: true, factors: [] },
+    weekly_flow: { label: "Weekly Flow", metric: "net_change", includePrice: true, factors: [] },
+    position_only: { label: "Positions Only", metric: "net_oi_pct", includePrice: false, factors: [] },
+    macro_context: { label: "Macro Context", metric: "net_oi_pct", includePrice: true, factors: ["macro_score"] }
+  };
+
   const state = {
     market: initialMarket,
     dataset: "tff",
@@ -539,6 +546,42 @@
     state.dataset = dataset;
     state.activeCategories = new Set(categoryKeys());
     renderAll();
+  }
+
+  function setChartRange(range) {
+    if (!["3m", "6m", "1y", "3y", "5y", "all"].includes(range)) return false;
+    state.range = range;
+    renderRangeButtons();
+    renderMainChart();
+    return true;
+  }
+
+  function applyChartPreset(name) {
+    const preset = CHART_PRESETS[name];
+    if (!preset) return false;
+    state.metric = preset.metric;
+    state.activeCategories = new Set(categoryKeys());
+    state.priceOverlays = new Set(preset.includePrice && priceRecords(state.market).length ? [state.market] : []);
+    state.factorOverlays = new Set(preset.factors.filter(key => {
+      if (key === "macro_score") return macroScoreSeries().length > 0;
+      return genericSeriesForFactor(key).length > 0;
+    }));
+    renderControls();
+    renderMainChart();
+    document.dispatchEvent(new CustomEvent("cot:chart-preset", { detail: { preset: name } }));
+    return true;
+  }
+
+  function chartSnapshot() {
+    return {
+      market: state.market,
+      dataset: state.dataset,
+      metric: state.metric,
+      range: state.range,
+      categories: [...state.activeCategories],
+      prices: [...state.priceOverlays],
+      factors: [...state.factorOverlays]
+    };
   }
 
   function renderInstrumentTabs() {
@@ -1151,9 +1194,7 @@
 
       const rangeButton = event.target.closest("[data-range]");
       if (rangeButton) {
-        state.range = rangeButton.dataset.range;
-        renderRangeButtons();
-        renderMainChart();
+        setChartRange(rangeButton.dataset.range);
         return;
       }
     });
@@ -1201,6 +1242,13 @@
       $("#loadingOverlay").innerHTML = `<div class="loading-card"><strong style="color:#ff6675">Dashboard data failed to load</strong><span>${escapeHtml(error.message || error)}</span></div>`;
     }
   }
+
+  window.__COT_WORLDCLASS_CHART__ = {
+    presets: Object.fromEntries(Object.entries(CHART_PRESETS).map(([key, value]) => [key, value.label])),
+    applyPreset: applyChartPreset,
+    setRange: setChartRange,
+    snapshot: chartSnapshot
+  };
 
   init();
 })();
