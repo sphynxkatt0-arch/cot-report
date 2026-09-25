@@ -1,0 +1,22 @@
+{
+  "date_range": [
+    "2023-06-07",
+    "2026-08-13"
+  ],
+  "daily_rows": 1164,
+  "weekly_rows": 167,
+  "production_liquidity_score_inferred_weights": {
+    "score_net_liquidity": 0.26,
+    "score_bank_reserves": 0.1,
+    "score_treasury_supply": 0.1,
+    "score_repo_spread": 0.08,
+    "score_slr_load": 0.04,
+    "score_real_yield": 0.14,
+    "score_credit": 0.14,
+    "score_dollar": 0.08,
+    "score_vix": 0.06
+  },
+  "production_score_reconstruction_abs_error_median": 7.105427357601002e-15,
+  "production_score_reconstruction_abs_error_max": 1.1217758081729414,
+  "note": "score_market_trend is not included in the inferred production aggregate weights; one row differs due to an override/special-case."
+}

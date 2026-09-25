@@ -1,0 +1,28 @@
+{
+  "generated_at": "2026-08-14",
+  "source_dataset": "model_output/macro_history.csv",
+  "source_artifact_id": 9202356162,
+  "source_gh_pages_sha": "d455e938554947fb15c50aa17e25c614d973e3c0",
+  "governance": {
+    "aggregate_liquidity_score_directional_weight": 0,
+    "promotion_requirement": "point-in-time vintage/release-safe replication"
+  },
+  "files": {
+    "aggregate_score_summary.csv": {
+      "bytes": 2129,
+      "sha256": "4295ee9286bd5bdfb768a9f22e191f793c14f65a03c7113ae168f5cc8acdfdc4"
+    },
+    "net_liquidity_incremental_controls.csv": {
+      "bytes": 1049,
+      "sha256": "21f58511b8eb78e307eb536b3194c2005c8c4ea667d734bd978a9178c3402b65"
+    },
+    "top_factor_findings.csv": {
+      "bytes": 3223,
+      "sha256": "4a59193b6229f36fd48b99a30bbee6edb95eeace975ac7b7e5e4161190b7908a"
+    },
+    "methodology_and_formula.json": {
+      "bytes": 713,
+      "sha256": "b934216184762900813d9572af6365597c703591d04b8f94f8d83b56020266d9"
+    }
+  }
+}

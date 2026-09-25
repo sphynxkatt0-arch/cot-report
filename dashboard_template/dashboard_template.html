@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>COT Macro Monitor</title>
+  <script>
+    (function () {
+      try {
+        var stored = window.localStorage.getItem("cot-dashboard-theme");
+        document.documentElement.setAttribute("data-theme", stored === "light" ? "light" : "dark");
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    }());
+  </script>
+  <script src="dashboard_template/plotly-2.35.2.min.js"></script>
+  <script>
+    if (!window.Plotly) {
+      document.write('<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"><\/script>');
+    }
+  </script>
+  <style>
+{{DASHBOARD_CSS}}
+  </style>
+</head>
+<body>
+  <header class="dashboard-header">
+    <div class="header-main">
+      <div>
+        <div class="eyebrow">CFTC positioning + macro liquidity</div>
+        <h1>COT Macro Monitor</h1>
+        <div class="sub">COT positioning, Fed net liquidity, rates, credit, dollar, volatility, score buckets, backtest evidence, and alert rules in one daily monitor.</div>
+      </div>
+      <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch dashboard theme">Dark</button>
+    </div>
+    <div id="freshnessLine" class="freshness-line"></div>
+    <div id="summaryStrip" class="summary-strip" aria-label="Current dashboard summary"></div>
+  </header>
+  <div id="refreshStatusBanner" class="refresh-status-banner" hidden></div>
+
+  <div id="floatingControls" class="floating-controls">
+    <aside id="controlPanel" class="control-panel">
+      <div id="controlPanelHandle" class="control-panel-head">
+        <div>
+          <div class="control-title">Chart controls</div>
+          <div class="control-subtitle">Market, overlays, signals, and display</div>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <label class="section-label" for="dataset">COT report</label>
+        <select id="dataset">
+          <option value="tff">TFF Detailed</option>
+          <option value="legacy">Legacy</option>
+        </select>
+      </div>
+
+      <div class="control-section">
+        <label class="section-label" for="market">COT market</label>
+        <select id="market">
+          <option value="sp500">S&P 500</option>
+          <option value="nq">NASDAQ-100</option>
+          <option value="vix">VIX Futures</option>
+          <option value="rty">Russell 2000</option>
+          <option value="dow">Dow Jones</option>
+          <option value="gold">Gold</option>
+        </select>
+      </div>
+
+      <div class="control-section">
+        <label class="section-label" for="metric">Position metric</label>
+        <select id="metric">
+          <option value="net_oi_pct">Net / open interest (%)</option>
+          <option value="net">Net contracts</option>
+          <option value="long">Long contracts</option>
+          <option value="short">Short contracts</option>
+          <option value="short_oi_pct">Short / open interest (%)</option>
+        </select>
+      </div>
+
+      <div class="control-section">
+        <label class="section-label">Categories</label>
+        <div id="categoryList" class="category-list"></div>
+        <div class="button-row">
+          <button id="selectAll" type="button">All</button>
+          <button id="clearCategories" type="button">None</button>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <label class="section-label">Price overlays</label>
+        <div class="price-grid">
+          <label class="price-toggle"><input id="showSp500" type="checkbox" checked><span class="swatch" style="background:var(--price)"></span>S&P 500</label>
+          <label class="price-toggle"><input id="showNq" type="checkbox" checked><span class="swatch" style="background:var(--text)"></span>NQ</label>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <label class="section-label">Factor overlays</label>
+        <div id="factorOverlayList" class="category-list"></div>
+      </div>
+
+      <div class="control-section">
+        <label class="section-label">View presets</label>
+        <div class="preset-grid" role="group" aria-label="Chart overlay presets">
+          <button type="button" data-view-preset="cot_price">COT + Price</button>
+          <button type="button" data-view-preset="macro">Macro Liquidity</button>
+          <button type="button" data-view-preset="stress">Stress</button>
+          <button type="button" data-view-preset="sentiment">Sentiment</button>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <label class="section-label">Latest factors</label>
+        <div id="factorSidebar" class="stats"></div>
+      </div>
+
+      <div class="control-section">
+        <label class="section-label">Threshold scanner</label>
+        <div class="stack">
+          <select id="thresholdFactor"></select>
+          <div class="compact-grid">
+            <select id="thresholdDirection">
+              <option value="<=">At or below</option>
+              <option value=">=">At or above</option>
+            </select>
+            <input id="thresholdValue" type="number" step="1" value="5">
+          </div>
+          <div class="compact-grid">
+            <select id="thresholdHorizon">
+              <option value="5">1w</option>
+              <option value="20" selected>4w</option>
+              <option value="65">13w</option>
+              <option value="130">26w</option>
+            </select>
+            <label class="price-toggle"><input id="showThresholdMarks" type="checkbox" checked><span class="swatch" style="background:#ef4444"></span>Marks</label>
+          </div>
+          <div id="thresholdStats" class="threshold-stats"></div>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <label class="section-label" for="priceScale">Price scale</label>
+        <select id="priceScale">
+          <option value="raw" selected>Raw price</option>
+          <option value="indexed">Indexed, first visible date = 100</option>
+        </select>
+      </div>
+
+      <div class="control-section">
+        <label class="section-label">Axis zoom</label>
+        <div class="stack">
+          <div>
+            <div class="range-readout"><span>Price axis</span><span id="priceAxisZoomValue"></span></div>
+            <input id="priceAxisZoom" type="range" min="0.5" max="5" step="0.1" value="1">
+          </div>
+          <div>
+            <div class="range-readout"><span>Factor axis</span><span id="factorAxisZoomValue"></span></div>
+            <input id="factorAxisZoom" type="range" min="0.5" max="5" step="0.1" value="1">
+          </div>
+          <button id="resetAxisZoom" type="button">Reset axis zoom</button>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <label class="section-label" for="dragMode">Mouse drag</label>
+        <select id="dragMode">
+          <option value="pan">Pan left / right</option>
+          <option value="zoom">Box zoom</option>
+        </select>
+        <label class="price-toggle" style="margin-top:8px"><input id="showRangeSlider" type="checkbox" checked><span class="swatch" style="background:#98a2b3"></span>Timeline slider</label>
+      </div>
+
+      <div class="control-section">
+        <label class="section-label" for="lineSelect">Line customization</label>
+        <div class="stack">
+          <select id="lineSelect"></select>
+          <div class="compact-grid">
+            <div>
+              <label class="section-label" for="lineColor">Color</label>
+              <input id="lineColor" type="color">
+            </div>
+            <div>
+              <label class="section-label" for="lineDash">Style</label>
+              <select id="lineDash">
+                <option value="solid">Solid</option>
+                <option value="dash">Dash</option>
+                <option value="dot">Dot</option>
+                <option value="dashdot">Dash-dot</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <div class="range-readout"><span>Width</span><span id="lineWidthValue"></span></div>
+            <input id="lineWidth" type="range" min="1" max="6" step="0.25">
+          </div>
+          <div>
+            <div class="range-readout"><span>Opacity</span><span id="lineOpacityValue"></span></div>
+            <input id="lineOpacity" type="range" min="0.15" max="1" step="0.05">
+          </div>
+          <button id="resetLine" type="button">Reset line</button>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <label class="section-label">Range</label>
+        <button id="reset" type="button">Show full range</button>
+      </div>
+
+      <div class="control-section">
+        <label class="section-label">Latest selected row</label>
+        <div id="stats" class="stats"></div>
+      </div>
+    </aside>
+    <button id="toggleSidebar" class="sidebar-tab" type="button" aria-label="Open chart controls" aria-expanded="false" aria-controls="controlPanel" title="Chart controls"><span class="sidebar-tab-arrow" aria-hidden="true">&#9881;</span></button>
+  </div>
+
+  <div id="appShell" class="app sidebar-collapsed">
+    <main>
+      <div class="dashboard-section-title"><span>1. Weekly Desk</span><small>Local COT setup scanner, selected-market brief, and backtested edge</small></div>
+      <section class="chart-card">
+        <div class="card-head">
+          <div class="card-title">Weekly Desk Scanner</div>
+          <div class="card-actions">
+            <div class="card-meta">Ranks local SP/NQ/VIX setups from positioning, price response, peers, and predictive edge</div>
+            <button class="card-toggle" type="button" data-card-toggle aria-label="Collapse Weekly Desk Scanner" aria-expanded="true"><span class="toggle-icon" aria-hidden="true"></span></button>
+          </div>
+        </div>
+        <div id="weeklyDeskPanel" class="weekly-desk-panel"></div>
+      </section>
+
+      <div class="dashboard-section-title"><span>2. Market Workbench</span><small>COT holdings, price, factors, and liquidity score on one timeline</small></div>
+      <section class="chart-card">
+        <div class="card-head">
+          <div id="mainTitle" class="card-title">COT Holdings + Liquidity Score</div>
+          <div class="card-actions">
+            <div class="card-meta">Drag pans by default; macro score is overlaid on the factor axis</div>
+            <button class="card-toggle" type="button" data-card-toggle aria-label="Collapse COT Holdings + Liquidity Score" aria-expanded="true"><span class="toggle-icon" aria-hidden="true"></span></button>
+          </div>
+        </div>
+        <div id="mainChart" class="chart"></div>
+      </section>
+
+      <div class="dashboard-section-title"><span>3. COT Positioning and Weekly Changes</span><small>Current report, positioning extremes, changes, and signal regime</small></div>
+      <section class="chart-card">
+        <div class="card-head">
+          <div class="card-title">Current Analytic Snapshot</div>
+          <div class="card-actions">
+            <div class="card-meta">Current regime, positioning extremes, factor state, and historical edge</div>
+            <button class="card-toggle" type="button" data-card-toggle aria-label="Collapse Current Analytic Snapshot" aria-expanded="true"><span class="toggle-icon" aria-hidden="true"></span></button>
+          </div>
+        </div>
+        <div id="analyticSnapshot" class="analytic-snapshot"></div>
+      </section>
+
+      <section class="chart-card">
+        <div class="card-head">
+          <div class="card-title">What Changed Since Last Update</div>
+          <div class="card-actions">
+            <div class="card-meta">Holdings and VIX deltas versus the prior available observation</div>
+            <button class="card-toggle" type="button" data-card-toggle aria-label="Collapse What Changed Since Last Update" aria-expanded="true"><span class="toggle-icon" aria-hidden="true"></span></button>
+          </div>
+        </div>
+        <div id="updateDeltaPanel" class="update-delta-panel"></div>
+      </section>
+
+      <section class="chart-card">
+        <div class="card-head">
+          <div class="card-title">Cross-Market Player Bias</div>
+          <div class="card-actions">
+            <div class="card-meta">Same trader class across S&amp;P 500, NASDAQ-100, and VIX; futures-equivalent dollar notional</div>
+            <button class="card-toggle" type="button" data-card-toggle aria-label="Collapse Cross-Market Player Bias" aria-expanded="true"><span class="toggle-icon" aria-hidden="true"></span></button>
+          </div>
+        </div>
+        <div id="crossMarketPanel" class="cross-market-panel"></div>
+      </section>
+
+      <section class="chart-card">
+        <div class="card-head">
+          <div class="card-title">Latest Positioning and Historical Extremes</div>
+          <div class="card-actions">
+            <div class="card-meta">All categories, % of open interest</div>
+            <button class="card-toggle" type="button" data-card-toggle aria-label="Collapse Latest Positioning and Historical Extremes" aria-expanded="true"><span class="toggle-icon" aria-hidden="true"></span></button>
+          </div>
+        </div>
+        <div id="netTable" class="net-table"></div>
+      </section>
+
+      <section class="chart-card">
+        <div class="card-head">
+          <div class="card-title">Signal Regime Panel</div>
+          <div class="card-actions">
+            <div class="card-meta">COT + factor percentile-score engine (lagged context)</div>
+            <button class="card-toggle" type="button" data-card-toggle aria-label="Collapse Signal Regime Panel" aria-expanded="true"><span class="toggle-icon" aria-hidden="true"></span></button>
+          </div>
+        </div>
+        <div id="regimePanel" class="regime-panel"></div>
+      </section>
+
+      <div class="dashboard-section-title"><span>4. Unified Liquidity Model</span><small>One reconciled score, its component blocks, and detailed liquidity evidence</small></div>
+      <section class="chart-card macro-scorecard-card">
+        <div id="macroScorecardPanel" class="macro-scorecard-panel"></div>
+      </section>
+
+      <section class="chart-card">
+        <div class="card-head">
+          <div class="card-title">Liquidity Plumbing Detail</div>
+          <div class="card-actions">
+            <div class="card-meta">Raw Fed liquidity and funding inputs; one subsystem of the full market regime</div>
+            <button class="card-toggle" type="button" data-card-toggle aria-label="Collapse Liquidity Plumbing Detail" aria-expanded="true"><span class="toggle-icon" aria-hidden="true"></span></button>
+          </div>
+        </div>
+        <div id="liquidityPanel" class="liquidity-panel"></div>
+      </section>
+
+      <section class="chart-card">
+        <div class="card-head">
+          <div class="card-title">Macro Regime Monitor</div>
+          <div class="card-actions">
+            <div class="card-meta">Seven-page macro monitor: regime, liquidity, repo/SLR, stress, positioning/TSP, backtest, and alerts</div>
+            <button class="card-toggle" type="button" data-card-toggle aria-label="Collapse Macro Regime Monitor" aria-expanded="true"><span class="toggle-icon" aria-hidden="true"></span></button>
+          </div>
+        </div>
+        <div id="macroMonitorPanel" class="macro-monitor-panel"></div>
+      </section>
+
+      <div class="dashboard-section-title"><span>5. Playbook and Evidence</span><small>Macro lens, backtests, source tables, and research detail</small></div>
+      <section class="chart-card">
+        <div class="card-head">
+          <div class="card-title">Herman Jin Macro Lens</div>
+          <div class="card-actions">
+            <div class="card-meta">Liquidity, positioning, pullback discipline, and invalidation framing</div>
+            <button class="card-toggle" type="button" data-card-toggle aria-label="Collapse Herman Jin Macro Lens" aria-expanded="true"><span class="toggle-icon" aria-hidden="true"></span></button>
+          </div>
+        </div>
+        <div id="macroLensPanel" class="macro-lens-panel"></div>
+      </section>
+
+      <section class="chart-card collapsed">
+        <div class="card-head">
+          <div class="card-title">Factor Predictivity</div>
+          <div class="card-actions">
+            <div class="card-meta">CNN sentiment and VIX factors, COT-aligned weekly returns</div>
+            <button class="card-toggle" type="button" data-card-toggle aria-label="Expand Factor Predictivity" aria-expanded="false"><span class="toggle-icon" aria-hidden="true"></span></button>
+          </div>
+        </div>
+        <div id="factorPanel" class="factor-panel"></div>
+      </section>
+
+      <section class="chart-card collapsed">
+        <div class="card-head">
+          <div class="card-title">Regime Backtest Evidence</div>
+          <div class="card-actions">
+            <div class="card-meta">COT-only walk-forward score, shifted to Friday release close</div>
+            <button class="card-toggle" type="button" data-card-toggle aria-label="Expand Regime Backtest Evidence" aria-expanded="false"><span class="toggle-icon" aria-hidden="true"></span></button>
+          </div>
+        </div>
+        <div id="regimeBacktestPanel" class="regime-backtest-panel"></div>
+      </section>
+
+      <section class="chart-card collapsed">
+        <div class="card-head">
+          <div class="card-title">Research Findings</div>
+          <div class="card-actions">
+            <div class="card-meta">TFF detailed, exact consolidated rows</div>
+            <button class="card-toggle" type="button" data-card-toggle aria-label="Expand Research Findings" aria-expanded="false"><span class="toggle-icon" aria-hidden="true"></span></button>
+          </div>
+        </div>
+        <div id="researchPanel" class="research-panel"></div>
+      </section>
+
+      <div class="note">Raw price uses separate right-side axes for S&P 500 and NQ when both are enabled, so each line keeps readable price ticks after date zoom. The right-side axes are locked to prevent accidental axis panning; use the Axis zoom sliders to visually rescale price or factor lines.</div>
+    </main>
+  </div>
+
+  <nav id="floatingToc" class="floating-toc" aria-label="Dashboard table of contents">
+    <button id="floatingTocToggle" class="floating-toc-tab" type="button" aria-label="Open dashboard contents" aria-expanded="false" aria-controls="floatingTocPanel" title="Dashboard contents">
+      <span class="floating-toc-icon" aria-hidden="true">&#9778;</span>
+    </button>
+    <div id="floatingTocPanel" class="floating-toc-panel">
+      <div class="floating-toc-title">Dashboard contents</div>
+      <div id="floatingTocLinks" class="floating-toc-links"></div>
+    </div>
+  </nav>
+
+  <script>
+{{DASHBOARD_JS}}
+  </script>
+</body>
+</html>
+

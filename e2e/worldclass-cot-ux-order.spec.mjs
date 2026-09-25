@@ -1,0 +1,485 @@
+import { test, expect } from '@playwright/test';
+
+async function open(page, query = '?market=nq&view=today') {
+  await page.goto(`/worldclass_dashboard.html${query}`);
+  await page.waitForFunction(() => document.documentElement.classList.contains('cot-worldclass-ux-ready'));
+  await expect(page.locator('#currentEdgeCommand')).toBeVisible();
+  await expect(page.locator('.instrument-bar')).toBeVisible();
+}
+
+test('Market is the default decision surface and includes the analytical workbench', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await open(page);
+
+  await expect(page.locator('.hero')).toBeHidden();
+  await expect(page.locator('[data-decision-view]')).toHaveCount(3);
+  await expect(page.locator('[data-decision-view="today"]')).toHaveClass(/active/);
+  await expect(page.locator('.decision-title-row')).toBeVisible();
+  await expect(page.locator('[data-decision-surface="latest-cot-changes"]')).toBeVisible();
+  await expect(page.locator('[data-decision-surface="latest-cot-changes"]')).toContainText('LATEST COT POSITION CHANGES');
+  await expect(page.locator('[data-decision-surface="latest-cot-changes"]')).toContainText(/Positions as of/i);
+  await expect(page.locator('[data-decision-surface="latest-cot-changes"]')).toContainText(/released/i);
+  await expect(page.locator('[data-decision-surface="latest-cot-changes"]')).toContainText(/versus the prior COT report/i);
+  await expect(page.locator('.decision-cot-change-row').first()).toContainText(/Long|Short|Primary|Secondary|Context|Hedger|Intermediary|Aggregate/i);
+  await expect(page.locator('.decision-cot-score-bridge')).toContainText('Governed COT score');
+  await expect(page.locator('.decision-cot-score-bridge')).toContainText('4W score change');
+  await expect(page.locator('#dataWorkspace')).toBeVisible();
+  await expect(page.locator('.workbench-panel')).toBeVisible();
+
+  const currentRows = await page.evaluate(() => window.__COT_CURRENT_EDGE_MODEL__.currentRows('nq').length);
+  await expect(page.locator('.decision-cot-change-row')).toHaveCount(currentRows);
+
+  const bounds = await page.evaluate(() => {
+    const bottom = selector => document.querySelector(selector)?.getBoundingClientRect().bottom ?? Infinity;
+    return { selector: bottom('.instrument-bar'), read: bottom('.decision-title-row'), latest: bottom('.decision-latest-cot') };
+  });
+  expect(bounds.selector).toBeLessThan(1000);
+  expect(bounds.read).toBeLessThan(1000);
+  expect(bounds.latest).toBeLessThan(1000);
+
+  await expect(page.locator('#cotIntelligence')).toBeHidden();
+  await expect(page.locator('.workbench-panel')).toBeVisible();
+});
+
+test('latest COT rows expose canonical net, long and short weekly deltas for the selected market', async ({ page }) => {
+  await open(page, '?market=nq&view=today');
+
+  const expected = await page.evaluate(() => {
+    const model = window.__COT_CURRENT_EDGE_MODEL__;
+    const rows = [...model.currentRows('nq')].sort((a, b) => {
+      const role = (model.ROLE_ORDER?.[a.actor_role] ?? 9) - (model.ROLE_ORDER?.[b.actor_role] ?? 9);
+      if (role) return role;
+      return Math.abs(Number(b.delta_net_contracts) || 0) - Math.abs(Number(a.delta_net_contracts) || 0);
+    });
+    return rows.map(row => ({
+      actor: row.actor_label,
+      net: row.net_contracts,
+      deltaNet: row.delta_net_contracts,
+      deltaLong: row.delta_long_contracts,
+      deltaShort: row.delta_short_contracts,
+      positionPercentile: row.position_percentile,
+      weeklyPercentile: row.change_magnitude_percentile,
+      report: row.report_date_tuesday,
+      release: row.release_date_friday
+    }));
+  });
+
+  expect(expected.length).toBeGreaterThan(0);
+  for (const [index, row] of expected.entries()) {
+    const card = page.locator('.decision-cot-change-row').nth(index);
+    await expect(card).toContainText(row.actor);
+    const text = await card.innerText();
+    for (const value of [row.net, row.deltaNet, row.deltaLong, row.deltaShort]) {
+      if (value === null || value === undefined) continue;
+      expect(text.replaceAll(',', '').replaceAll('−', '-')).toContain(String(Math.round(Number(value))));
+    }
+  }
+
+  const releaseBlock = await page.locator('.decision-latest-cot .decision-block-head').innerText();
+  expect(releaseBlock).toContain(expected[0].report);
+  expect(releaseBlock).toContain(expected[0].release);
+});
+
+test('financial and metals markets keep their correct actor taxonomies', async ({ page }) => {
+  await open(page, '?market=nq&view=today');
+  const nq = await page.locator('.decision-latest-cot').innerText();
+  expect(nq).toMatch(/Asset Manager|Institutional/i);
+  expect(nq).toMatch(/Leveraged/i);
+
+  await page.locator('#instrumentTabs [data-market="gold"]').click();
+  await expect(page).toHaveURL(/market=gold/);
+  const gold = await page.locator('.decision-latest-cot').innerText();
+  expect(gold).toMatch(/Managed Money/i);
+  expect(gold).toMatch(/Producer|Merchant|Processor|User/i);
+  expect(gold).toMatch(/Swap/i);
+});
+
+test('score, model estimate and live record stay distinct while the active edge has one headline', async ({ page }) => {
+  await open(page, '?market=sp500&view=today');
+
+  await expect(page.locator('.decision-title-row')).toContainText(/Governed COT score/i);
+  const semantics = page.locator('.decision-semantics');
+  await expect(semantics).toContainText('CURRENT MODEL ESTIMATE');
+  await expect(semantics).toContainText('LIVE PROSPECTIVE');
+  await expect(semantics).not.toContainText('ACTIVE HISTORICAL EDGE');
+  await expect(page.locator('.decision-strongest')).toBeVisible();
+
+  const estimate = semantics.locator('.decision-semantic').filter({ hasText: 'CURRENT MODEL ESTIMATE' });
+  await expect(estimate).toContainText(/P\(positive\)|No .* regime estimate/i);
+  const live = semantics.locator('.decision-semantic').filter({ hasText: /LIVE PROSPECTIVE/ });
+  expect(await live.innerText()).toMatch(/FROZEN|NOT YET FROZEN/);
+});
+
+test('macro changes model family view but never rewrites the raw COT score or actor deltas', async ({ page }) => {
+  await open(page, '?market=sp500&horizon=1w&view=today&model=combined');
+
+  const scoreBefore = await page.locator('.decision-title-row').innerText();
+  const deltasBefore = await page.locator('.decision-latest-cot').innerText();
+  const combined = page.locator('.decision-semantic').filter({ hasText: 'CURRENT MODEL ESTIMATE' });
+  const combinedText = await combined.innerText();
+
+  await page.locator('[data-model-family="macro"]').click();
+  await expect(page).toHaveURL(/model=macro/);
+  const macroText = await page.locator('.decision-semantic').filter({ hasText: 'CURRENT MODEL ESTIMATE' }).innerText();
+  expect(macroText).not.toBe(combinedText);
+
+  const scoreAfter = await page.locator('.decision-title-row').innerText();
+  expect(scoreAfter.match(/Governed COT score[^.]+/)?.[0]).toBe(scoreBefore.match(/Governed COT score[^.]+/)?.[0]);
+  expect(await page.locator('.decision-latest-cot').innerText()).toBe(deltasBefore);
+});
+
+test('Market contains strongest edge, week path and coming edge without separate top-level tabs', async ({ page }) => {
+  await open(page, '?market=sp500&horizon=1w&view=today');
+
+  await expect(page.locator('[data-decision-view="edges"]')).toHaveCount(0);
+  await expect(page.locator('[data-decision-view="week"]')).toHaveCount(0);
+  await expect(page.locator('.decision-strongest')).toBeVisible();
+  await expect(page.locator('[data-decision-surface="week-path"]')).toBeVisible();
+  await expect(page.locator('[data-decision-surface="coming-edge"]')).toBeVisible();
+  await expect(page.locator('[data-decision-surface="coming-edge"]')).toContainText('Conditional watch — not a prediction');
+  await expect(page.locator('.decision-strongest')).toHaveCount(1);
+});
+
+test('old overview, edges, week and data URLs normalize safely to Market', async ({ page }) => {
+  for (const oldView of ['overview', 'edges', 'week', 'data']) {
+    await open(page, `?market=nq&view=${oldView}`);
+    await expect(page).toHaveURL(/view=today/);
+    await expect(page.locator('[data-decision-view="today"]')).toHaveClass(/active/);
+    await expect(page.locator('#dataWorkspace')).toBeVisible();
+  }
+});
+
+test('market, horizon and model family persist in URL and synchronize Today', async ({ page }) => {
+  await open(page, '?market=sp500&horizon=1w&view=today&model=combined');
+
+  await page.locator('.decision-scanner [data-decision-market="gold"]').click();
+  await expect(page.locator('#instrumentTabs [data-market="gold"]')).toHaveClass(/active/);
+  await expect(page).toHaveURL(/market=gold/);
+  await expect(page.locator('.decision-title-row')).toContainText('Gold');
+
+  await page.locator('[data-decision-horizon="2w"]').click();
+  await expect(page.locator('[data-decision-horizon="2w"]')).toHaveClass(/active/);
+  await expect(page).toHaveURL(/horizon=2w/);
+
+  await page.locator('[data-model-family="macro"]').click();
+  await expect(page).toHaveURL(/model=macro/);
+});
+
+test('Research restores the deep evidence surface without reopening chart controls', async ({ page }) => {
+  await open(page, '?market=gold&view=research');
+
+  await expect(page.locator('[data-decision-view="research"]')).toHaveClass(/active/);
+  await expect(page.locator('[data-decision-surface="research"]')).toBeVisible();
+  await expect(page.locator('#researchWorkspace')).toBeVisible();
+  await expect(page.locator('.decision-research-group')).toHaveCount(4);
+  await expect(page.locator('[data-decision-surface="research"]')).toContainText('Positioning & actors');
+  await expect(page.locator('[data-decision-surface="research"]')).toContainText('Backtests & regimes');
+  await expect(page.locator('[data-decision-surface="research"]')).toContainText('Macro evidence');
+  await expect(page.locator('[data-decision-surface="research"]')).toContainText('Methodology & provenance');
+
+  await expect(page.locator('#cotIntelligence')).toBeVisible();
+  await expect(page.locator('#cotIntelligence')).toHaveAttribute('aria-hidden', 'false');
+  await expect(page.locator('#cotIntelligence .cot-intel-head')).toBeHidden();
+  await expect(page.locator('#cotIntelligence .cot-intel-tabs')).toHaveCount(0);
+  await expect(page.locator('#cotIntelligence [data-cot-tab]')).toHaveCount(0);
+  await expect(page.locator('#cotIntelligence .cot-research-primary')).toBeVisible();
+  await expect(page.locator('#cotIntelligence .cot-research-fold')).toHaveCount(3);
+  await expect(page.locator('.controls-surface')).toBeHidden();
+  await expect(page.locator('.workbench-panel')).toBeHidden();
+  await expect(page.locator('.methodology')).toBeHidden();
+  await expect(page.locator('[data-decision-view]')).toHaveCount(3);
+
+  const architecture = await page.evaluate(() => ({
+    researchParent: document.querySelector('#cotIntelligence')?.parentElement?.id,
+    crossParent: document.querySelector('#wcCrossActorPanel')?.parentElement?.id,
+    shellTop: document.querySelector('#currentEdgeCommand')?.getBoundingClientRect().top ?? Infinity,
+    explorerTop: document.querySelector('#cotIntelligence')?.getBoundingClientRect().top ?? -Infinity,
+    primaryNavTop: document.querySelector('.decision-nav')?.getBoundingClientRect().top ?? Infinity
+  }));
+  expect(architecture.researchParent).toBe('researchWorkspace');
+  expect(architecture.crossParent).toBe('researchWorkspace');
+  expect(architecture.shellTop).toBeLessThan(architecture.explorerTop);
+  expect(architecture.primaryNavTop).toBeLessThan(architecture.explorerTop);
+});
+
+test('top-level navigation keeps one shell and preserves selection state across workspaces', async ({ page }) => {
+  await open(page, '?market=nq&horizon=4w&view=today&model=macro');
+
+  await page.locator('[data-decision-view="research"]').click();
+  await expect(page).toHaveURL(/market=nq/);
+  await expect(page).toHaveURL(/horizon=4w/);
+  await expect(page).toHaveURL(/model=macro/);
+  await expect(page.locator('#researchWorkspace')).toBeVisible();
+  await expect(page.locator('#dataWorkspace')).toBeHidden();
+  await expect(page.locator('#liveWorkspace')).toBeHidden();
+
+  await page.locator('[data-decision-view="live"]').click();
+  await expect(page.locator('#liveWorkspace')).toBeVisible();
+  await expect(page.locator('#liveTrackRecordPanel')).toBeVisible();
+  expect(await page.locator('#liveTrackRecordPanel').evaluate(node => node.parentElement?.id)).toBe('liveWorkspace');
+
+  await page.locator('[data-decision-view="today"]').click();
+  await expect(page.locator('#dataWorkspace')).toBeVisible();
+  await expect(page.locator('.controls-surface')).toBeVisible();
+  expect(await page.locator('.controls-surface').evaluate(node => node.parentElement?.id)).toBe('dataWorkspace');
+  await expect(page.locator('#instrumentTabs [data-market="nq"]')).toHaveClass(/active/);
+  await expect(page.locator('[data-model-family="macro"]')).toHaveClass(/active/);
+  await expect(page.locator('[data-decision-horizon="4w"]')).toHaveClass(/active/);
+});
+
+test('Market view includes holdings history, controls and analytical components', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await open(page, '?market=nq&view=data');
+
+  await expect(page).toHaveURL(/view=today/);
+  await expect(page.locator('[data-decision-view="today"]')).toHaveClass(/active/);
+  await expect(page.locator('.controls-surface')).toBeVisible();
+  await expect(page.locator('.workbench-panel')).toBeVisible();
+  await expect(page.locator('#weeklyChangePanel')).toBeVisible();
+  await expect(page.locator('#positioningColumns')).toBeVisible();
+  await expect(page.locator('#macroCards')).toBeVisible();
+  await expect(page.locator('#methodologyPanel')).toBeVisible();
+
+  await page.waitForFunction(() => Array.isArray(document.querySelector('#mainChart')?.data) && document.querySelector('#mainChart').data.length > 0);
+  const chart = await page.evaluate(() => ({
+    traces: document.querySelector('#mainChart')?.data?.length || 0,
+    title: document.querySelector('#workbenchTitle')?.textContent || ''
+  }));
+  expect(chart.traces).toBeGreaterThan(0);
+  expect(chart.title).toMatch(/Nasdaq-100.*positioning/i);
+});
+
+test('Market workbench COT score and actor percentiles use the governed full-history artifacts', async ({ page }) => {
+  test.setTimeout(90_000);
+  const cases = [
+    { market: 'sp500' },
+    { market: 'nq' },
+    { market: 'dow' },
+    { market: 'rty' },
+    { market: 'sp500', report: 'legacy' },
+    { market: 'gold' },
+    { market: 'silver' }
+  ];
+
+  for (const { market, report } of cases) {
+    await page.goto(`/worldclass_dashboard.html?market=${market}&view=data${report ? `&report=${report}` : ''}`);
+    await page.waitForFunction(() => document.documentElement.classList.contains('cot-worldclass-ux-ready'));
+    await expect(page.locator('.instrument-bar')).toBeVisible();
+    await expect(page.locator('#cotScorePanel')).toBeVisible();
+
+    const expected = await page.evaluate(async ({ currentMarket, requestedReport }) => {
+      const [regime, current] = await Promise.all([
+        fetch('worldclass/regime_backtest.json', { cache: 'no-store' }).then(response => response.json()),
+        fetch('worldclass/cot-current-state.json', { cache: 'no-store' }).then(response => response.json())
+      ]);
+      const dataset = requestedReport
+        || window.__COT_REPORT_TAXONOMY__?.datasetForMarket?.(currentMarket)
+        || (currentMarket === 'gold' || currentMarket === 'silver' ? 'disaggregated' : 'tff');
+      const governed = regime?.markets?.[currentMarket]?.datasets?.[dataset]?.current;
+      const actorPrefix = `${dataset}:${currentMarket}:`;
+      const actorEntry = Object.entries(current?.actor_states || {})
+        .find(([key, value]) => key.startsWith(actorPrefix) && Number.isFinite(Number(value?.position_percentile)))
+        || null;
+      const actor = actorEntry?.[1] || null;
+      return {
+        dataset,
+        score: governed?.cot_score,
+        state: String(governed?.cot_state || '').toUpperCase(),
+        actorKey: actorEntry?.[0]?.slice(actorPrefix.length) || null,
+        actorLabel: actor?.actor_label || null,
+        actorPercentile: actor?.position_percentile ?? null
+      };
+    }, { currentMarket: market, requestedReport: report || null });
+
+    expect(Number.isFinite(Number(expected.score))).toBeTruthy();
+    await expect(page.locator('#cotScorePanel .score-ring-value')).toHaveText(String(Math.round(Number(expected.score))));
+    await expect(page.locator('#cotScorePanel .score-copy h4')).toHaveText(expected.state);
+    await expect(page.locator('#cotScorePanel .score-copy')).toContainText('Governed full-history percentile score');
+    await expect(page.locator('#workbenchTitle')).toContainText(expected.dataset === 'legacy' ? 'Legacy' : expected.dataset === 'disaggregated' ? 'Disaggregated' : 'TFF Detailed');
+
+    if (expected.actorKey && Number.isFinite(Number(expected.actorPercentile))) {
+      const row = page.locator(`#positioningPanel .position-row[data-category="${expected.actorKey}"]`);
+      await expect(row).toBeVisible();
+      if (expected.actorLabel) await expect(row).toContainText(expected.actorLabel);
+      const displayed = Number((await row.locator('.percentile-label').innerText()).match(/\d+/)?.[0]);
+      expect(displayed).toBe(Math.round(Number(expected.actorPercentile)));
+    }
+  }
+});
+
+test('price overlays follow the selected market and multi-market indexing uses one common base date', async ({ page }) => {
+  await open(page, '?market=nq&view=data');
+  await page.waitForFunction(() => Array.isArray(document.querySelector('#mainChart')?.data));
+
+  const priceTraceNames = () => page.evaluate(() => (document.querySelector('#mainChart')?.data || [])
+    .filter(trace => trace.yaxis === 'y2')
+    .map(trace => trace.name));
+  expect(await priceTraceNames()).toEqual(['NQ price']);
+
+  await page.locator('#instrumentTabs [data-market="sp500"]').click();
+  await page.waitForFunction(() => (document.querySelector('#mainChart')?.data || [])
+    .filter(trace => trace.yaxis === 'y2')
+    .map(trace => trace.name).join('|') === 'S&P price');
+  expect(await priceTraceNames()).toEqual(['S&P price']);
+
+  await page.locator('#instrumentTabs [data-market="nq"]').click();
+  await page.waitForFunction(() => (document.querySelector('#mainChart')?.data || [])
+    .filter(trace => trace.yaxis === 'y2')
+    .map(trace => trace.name).join('|') === 'NQ price');
+  expect(await priceTraceNames()).toEqual(['NQ price']);
+
+  await page.locator('#desktopControls [data-price-overlay="sp500"]').click();
+  await page.waitForFunction(() => (document.querySelector('#mainChart')?.data || []).filter(trace => trace.yaxis === 'y2').length === 2);
+
+  const indexed = await page.evaluate(() => (document.querySelector('#mainChart')?.data || [])
+    .filter(trace => trace.yaxis === 'y2')
+    .map(trace => ({ name: trace.name, firstDate: trace.x?.[0], firstValue: trace.y?.[0] })));
+  expect(indexed.map(item => item.name).sort()).toEqual(['NQ price', 'S&P price']);
+  expect(new Set(indexed.map(item => item.firstDate)).size).toBe(1);
+  for (const item of indexed) expect(Number(item.firstValue)).toBeCloseTo(100, 8);
+  await expect(page.locator('#legendHint')).toContainText('share one base date');
+});
+
+test('Market keeps one governed edge headline and does not mount a second data/backtest edge', async ({ page }) => {
+  for (const report of ['tff', 'legacy']) {
+    await open(page, `?market=sp500&horizon=1w&view=today&report=${report}`);
+
+    const scannerText = await page.locator('.decision-scanner [data-decision-market="sp500"]').innerText();
+    const expected = await page.evaluate(() => {
+      const model = window.__COT_CURRENT_EDGE_MODEL__;
+      const directional = new Set(['PRIMARY_DIRECTIONAL', 'SECONDARY_DIRECTIONAL']);
+      const top = model.rankedEdges(model.state.horizon, model.state.market)
+        .find(item => directional.has(item?.row?.actor_role)) || null;
+      return top ? {
+        actor: top.row.actor_label,
+        edge: Number(top.metric.excess_vs_baseline_pp),
+        grade: model.evidenceGrade(model.evidenceStatus(top.row, top.metric)).grade
+      } : null;
+    });
+
+    await expect(page.locator('#dataWorkspace')).toBeVisible();
+    const headlineEdge = page.locator('.decision-strongest');
+    await expect(headlineEdge).toBeVisible();
+    await expect(page.locator('.decision-data-edge')).toHaveCount(0);
+    if (expected) {
+      await expect(headlineEdge).toContainText(expected.actor);
+      await expect(headlineEdge).toContainText(expected.grade);
+      const normalized = (await headlineEdge.innerText()).replaceAll('−', '-').replaceAll(',', '.');
+      const scannerNormalized = scannerText.replaceAll('−', '-').replaceAll(',', '.');
+      const edge = Math.abs(expected.edge).toFixed(2);
+      expect(normalized).toContain(edge);
+      expect(scannerNormalized).toContain(edge);
+    } else {
+      await expect(headlineEdge).toContainText('NO ACTIVE DIRECTIONAL COT EDGE');
+      expect(scannerText).toContain('No edge');
+    }
+
+    await expect(page.locator('#wcForecastPanel')).toHaveCount(0);
+    await expect(page.locator('#wcDecisionLayer')).toHaveCount(0);
+    await expect(page.getByText('Backtest & forward expectancy', { exact: true })).toHaveCount(0);
+  }
+});
+
+test('holdings chart can plot historical weekly net changes with short date ranges', async ({ page }) => {
+  await open(page, '?market=nq&view=data');
+  const metric = page.locator('#desktopControls [data-control="metric"]');
+  await expect(metric).toBeVisible();
+  await metric.selectOption('net_change');
+  await expect(page.locator('#workbenchTitle')).toContainText('weekly holdings change');
+  await expect(page.locator('#legendHint')).toContainText('current COT position minus the prior report');
+
+  const traces = await page.evaluate(() => (document.querySelector('#mainChart')?.data || [])
+    .filter(trace => trace.yaxis === 'y' && Array.isArray(trace.y))
+    .map(trace => ({ name: trace.name, count: trace.y.length, finite: trace.y.filter(Number.isFinite).length })));
+  expect(traces.length).toBeGreaterThan(0);
+  expect(traces.every(trace => trace.count > 10 && trace.finite === trace.count)).toBeTruthy();
+
+  await page.locator('#rangeButtons [data-range="3m"]').click();
+  await expect(page.locator('#rangeButtons [data-range="3m"]')).toHaveClass(/active/);
+  const threeMonthCount = await page.evaluate(() => (document.querySelector('#mainChart')?.data || [])
+    .find(trace => trace.yaxis === 'y' && Array.isArray(trace.x))?.x?.length || 0);
+  expect(threeMonthCount).toBeGreaterThan(2);
+  expect(threeMonthCount).toBeLessThan(30);
+});
+
+test('Legacy report selection stays synchronized with the visible workbench', async ({ page }) => {
+  await open(page, '?market=nq&view=data&report=legacy');
+  await expect(page).toHaveURL(/view=today/);
+  await expect(page.locator('#reportTaxonomyControl [data-report-dataset="legacy"]')).toHaveClass(/active/);
+  await expect(page.locator('#desktopControls [data-control="dataset"]')).toHaveValue('legacy');
+  await expect(page.locator('#workbenchTitle')).toContainText('Legacy');
+  await expect(page.locator('[data-decision-view="today"]')).toHaveClass(/active/);
+});
+
+test('weekday path preserves release timing language on Today', async ({ page }) => {
+  await open(page, '?market=nq&view=today');
+  const panel = page.locator('[data-decision-surface="week-path"]');
+  await expect(panel).toContainText('THIS WEEK — CUMULATIVE HISTORICAL PATH');
+  if (await panel.locator('.decision-week-path article').count()) {
+    await expect(panel).toContainText('previous Tuesday COT positioning');
+    await expect(panel).toContainText('publicly available Friday');
+    await expect(panel.locator('.decision-week-path article')).toHaveCount(5);
+  }
+});
+
+test('important index and VIX option expiries remain visible on Today', async ({ page }) => {
+  await open(page, '?market=nq&horizon=1w&view=today');
+  const overview = page.locator('.decision-current');
+  await expect(overview).toContainText('Important expiries');
+  await expect(overview).toContainText('Next index OPEX');
+  await expect(overview).toContainText('Next VIX settlement');
+});
+
+test('mobile has no page-level horizontal overflow and latest COT changes become cards', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page);
+
+  let overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+
+  const firstChange = page.locator('.decision-cot-change-row').first();
+  await expect(firstChange).toBeVisible();
+  await expect(firstChange.locator(':scope > strong')).toHaveCount(2);
+  await expect(firstChange.locator(':scope > span')).toHaveCount(4);
+  const box = await firstChange.boundingBox();
+  expect(box.width).toBeLessThanOrEqual(390);
+
+  await page.locator('[data-decision-view="research"]').click();
+  overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test('mobile Market keeps controls and the holdings graph inside the viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await open(page, '?market=nq&view=data');
+  await expect(page.locator('.workbench-panel')).toBeVisible();
+  await expect(page.locator('#mobileControls')).toBeVisible();
+  await page.locator('#mobileControls > summary').click();
+  await page.locator('#mobileControlBody [data-control="metric"]').selectOption('net_change');
+  await expect(page.locator('#workbenchTitle')).toContainText('weekly holdings change');
+  await page.waitForFunction(() => Array.isArray(document.querySelector('#mainChart')?.data) && document.querySelector('#mainChart').data.length > 0);
+
+  const geometry = await page.evaluate(() => ({
+    viewport: document.documentElement.clientWidth,
+    scroll: document.documentElement.scrollWidth,
+    chart: document.querySelector('#mainChart')?.getBoundingClientRect().width || 0,
+    panel: document.querySelector('.workbench-panel')?.getBoundingClientRect().width || 0
+  }));
+  expect(geometry.scroll).toBeLessThanOrEqual(geometry.viewport + 2);
+  expect(geometry.chart).toBeLessThanOrEqual(geometry.viewport);
+  expect(geometry.panel).toBeLessThanOrEqual(geometry.viewport);
+});
+
+test('light and dark themes retain readable decision surfaces', async ({ page }) => {
+  await open(page);
+  for (const theme of ['dark', 'light']) {
+    const current = await page.locator('html').getAttribute('data-theme');
+    if (current !== theme) await page.locator('#themeToggle').click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
+    const contrastSanity = await page.locator('.decision-current').evaluate(node => {
+      const style = getComputedStyle(node);
+      return { color: style.color, background: style.backgroundColor };
+    });
+    expect(contrastSanity.color).not.toBe(contrastSanity.background);
+  }
+});
