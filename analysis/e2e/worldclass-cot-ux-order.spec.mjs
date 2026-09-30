@@ -402,6 +402,42 @@ test('holdings chart can plot historical weekly net changes with short date rang
   expect(threeMonthCount).toBeLessThan(30);
 });
 
+test('chart presets switch common analytical views atomically and reset restores full history', async ({ page }) => {
+  await open(page, '?market=nq&view=data');
+  await expect(page.locator('#wcChartToolbar')).toBeVisible();
+
+  await page.locator('[data-wc-preset="weekly_flow"]').click();
+  let snapshot = await page.evaluate(() => window.__COT_WORLDCLASS_CHART__?.snapshot?.());
+  expect(snapshot.metric).toBe('net_change');
+  expect(snapshot.prices).toEqual(['nq']);
+  expect(snapshot.factors).toEqual([]);
+  await expect(page.locator('#desktopControls [data-control="metric"]')).toHaveValue('net_change');
+  await expect(page.locator('[data-wc-preset="weekly_flow"]')).toHaveClass(/active/);
+  await expect(page.locator('#workbenchTitle')).toContainText('weekly holdings change');
+
+  await page.locator('[data-wc-preset="macro_context"]').click();
+  snapshot = await page.evaluate(() => window.__COT_WORLDCLASS_CHART__?.snapshot?.());
+  expect(snapshot.metric).toBe('net_oi_pct');
+  expect(snapshot.prices).toEqual(['nq']);
+  expect(snapshot.factors).toEqual(['macro_score']);
+  await expect(page.locator('[data-wc-preset="macro_context"]')).toHaveClass(/active/);
+
+  await page.locator('#rangeButtons [data-range="3m"]').click();
+  snapshot = await page.evaluate(() => window.__COT_WORLDCLASS_CHART__?.snapshot?.());
+  expect(snapshot.range).toBe('3m');
+
+  await page.locator('[data-wc-chart="reset"]').click();
+  snapshot = await page.evaluate(() => window.__COT_WORLDCLASS_CHART__?.snapshot?.());
+  expect(snapshot.range).toBe('all');
+  await expect(page.locator('#rangeButtons [data-range="all"]')).toHaveClass(/active/);
+  const chartState = await page.evaluate(() => ({
+    dragmode: document.querySelector('#mainChart')?.layout?.dragmode,
+    timeline: Boolean(document.querySelector('#mainChart')?.layout?.xaxis?.rangeslider?.visible)
+  }));
+  expect(chartState.dragmode).toBe('pan');
+  expect(chartState.timeline).toBeFalsy();
+});
+
 test('Legacy report selection stays synchronized with the visible workbench', async ({ page }) => {
   await open(page, '?market=nq&view=data&report=legacy');
   await expect(page).toHaveURL(/view=today/);
