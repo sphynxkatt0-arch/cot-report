@@ -1,0 +1,20 @@
+WARNING: skipped 2016: 403 Client Error: Forbidden for url: https://www.cftc.gov/files/dea/history/fut_fin_txt_2016.zip
+WARNING: skipped 2017: 403 Client Error: Forbidden for url: https://www.cftc.gov/files/dea/history/fut_fin_txt_2017.zip
+WARNING: skipped 2018: 403 Client Error: Forbidden for url: https://www.cftc.gov/files/dea/history/fut_fin_txt_2018.zip
+WARNING: skipped 2019: 403 Client Error: Forbidden for url: https://www.cftc.gov/files/dea/history/fut_fin_txt_2019.zip
+WARNING: skipped 2020: 403 Client Error: Forbidden for url: https://www.cftc.gov/files/dea/history/fut_fin_txt_2020.zip
+WARNING: skipped 2021: 403 Client Error: Forbidden for url: https://www.cftc.gov/files/dea/history/fut_fin_txt_2021.zip
+WARNING: skipped 2022: 403 Client Error: Forbidden for url: https://www.cftc.gov/files/dea/history/fut_fin_txt_2022.zip
+WARNING: skipped 2023: 403 Client Error: Forbidden for url: https://www.cftc.gov/files/dea/history/fut_fin_txt_2023.zip
+WARNING: skipped 2024: 403 Client Error: Forbidden for url: https://www.cftc.gov/files/dea/history/fut_fin_txt_2024.zip
+WARNING: skipped 2025: 403 Client Error: Forbidden for url: https://www.cftc.gov/files/dea/history/fut_fin_txt_2025.zip
+WARNING: skipped 2026: 403 Client Error: Forbidden for url: https://www.cftc.gov/files/dea/history/fut_fin_txt_2026.zip
+Traceback (most recent call last):
+  File "/home/runner/work/cot-report/cot-report/analysis/cot_overlay_exact.py", line 812, in <module>
+    main()
+  File "/home/runner/work/cot-report/cot-report/analysis/cot_overlay_exact.py", line 802, in main
+    raw = load_cftc_tff_range(args.start, args.end) if len(keys) > 1 else None
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/cot-report/cot-report/analysis/cot_overlay_exact.py", line 228, in load_cftc_tff_range
+    raise RuntimeError("No CFTC data loaded.")
+RuntimeError: No CFTC data loaded.

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "model_version": "macro-liquidity-guard-v1.0",
+  "minimum_source_coverage": 0.60,
+  "severe_score_threshold": 25.0,
+  "minimum_severe_pillars": 2,
+  "eligible_pillars": [
+    "funding_microstructure",
+    "dealer_absorption",
+    "fiscal_cash_flow",
+    "auction_absorption"
+  ],
+  "action": "Wait — Liquidity Plumbing Stress",
+  "description": "Conservative actionability guard. It can block new exposure when multiple fresh plumbing indicators are severely stressed, but it cannot create or reverse COT direction."
+}

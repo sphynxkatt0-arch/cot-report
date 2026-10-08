@@ -1,0 +1,4 @@
+﻿key,label,dataset,source,unit,status,mnemonic,resolution,latest_date,latest_value,change_short,change_medium,zscore,age_days,error
+treasury_operating_cash,Daily Treasury operating cash,fiscaldata,U.S. Treasury Fiscal Data — Daily Treasury Statement,USD bn,fresh,,official fiscaldata API; deterministic TGA closing-balance selection,2026-10-06,885.414,-51.186000000000035,5.394999999999982,-1.0674291661775985,2,
+treasury_cash_flows,Daily Treasury deposits and withdrawals,fiscaldata,U.S. Treasury Fiscal Data — Daily Treasury Statement,USD bn,fresh,,official fiscaldata API,2026-10-06,-4.163000000000011,102.35399999999987,-10.79400000000038,-0.09718855576132432,2,
+treasury_auction_absorption,Treasury auction absorption,fiscaldata,U.S. Treasury Fiscal Data — Treasury Securities Auctions,score,fresh,,official fiscaldata API,2026-10-07,46.7,-0.03285714285714292,2.505594297652018,,1,
