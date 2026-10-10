@@ -96,6 +96,7 @@
   const $$ = (selector) => [...document.querySelectorAll(selector)];
 
   function finite(value) {
+    if (value === null || value === undefined || value === "") return null;
     const number = Number(value);
     return Number.isFinite(number) ? number : null;
   }
@@ -290,15 +291,20 @@
 
   function currentPrior() {
     const rows = currentRows();
-    return rows.at(-2) || {};
+    const latest = rows.at(-1), prior = rows.at(-2);
+    if (!latest || !prior) return {};
+    const gap = (new Date(latest.date) - new Date(prior.date)) / 86400000;
+    return (latest.prior_report_date ? latest.prior_report_date === prior.date : gap >= 6 && gap <= 8) ? prior : {};
   }
 
   function governedRegimeCurrent(dataset = state.dataset, market = state.market) {
-    return db.REGIME_BACKTEST?.markets?.[market]?.datasets?.[dataset]?.current || null;
+    const current = db.REGIME_BACKTEST?.markets?.[market]?.datasets?.[dataset]?.current || null;
+    return window.__COT_RUNTIME_COHERENCE__?.regimeCurrent(dataset, market, current) || current;
   }
 
   function governedActorState(category, dataset = state.dataset, market = state.market) {
-    return db.COT_CURRENT_STATE?.actor_states?.[`${dataset}:${market}:${category}`] || null;
+    const current = window.__COT_RUNTIME_COHERENCE__?.applyCurrent(db.COT_CURRENT_STATE) || db.COT_CURRENT_STATE;
+    return current?.actor_states?.[`${dataset}:${market}:${category}`] || current?.all_taxonomy_actor_states?.[`${dataset}:${market}:${category}`] || null;
   }
 
   function signed(value, digits = 0, suffix = "") {
@@ -669,9 +675,9 @@
       const priorShort = finite(prior[fieldFor(key, "short")]);
       const latestPct = finite(latest[fieldFor(key, "net_oi_pct")]);
       const priorPct = finite(prior[fieldFor(key, "net_oi_pct")]);
-      const longDelta = latestLong !== null && priorLong !== null ? latestLong - priorLong : null;
-      const shortDelta = latestShort !== null && priorShort !== null ? latestShort - priorShort : null;
-      const netDelta = latestNet !== null && priorNet !== null ? latestNet - priorNet : null;
+      const longDelta = finite(latest[`${key}_delta_long`]) ?? (latestLong !== null && priorLong !== null ? latestLong - priorLong : null);
+      const shortDelta = finite(latest[`${key}_delta_short`]) ?? (latestShort !== null && priorShort !== null ? latestShort - priorShort : null);
+      const netDelta = finite(latest[`${key}_delta_net`]) ?? (latestNet !== null && priorNet !== null ? latestNet - priorNet : null);
       const pctDelta = latestPct !== null && priorPct !== null ? latestPct - priorPct : null;
       return {
         key,
@@ -691,8 +697,8 @@
     const prior = currentPrior();
     const score = cotScore();
     const macro = macroScoreValue();
-    const oiDelta = finite(latest.open_interest) !== null && finite(prior.open_interest) !== null
-      ? finite(latest.open_interest) - finite(prior.open_interest) : null;
+    const oiDelta = finite(latest.change_open_interest) ?? (finite(latest.open_interest) !== null && finite(prior.open_interest) !== null
+      ? finite(latest.open_interest) - finite(prior.open_interest) : null);
     const weekly = weeklyDeltas().filter(row => row.netDelta !== null);
     const largest = weekly.sort((a, b) => Math.abs(b.netDelta) - Math.abs(a.netDelta))[0];
     const currentPrice = finite(latest.price);
@@ -931,7 +937,7 @@
 
     const oiLatest = finite(latest.open_interest);
     const oiPrior = finite(prior.open_interest);
-    const oiDelta = oiLatest !== null && oiPrior !== null ? oiLatest - oiPrior : null;
+    const oiDelta = finite(latest.change_open_interest) ?? (oiLatest !== null && oiPrior !== null ? oiLatest - oiPrior : null);
     const pxLatest = finite(latest.price);
     const pxPrior = finite(prior.price);
     const pxDelta = pxLatest !== null && pxPrior !== null ? pxLatest - pxPrior : null;

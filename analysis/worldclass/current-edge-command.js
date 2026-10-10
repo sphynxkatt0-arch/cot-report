@@ -85,7 +85,11 @@
     return datasets.tff || datasets.disaggregated || Object.values(datasets)[0] || null;
   }
   function familyFor(market = M().state.market, family = state.family) { return datasetFor(market)?.families?.[family] || null; }
-  function currentRegime(market = M().state.market) { return datasetFor(market)?.current || null; }
+  function currentRegime(market = M().state.market) {
+    const block = datasetFor(market), current = block?.current || null;
+    const dataset = block?.dataset || state.regime?.markets?.[market]?.presentation_dataset || 'tff';
+    return window.__COT_RUNTIME_COHERENCE__?.regimeCurrent(dataset, market, current) || current;
+  }
 
   function cotScoreRead(market = M().state.market) {
     const current = currentRegime(market);
@@ -99,7 +103,7 @@
   function modelEstimate(market = M().state.market, horizon = M().state.horizon, family = state.family) {
     const model = familyFor(market, family);
     const metric = model?.horizons?.[horizon] || null;
-    if (!metric) return null;
+    if (!metric || datasetFor(market)?.current?.report_date !== M().reportDates(market).report) return null;
     return {
       family,
       expected: finite(metric.mean_return_pct),
@@ -115,10 +119,9 @@
   }
 
   function liveForecast(market = M().state.market, horizon = M().state.horizon) {
-    const rows = (M().state.live?.current_predictions || []).filter(row => row?.market === market);
-    const combined = rows.filter(row => row?.model_family === "combined");
-    const model = (combined.length ? combined : rows).at(-1) || null;
-    if (!model) return null;
+    const forecast = M().liveForecast(market, horizon, state.family);
+    if (!forecast) return null;
+    const model = forecast.model;
     const expected = finite(model[`expected_${horizon}_return_pct`] ?? model[`expected_${horizon}_return`] ?? model?.historical_horizons?.[horizon]?.expected_return_pct);
     const probability = finite(model[`probability_positive_${horizon}`] ?? model[`probability_positive_${horizon}_pct`] ?? model?.historical_horizons?.[horizon]?.probability_positive);
     if (expected === null && probability === null) return null;
@@ -129,7 +132,7 @@
   function contextRanked(summary = M().summary()) { return (summary.ranked || []).filter(item => !DIRECTIONAL_ROLES.has(item?.row?.actor_role)); }
   function strongestDirectional(summary = M().summary()) { return directionalRanked(summary)[0] || null; }
   function governedMarketEdge(market = M().state.market) {
-    const top = M().rankedEdges(M().state.horizon, market).filter(item => DIRECTIONAL_ROLES.has(item?.row?.actor_role))[0] || null;
+    const top = M().rankedEdges(M().state.horizon, market, { validatedOnly: true }).filter(item => DIRECTIONAL_ROLES.has(item?.row?.actor_role))[0] || null;
     const dir = top ? M().edgeDirection(top.metric) : { tone: "neutral", label: "—" };
     return { top, dir, grade: gradeFor(top) };
   }
@@ -242,7 +245,7 @@
 
   function currentModelCard() {
     const estimate = modelEstimate();
-    if (!estimate) return `<div class="decision-semantic prospective unavailable"><span>CURRENT MODEL ESTIMATE</span><strong>n/a</strong><small>No ${esc(state.family)} regime estimate is available for ${horizonLabel(M().state.horizon)}.</small>${modelControls()}</div>`;
+    if (!estimate) return `<div class="decision-semantic prospective unavailable"><span>CURRENT MODEL ESTIMATE</span><strong>n/a</strong><small>The ${esc(state.family)} estimate has not been rebuilt for report ${esc(M().reportDates().report || "n/a")} at ${horizonLabel(M().state.horizon)}.</small>${modelControls()}</div>`;
     return `<div class="decision-semantic prospective"><span>CURRENT MODEL ESTIMATE · ${esc(state.family.toUpperCase())}</span><strong>${signed(estimate.expected, 2, "%")}</strong><small>P(positive) ${pctProbability(estimate.probability)} · baseline ${signed(estimate.baseline, 2, "%")} · excess ${signed(estimate.excess, 2, " pp")} · N ${integer(estimate.observations)} · Confidence ${esc(estimate.confidence)}</small><small>${esc(estimate.matchRule)}</small>${modelControls()}</div>`;
   }
   function liveProspectiveCard() {
@@ -297,15 +300,15 @@
     const { row, metric } = strongest;
     const grade = gradeFor(strongest);
     const dir = M().edgeDirection(metric);
-    return `<section class="decision-strongest"><div class="decision-block-head"><div><span class="decision-kicker">STRONGEST CURRENT DIRECTIONAL EDGE</span><h3>${esc(row.actor_label)} · ${percentile(row.current_change_percentile ?? row.change_magnitude_percentile)} ${esc(row.direction)}</h3></div><span class="decision-direction ${dir.tone}">${dir.label}</span></div><div class="decision-edge-metrics"><div><span>Trigger</span><strong>P${esc(row.selected_threshold)}</strong></div><div><span>Historical conditional</span><strong>${signed(metric.conditional_return_pct, 2, "%")}</strong></div><div><span>Normal return</span><strong>${signed(metric.baseline_return_pct, 2, "%")}</strong></div><div><span>Uplift vs normal</span><strong class="${dir.tone}">${signed(metric.excess_vs_baseline_pp, 2, " pp")}</strong></div><div><span>Independent N</span><strong>${integer(metric.independent_n ?? metric.n)}</strong></div><div><span>Evidence</span><strong>${gradeText(grade)}</strong></div></div>${evidenceDrawer(strongest)}</section>`;
+    return `<section class="decision-strongest"><div class="decision-block-head"><div><span class="decision-kicker">STRONGEST CURRENT DIRECTIONAL EDGE</span><h3>${esc(String(row.dataset || "").toUpperCase())} · ${esc(row.actor_label)} · ${percentile(row.current_change_percentile ?? row.change_magnitude_percentile)} ${esc(row.direction)}</h3></div><span class="decision-direction ${dir.tone}">${dir.label}</span></div><div class="decision-edge-metrics"><div><span>Trigger</span><strong>P${esc(row.selected_threshold)}</strong></div><div><span>Historical conditional</span><strong>${signed(metric.conditional_return_pct, 2, "%")}</strong></div><div><span>Normal return</span><strong>${signed(metric.baseline_return_pct, 2, "%")}</strong></div><div><span>Uplift vs normal</span><strong class="${dir.tone}">${signed(metric.excess_vs_baseline_pp, 2, " pp")}</strong></div><div><span>Independent N</span><strong>${integer(metric.independent_n ?? metric.n)}</strong></div><div><span>Evidence</span><strong>${gradeText(grade)}</strong></div></div>${evidenceDrawer(strongest)}</section>`;
   }
 
   function opportunityScanner() {
     const rows = M().MARKET_ORDER.map(market => {
       const { top, dir, grade } = governedMarketEdge(market);
       return { market, top, dir, grade };
-    }).sort((a, b) => Boolean(b.top) - Boolean(a.top) || Math.abs(finite(b.top?.metric?.excess_vs_baseline_pp) || 0) - Math.abs(finite(a.top?.metric?.excess_vs_baseline_pp) || 0));
-    return `<div class="decision-block-head"><div><span class="decision-kicker">OPPORTUNITY SCANNER</span><h3>Compare market edges</h3><p class="decision-scanner-note">${horizonLabel(M().state.horizon)} historical uplift versus normal return. Select a market to inspect its evidence.</p></div></div><div class="decision-scanner-list">${rows.map(item => `<button type="button" data-decision-market="${item.market}" aria-pressed="${item.market === M().state.market}" class="${item.market === M().state.market ? "active" : ""}"><span>${esc(M().MARKETS[item.market])}</span><strong class="${item.dir.tone}">${item.top ? signed(item.top.metric.excess_vs_baseline_pp, 2, " pp") : "No edge"}</strong><small>${item.grade ? item.grade.grade : "—"}</small></button>`).join("")}</div><p class="decision-scanner-note decision-scanner-legend">pp = percentage points · Letter = evidence grade.<br>Ranked by absolute uplift, not confidence.</p>`;
+    }).sort((a, b) => Boolean(b.top) - Boolean(a.top) || (M().EVIDENCE_ORDER[M().evidenceStatus(b.top?.row, b.top?.metric)] ?? 0) - (M().EVIDENCE_ORDER[M().evidenceStatus(a.top?.row, a.top?.metric)] ?? 0) || Math.abs(finite(b.top?.metric?.excess_vs_baseline_pp) || 0) - Math.abs(finite(a.top?.metric?.excess_vs_baseline_pp) || 0));
+    return `<div class="decision-block-head"><div><span class="decision-kicker">OPPORTUNITY SCANNER</span><h3>Compare validated market edges</h3><p class="decision-scanner-note">${horizonLabel(M().state.horizon)} historical uplift versus normal return. TFF and Legacy are evaluated together for financial markets.</p></div></div><div class="decision-scanner-list">${rows.map(item => `<button type="button" data-decision-market="${item.market}" aria-pressed="${item.market === M().state.market}" class="${item.market === M().state.market ? "active" : ""}"><span>${esc(M().MARKETS[item.market])}</span><strong class="${item.dir.tone}">${item.top ? signed(item.top.metric.excess_vs_baseline_pp, 2, " pp") : "No edge"}</strong><small>${item.grade ? item.grade.grade : "—"}</small></button>`).join("")}</div><p class="decision-scanner-note decision-scanner-legend">pp = percentage points · Letter = evidence grade.<br>Ranked by evidence quality, then absolute uplift. Discovery-only conditions do not headline.</p>`;
   }
 
   function edgeRow(item) {
@@ -460,6 +463,7 @@
       const content = state.view === "research" ? researchView(summary) : state.view === "live" ? liveIntro() : today(summary);
       root.innerHTML = `${navigation()}${content}`;
       writeUrl({ push: false });
+      window.dispatchEvent(new CustomEvent("cot:decision-change", { detail: { market: M().state.market, horizon: M().state.horizon, view: state.view } }));
     } finally {
       state.rendering = false;
     }

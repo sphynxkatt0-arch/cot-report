@@ -1,3 +1,4 @@
+import RELEASE_CALENDAR from '../analysis/reference/cftc_release_calendar.json' with { type: 'json' };
 const TFF_DATASET = 'gpe5-46if';
 const LEGACY_DATASET = '6dca-aqww';
 const API_ROOT = 'https://publicreporting.cftc.gov/resource';
@@ -59,6 +60,10 @@ const LEGACY_FIELDS = [
   'comm_positions_short_all',
   'change_in_comm_long_all',
   'change_in_comm_short_all',
+  'tot_rept_positions_long_all',
+  'tot_rept_positions_short',
+  'change_in_tot_rept_long_all',
+  'change_in_tot_rept_short',
   'nonrept_positions_long_all',
   'nonrept_positions_short_all',
   'change_in_nonrept_long_all',
@@ -66,6 +71,7 @@ const LEGACY_FIELDS = [
 ].join(',');
 
 function asNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -105,6 +111,8 @@ function category(row, longField, shortField, changeLongField, changeShortField,
     short,
     net: currentNet,
     weeklyChange,
+    changeLong: asNumber(row?.[changeLongField]),
+    changeShort: asNumber(row?.[changeShortField]),
     netPctOpenInterest: percentOfOpenInterest(currentNet, openInterest),
     percentile3y: percentileRank(history, currentNet),
   };
@@ -120,7 +128,9 @@ function exactRows(rows, market) {
 async function fetchDataset(dataset, select) {
   const codes = Object.values(MARKETS).map((market) => `'${market.code}'`).join(',');
   const url = new URL(`${API_ROOT}/${dataset}.json`);
-  url.searchParams.set('$limit', '1000');
+  // Full history is needed for the governed expanding percentiles. The API
+  // returns a bounded chart tail, plus full-history metrics for recent reports.
+  url.searchParams.set('$limit', '10000');
   url.searchParams.set('$select', select);
   url.searchParams.set('$where', `cftc_contract_market_code in (${codes})`);
   url.searchParams.set('$order', 'report_date_as_yyyy_mm_dd DESC');
@@ -149,7 +159,97 @@ function releaseState(reportDate) {
   return { state: 'stale', ageDays };
 }
 
-function buildMarket(market, tffRows, legacyRows) {
+const ACTOR_FIELDS = {
+  tff: {
+    dealer: ['dealer_positions_long_all', 'dealer_positions_short_all', 'change_in_dealer_long_all', 'change_in_dealer_short_all'],
+    asset_mgr: ['asset_mgr_positions_long', 'asset_mgr_positions_short', 'change_in_asset_mgr_long', 'change_in_asset_mgr_short'],
+    lev_money: ['lev_money_positions_long', 'lev_money_positions_short', 'change_in_lev_money_long', 'change_in_lev_money_short'],
+    other_reportable: ['other_rept_positions_long', 'other_rept_positions_short', 'change_in_other_rept_long', 'change_in_other_rept_short'],
+    non_reportable: ['nonrept_positions_long_all', 'nonrept_positions_short_all', 'change_in_nonrept_long_all', 'change_in_nonrept_short_all'],
+  },
+  legacy: {
+    noncommercial: ['noncomm_positions_long_all', 'noncomm_positions_short_all', 'change_in_noncomm_long_all', 'change_in_noncomm_short_all'],
+    commercial: ['comm_positions_long_all', 'comm_positions_short_all', 'change_in_comm_long_all', 'change_in_comm_short_all'],
+    total_reportable: ['tot_rept_positions_long_all', 'tot_rept_positions_short', 'change_in_tot_rept_long_all', 'change_in_tot_rept_short'],
+    nonreportable: ['nonrept_positions_long_all', 'nonrept_positions_short_all', 'change_in_nonrept_long_all', 'change_in_nonrept_short_all'],
+  },
+};
+
+const day = value => String(value || '').slice(0, 10);
+const dateAt = value => new Date(`${day(value)}T12:00:00Z`);
+function observed(date) {
+  const copy = new Date(date);
+  if (copy.getUTCDay() === 6) copy.setUTCDate(copy.getUTCDate() - 1);
+  if (copy.getUTCDay() === 0) copy.setUTCDate(copy.getUTCDate() + 1);
+  return day(copy.toISOString());
+}
+function nthWeekday(year, month, weekday, nth) {
+  const date = new Date(Date.UTC(year, month, 1, 12));
+  date.setUTCDate(1 + (weekday - date.getUTCDay() + 7) % 7 + 7 * (nth - 1));
+  return day(date.toISOString());
+}
+function holidays(year) {
+  const lastMonday = new Date(Date.UTC(year, 5, 0, 12));
+  lastMonday.setUTCDate(lastMonday.getUTCDate() - (lastMonday.getUTCDay() + 6) % 7);
+  return new Set([
+    observed(new Date(Date.UTC(year, 0, 1, 12))), observed(new Date(Date.UTC(year + 1, 0, 1, 12))),
+    nthWeekday(year, 0, 1, 3), nthWeekday(year, 1, 1, 3), day(lastMonday.toISOString()),
+    ...(year >= 2021 ? [observed(new Date(Date.UTC(year, 5, 19, 12)))] : []),
+    observed(new Date(Date.UTC(year, 6, 4, 12))), nthWeekday(year, 8, 1, 1), nthWeekday(year, 9, 1, 2),
+    observed(new Date(Date.UTC(year, 10, 11, 12))), nthWeekday(year, 10, 4, 4), observed(new Date(Date.UTC(year, 11, 25, 12))),
+  ]);
+}
+export function releaseDate(reportDate) {
+  const exception = RELEASE_CALENDAR.exceptions?.[day(reportDate)];
+  if (exception) return { date: exception.release_date, source: exception.source_type || 'CFTC_ACTUAL_EXCEPTION' };
+  const cursor = dateAt(reportDate);
+  let businessDays = 0;
+  while (businessDays < 3) {
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+    if (![0, 6].includes(cursor.getUTCDay()) && !holidays(cursor.getUTCFullYear()).has(day(cursor.toISOString()))) businessDays++;
+  }
+  return { date: day(cursor.toISOString()), source: 'NORMAL_BUSINESS_DAY_SCHEDULE_ASSUMPTION' };
+}
+function midrank(values, current) {
+  const clean = values.filter(Number.isFinite);
+  if (!clean.length || !Number.isFinite(current)) return null;
+  const less = clean.filter(value => value < current).length;
+  const equal = clean.filter(value => value === current).length;
+  return (less + equal / 2) / clean.length * 100;
+}
+export function reportHistory(rows, dataset) {
+  const records = [...rows].reverse().map((row, index, ascending) => {
+    const release = releaseDate(row.report_date_as_yyyy_mm_dd);
+    const oi = asNumber(row.open_interest_all);
+    const record = { date: day(row.report_date_as_yyyy_mm_dd), open_interest: oi,
+      change_open_interest: asNumber(row.change_in_open_interest_all),
+      prior_report_date: index ? day(ascending[index - 1].report_date_as_yyyy_mm_dd) : null,
+      release_date: release.date, release_source: release.source, runtime_authority: '/api/cot' };
+    for (const [actor, fields] of Object.entries(ACTOR_FIELDS[dataset])) {
+      const [long, short, dl, ds] = fields.map(field => asNumber(row[field]));
+      const n = net(long, short);
+      record[`${actor}_long`] = long; record[`${actor}_short`] = short; record[`${actor}_net`] = n;
+      record[`${actor}_net_oi_pct`] = oi && n !== null ? n / oi * 100 : null;
+      record[`${actor}_short_oi_pct`] = oi && short !== null ? short / oi * 100 : null;
+      record[`${actor}_delta_long`] = dl; record[`${actor}_delta_short`] = ds;
+      record[`${actor}_delta_net`] = net(dl, ds);
+    }
+    return record;
+  });
+  // Recent current/4W scores use expanding FULL history, not the chart tail.
+  for (const actor of Object.keys(ACTOR_FIELDS[dataset])) {
+    const levels = records.map(record => record[`${actor}_net_oi_pct`]);
+    const magnitudes = records.map((record, i) => i && Number.isFinite(levels[i]) && Number.isFinite(levels[i - 1])
+      ? Math.abs(levels[i] - levels[i - 1]) : null);
+    for (let i = Math.max(0, records.length - 6); i < records.length; i++) {
+      records[i][`${actor}_position_percentile`] = midrank(levels.slice(0, i + 1), levels[i]);
+      records[i][`${actor}_change_percentile`] = midrank(magnitudes.slice(0, i + 1), magnitudes[i]);
+    }
+  }
+  return records.slice(-312);
+}
+
+export function buildMarket(market, tffRows, legacyRows) {
   const tff = exactRows(tffRows, market);
   const legacy = exactRows(legacyRows, market);
   const latestTff = tff[0];
@@ -248,6 +348,7 @@ function buildMarket(market, tffRows, legacyRows) {
       ),
     },
     historyPoints: Math.min(tff.length, 156),
+    history: { tff: reportHistory(tff, 'tff'), legacy: reportHistory(legacy, 'legacy') },
   };
 }
 

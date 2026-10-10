@@ -51,24 +51,26 @@
 
   function transformCurrent(payload) {
     if (!payload || typeof payload !== "object") return payload;
-    const actorStates = filterKeyedObject(payload.actor_states || {});
+    const allTaxonomyActorStates = payload.actor_states || {};
+    const actorStates = filterKeyedObject(allTaxonomyActorStates);
     const marketSources = Object.fromEntries(Object.entries(payload.market_sources || {}).filter(([key, row]) => {
       const market = inferMarket(row, key);
       const dataset = inferDataset(row, key);
       return !market || !dataset || dataset === datasetForMarket(market);
     }));
-    return { ...payload, actor_states: actorStates, market_sources: marketSources, presentation_selection: selectionMeta() };
+    return { ...payload, actor_states: actorStates, all_taxonomy_actor_states: allTaxonomyActorStates, market_sources: marketSources, presentation_selection: selectionMeta() };
   }
 
   function transformActive(payload) {
     if (!payload || typeof payload !== "object") return payload;
+    const allTaxonomyByMarket = payload.by_market || {};
     let total = 0;
     const byMarket = Object.fromEntries(Object.entries(payload.by_market || {}).map(([market, block]) => {
       const rows = (block?.active_thresholds || []).filter(row => matchesSelection(row, null, market));
       total += rows.length;
       return [market, { ...block, active_thresholds: rows, active_threshold_count: rows.length }];
     }));
-    return { ...payload, by_market: byMarket, active_threshold_count: total, presentation_selection: selectionMeta() };
+    return { ...payload, by_market: byMarket, all_taxonomy_by_market: allTaxonomyByMarket, active_threshold_count: total, presentation_selection: selectionMeta() };
   }
 
   function transformRegistry(payload) {
@@ -77,7 +79,7 @@
     const thresholdEdges = Array.isArray(edges)
       ? edges.filter(row => matchesSelection(row))
       : edges && typeof edges === "object" ? filterKeyedObject(edges) : edges;
-    return { ...payload, threshold_edges: thresholdEdges, presentation_selection: selectionMeta() };
+    return { ...payload, threshold_edges: thresholdEdges, all_taxonomy_threshold_edges: edges, presentation_selection: selectionMeta() };
   }
 
   function transformRegime(payload) {

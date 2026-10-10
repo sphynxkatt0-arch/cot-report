@@ -1,0 +1,11 @@
+{
+  "name": "cot-runtime",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:cot": "node --test analysis/tests/runtime-cot.test.mjs"
+  },
+  "engines": {
+    "node": "24.x"
+  }
+}

@@ -11,6 +11,7 @@
   const EVIDENCE_LABEL={PROSPECTIVE_CONFIRMED:"Live confirmed",GLOBAL_FDR:"Global FDR",FAMILY_FDR:"Family FDR",NONOVERLAP_CONFIRMED:"Non-overlap confirmed",HOLDOUT_DIRECTION_CONFIRMED:"Holdout direction",OOS_PLUS_OVERLAP:"OOS + overlap",OOS_ONLY:"OOS only",DISCOVERY_ONLY:"Discovery only",DESCRIPTIVE_ONLY:"Descriptive",INSUFFICIENT_N:"Insufficient independent N"};
   const FORWARD=["1w","2w","4w","13w","26w"];
   const WATCH_CLASSES=new Set(["GLOBAL_FDR","FAMILY_FDR","NONOVERLAP_CONFIRMED","HOLDOUT_DIRECTION_CONFIRMED"]);
+  const VALIDATED_CLASSES=new Set(["GLOBAL_FDR","FAMILY_FDR","NONOVERLAP_CONFIRMED","HOLDOUT_DIRECTION_CONFIRMED"]);
   const state={current:null,active:null,live:null,registry:null,sentiment:null,market:"sp500",horizon:"1w"};
 
   const finite=v=>{if(v===null||v===undefined||v==="")return null;const n=Number(v);return Number.isFinite(n)?n:null};
@@ -32,6 +33,8 @@
   function currentRows(market=state.market){
     return Object.values(state.current?.actor_states||{}).filter(r=>r?.market===market).sort((a,b)=>(ROLE_ORDER[a.actor_role]??9)-(ROLE_ORDER[b.actor_role]??9)||String(a.actor_label||"").localeCompare(String(b.actor_label||"")));
   }
+  function allActorStates(){return{...(state.current?.all_taxonomy_actor_states||{}),...(state.current?.actor_states||{})}}
+  function actorState(series){return state.current?.actor_states?.[series]||state.current?.all_taxonomy_actor_states?.[series]||null}
   function actorKey(row){return String(row?.series||"").split(":").at(-1)||""}
   function isCanonicalActiveRow(row,market){
     if(String(row?.actor_role||"")==="AGGREGATE_CONTEXT")return false;
@@ -39,29 +42,52 @@
     if(primary&&NONREPORTABLE_ACTORS.has(actor)&&String(row?.dataset||"")!==primary)return false;
     return true;
   }
-  function activeRows(market=state.market){
-    const rows=state.active?.by_market?.[market]?.active_thresholds||[];
+  function selectionFor(row,horizon=state.horizon){
+    const selection=row?.horizon_selections?.[horizon];
+    if(selection?.selected_threshold!==undefined&&selection?.selected_threshold!==null)return selection;
+    return{selected_threshold:row?.selected_threshold,evidence_status:row?.evidence_status||row?.historical_classification,independent_n:metricForLegacy(row,horizon)?.independent_n,excess_vs_baseline_pp:metricForLegacy(row,horizon)?.excess_vs_baseline_pp};
+  }
+  function metricForLegacy(row,horizon){return (row?.metrics||[]).find(m=>m?.horizon===horizon)||null}
+  function profileFor(row,selectedHorizon=state.horizon){
+    const selection=selectionFor(row,selectedHorizon),threshold=selection?.selected_threshold;
+    return row?.threshold_profiles?.[String(threshold)]||row?.metrics||[];
+  }
+  function effectiveRow(row,selectedHorizon=state.horizon){
+    const selection=selectionFor(row,selectedHorizon),metrics=profileFor(row,selectedHorizon);
+    return{...row,selected_threshold:selection?.selected_threshold??row?.selected_threshold,evidence_status:selection?.evidence_status||row?.evidence_status,historical_classification:selection?.evidence_status||row?.historical_classification,metrics,_selected_horizon:selectedHorizon};
+  }
+  function activeRows(market=state.market,horizon=state.horizon){
+    const rows=(state.active?.all_taxonomy_by_market||state.active?.by_market||{})?.[market]?.active_thresholds||[];
     return rows.filter(row=>isCanonicalActiveRow(row,market)).filter(row=>{
-      const current=state.current?.actor_states?.[row.series];
+      const current=actorState(row.series);
       if(!current)return false;
-      const threshold=finite(row.selected_threshold);
+      const threshold=finite(selectionFor(row,horizon)?.selected_threshold);
       const magnitude=finite(current.change_magnitude_percentile);
       return current.direction===row.direction&&threshold!==null&&magnitude!==null&&magnitude>=threshold;
     });
   }
-  function metricFor(row,horizon){return (row?.metrics||[]).find(m=>m?.horizon===horizon)||null}
+  function metricFor(row,horizon,selectedHorizon=row?._selected_horizon||horizon){return profileFor(row,selectedHorizon).find(m=>m?.horizon===horizon)||null}
   function evidenceStatus(row,metric){return String(metric?.evidence_status||row?.evidence_status||row?.historical_classification||"DISCOVERY_ONLY")}
   function evidenceGrade(status){const s=String(status||"");if(s==="PROSPECTIVE_CONFIRMED"||s==="GLOBAL_FDR"||s==="FAMILY_FDR")return{grade:"A",label:EVIDENCE_LABEL[s]||s,tone:"strong"};if(s==="NONOVERLAP_CONFIRMED"||s==="HOLDOUT_DIRECTION_CONFIRMED")return{grade:"B",label:EVIDENCE_LABEL[s]||s,tone:"supported"};if(s==="DISCOVERY_ONLY"||s==="OOS_ONLY"||s==="OOS_PLUS_OVERLAP")return{grade:"C",label:EVIDENCE_LABEL[s]||s,tone:"mixed"};return{grade:"D",label:EVIDENCE_LABEL[s]||s,tone:"weak"}}
   function sampleLabel(n){const v=finite(n);if(v===null)return"N unavailable";if(v>=60)return"Full sample";if(v>=30)return"Sample warning";if(v>=15)return"Research-only N";return"Insufficient N"}
 
-  function rankedEdges(horizon=state.horizon,market=state.market){
-    return activeRows(market).map(row=>({row,metric:metricFor(row,horizon)})).filter(x=>x.metric&&finite(x.metric.excess_vs_baseline_pp)!==null).sort((a,b)=>(EVIDENCE_ORDER[evidenceStatus(b.row,b.metric)]??0)-(EVIDENCE_ORDER[evidenceStatus(a.row,a.metric)]??0)||Math.abs(finite(b.metric.excess_vs_baseline_pp)||0)-Math.abs(finite(a.metric.excess_vs_baseline_pp)||0)||(ROLE_ORDER[a.row.actor_role]??9)-(ROLE_ORDER[b.row.actor_role]??9)||(finite(b.metric.independent_n)||finite(b.metric.n)||0)-(finite(a.metric.independent_n)||finite(a.metric.n)||0));
+  function rankedEdges(horizon=state.horizon,market=state.market,{validatedOnly=false}={}){
+    return activeRows(market,horizon).map(sourceRow=>{const current=actorState(sourceRow.series),row={...effectiveRow(sourceRow,horizon),current_change_percentile:current?.change_magnitude_percentile,change_magnitude_percentile:current?.change_magnitude_percentile};return{row,sourceRow,metric:metricFor(row,horizon,horizon)}}).filter(x=>x.metric&&finite(x.metric.excess_vs_baseline_pp)!==null&&(!validatedOnly||(VALIDATED_CLASSES.has(evidenceStatus(x.row,x.metric))&&finite(x.metric.independent_n)>=15))).sort((a,b)=>(EVIDENCE_ORDER[evidenceStatus(b.row,b.metric)]??0)-(EVIDENCE_ORDER[evidenceStatus(a.row,a.metric)]??0)||Math.abs(finite(b.metric.excess_vs_baseline_pp)||0)-Math.abs(finite(a.metric.excess_vs_baseline_pp)||0)||(finite(b.metric.independent_n)||finite(b.metric.n)||0)-(finite(a.metric.independent_n)||finite(a.metric.n)||0)||(ROLE_ORDER[a.row.actor_role]??9)-(ROLE_ORDER[b.row.actor_role]??9));
   }
   function edgeDirection(metric){const edge=finite(metric?.excess_vs_baseline_pp);if(edge===null||Math.abs(edge)<.05)return{label:"NEUTRAL",tone:"neutral",sign:0};return edge>0?{label:"BULLISH",tone:"positive",sign:1}:{label:"BEARISH",tone:"negative",sign:-1}}
   function modelTone(signal){const text=String(signal||"").toLowerCase();if(/bull|long|risk.?on|construct|support/.test(text))return"positive";if(/bear|short|risk.?off|defens|restrict/.test(text))return"negative";return"neutral"}
   function toneSign(tone){return tone==="positive"?1:tone==="negative"?-1:0}
 
-  function corePrediction(market=state.market){const rows=(state.live?.current_predictions||[]).filter(r=>r?.market===market),combined=rows.filter(r=>r?.model_family==="combined");return(combined.length?combined:rows).at(-1)||null}
+  function matchingLivePredictions(market=state.market,family="combined"){
+    const report=reportDates(market).report;
+    // Older presentation files omitted these identities; recover them only
+    // from the matching immutable signal audit, never from today's header.
+    const audits=new Map((state.live?.history||[]).map(row=>[row.signal_id,row]));
+    return(state.live?.current_predictions||[]).map(row=>({...audits.get(row.signal_id),...row})).filter(row=>
+      row.market===market&&row.model_family===family&&row.report_date===report&&row.created_at_utc&&row.forecast_hash
+    ).sort((a,b)=>String(a.created_at_utc).localeCompare(String(b.created_at_utc)));
+  }
+  function corePrediction(market=state.market){return matchingLivePredictions(market).at(-1)||null}
   function actorLivePredictions(market=state.market){return(state.live?.edge_evidence?.current_predictions||[]).filter(r=>r?.market===market)}
   function reportDates(market=state.market){const rows=currentRows(market),report=[...new Set(rows.map(r=>r.report_date_tuesday).filter(Boolean))].sort().at(-1)||null,release=[...new Set(rows.map(r=>r.release_date_friday).filter(Boolean))].sort().at(-1)||null;return{report,release}}
 
@@ -69,41 +95,12 @@
   const percentileRank=(values,current)=>{const clean=values.map(finite).filter(v=>v!==null).sort((a,b)=>a-b);if(!clean.length||current===null)return null;let left=0,equal=0;for(const value of clean){if(value<current)left++;else if(value===current)equal++}return(left+Math.max(equal,1)/2)/clean.length*100};
   const actionType=(dl,ds,dn)=>{if(dl===null||ds===null)return dn>0?"NET_ADD":dn<0?"NET_CUT":"FLAT";if(dl>0&&ds<0)return"LONG_ADD_SHORT_COVER";if(dl<0&&ds>0)return"LONG_LIQUIDATE_SHORT_ADD";if(dl>0&&ds>=0)return dn>0?"BOTH_SIDES_ADD_LONG_DOMINANT":"BOTH_SIDES_ADD_SHORT_DOMINANT";if(dl<=0&&ds<0)return dn>0?"BOTH_SIDES_CUT_SHORT_DOMINANT":"BOTH_SIDES_CUT_LONG_DOMINANT";if(dl>0)return"LONG_ADD";if(dl<0)return"LONG_LIQUIDATE";if(ds>0)return"SHORT_ADD";if(ds<0)return"SHORT_COVER";return"FLAT"};
   function overlayRuntimeCurrent(current){
-    const base=window.__COT_WORLDCLASS_BASE__,api=window.__COT_LIVE_API__;
-    if(!base?.COT_DATA||!api?.markets)return current;
-    current=current&&typeof current==="object"?current:{actor_states:{}};
-    current.actor_states={...(current.actor_states||{})};
-    for(const market of ["sp500","nq"]){
-      const apiMarket=api.markets?.[market],reportDate=String(apiMarket?.reportDate||"").slice(0,10);
-      if(!reportDate)continue;
-      for(const dataset of ["tff","legacy"]){
-        const payload=base.COT_DATA?.[dataset]?.[market],records=(payload?.records||[]).filter(r=>r?.date);
-        if(records.length<2)continue;
-        const row=records.at(-1),prev=records.at(-2);
-        for(const [actor,label] of Object.entries(payload.categories||{})){
-          const level=finite(row[`${actor}_net_oi_pct`]),previousLevel=finite(prev[`${actor}_net_oi_pct`]);
-          const longNow=finite(row[`${actor}_long`]),shortNow=finite(row[`${actor}_short`]),netNow=finite(row[`${actor}_net`]);
-          const longPrev=finite(prev[`${actor}_long`]),shortPrev=finite(prev[`${actor}_short`]),netPrev=finite(prev[`${actor}_net`]);
-          if(level===null||previousLevel===null||netNow===null||netPrev===null)continue;
-          const delta=level-previousLevel,dl=longNow!==null&&longPrev!==null?longNow-longPrev:null,ds=shortNow!==null&&shortPrev!==null?shortNow-shortPrev:null,dn=netNow-netPrev;
-          const levels=[],magnitudes=[];
-          for(let i=1;i<records.length;i++){
-            const value=finite(records[i][`${actor}_net_oi_pct`]),before=finite(records[i-1][`${actor}_net_oi_pct`]);
-            if(value===null||before===null)continue;
-            levels.push(value);magnitudes.push(Math.abs(value-before));
-          }
-          const oi=finite(row.open_interest),prevOi=finite(prev.open_interest),series=`${dataset}:${market}:${actor}`,existing=current.actor_states[series]||{};
-          current.actor_states[series]={...existing,series,dataset,market,actor,actor_label:label,actor_role:ACTOR_ROLES?.[dataset]?.[actor]||existing.actor_role||"UNCLASSIFIED",report_date_tuesday:reportDate,release_date_friday:String(api.fetchedAt||"").slice(0,10)||existing.release_date_friday,availability_at_utc:api.fetchedAt||existing.availability_at_utc,availability_source_type:"RUNTIME_API_OBSERVED",signal_date:String(api.fetchedAt||"").slice(0,10)||existing.signal_date,direction:Math.abs(delta)<=1e-12?"FLAT":delta>0?"ADD":"CUT",action_type:actionType(dl,ds,dn),long_contracts:longNow,short_contracts:shortNow,net_contracts:netNow,open_interest:oi,long_oi_pct:oi?longNow/oi*100:null,short_oi_pct:oi?shortNow/oi*100:null,net_oi_pct:level,position_percentile:percentileRank(levels,level),delta_long_contracts:dl,delta_short_contracts:ds,delta_net_contracts:dn,delta_net_oi_pp:delta,change_magnitude_percentile:percentileRank(magnitudes,Math.abs(delta)),delta_open_interest:oi!==null&&prevOi!==null?oi-prevOi:null,delta_open_interest_pct:oi!==null&&prevOi?((oi/prevOi)-1)*100:null,runtime_authority:"/api/cot"};
-        }
-      }
-    }
-    current.runtime_cot_api={latest_report_date:String(api.latestReportDate||"").slice(0,10)||null,fetched_at:api.fetchedAt||null,authority:"/api/cot"};
-    return current;
+    return window.__COT_RUNTIME_COHERENCE__?.applyCurrent(current) || current;
   }
   function edgeExplanation(item){if(!item)return"";const m=item.metric,status=evidenceStatus(item.row,m),edge=finite(m?.excess_vs_baseline_pp),n=finite(m?.independent_n??m?.n),base=finite(m?.baseline_return_pct),conditional=finite(m?.conditional_return_pct);const pieces=[`${EVIDENCE_LABEL[status]||status}`];if(edge!==null)pieces.push(`historical excess ${edge>=0?"+":""}${edge.toFixed(2)} pp vs baseline`);if(conditional!==null&&base!==null)pieces.push(`conditional ${conditional.toFixed(2)}% vs baseline ${base.toFixed(2)}%`);if(n!==null)pieces.push(`independent N ${Math.trunc(n)}`);return pieces.join(" · ")}
 
   function directionalRead(market=state.market,horizon=state.horizon){
-    const ranked=rankedEdges(horizon,market),model=corePrediction(market),strongest=ranked[0]||null;
+    const ranked=rankedEdges(horizon,market,{validatedOnly:true}),model=corePrediction(market),strongest=ranked[0]||null;
     if(model?.signal){return{label:String(model.signal).toUpperCase(),tone:modelTone(model.signal),source:"prospective",strongest,opposition:null,ranked,model,detail:"Prospective combined model is frozen separately from historical actor edges."}}
     if(!strongest)return{label:"NO ACTIVE EDGE",tone:"neutral",source:"historical",strongest:null,opposition:null,ranked,model:null,detail:"No release-corrected percentile threshold is active at the selected horizon."};
     const dir=edgeDirection(strongest.metric),strength=Math.abs(finite(strongest.metric.excess_vs_baseline_pp)||0);
@@ -117,8 +114,8 @@
   function summary(){const read=directionalRead();const bullish=read.ranked.filter(x=>edgeDirection(x.metric).sign>0).length,bearish=read.ranked.filter(x=>edgeDirection(x.metric).sign<0).length;return{...read,bullish,bearish}}
 
   function bestForwardMetric(row){
-    const metrics=FORWARD.map(h=>metricFor(row,h)).filter(m=>finite(m?.excess_vs_baseline_pp)!==null);
-    return metrics.sort((a,b)=>(EVIDENCE_ORDER[evidenceStatus(row,b)]??0)-(EVIDENCE_ORDER[evidenceStatus(row,a)]??0)||Math.abs(finite(b.excess_vs_baseline_pp)||0)-Math.abs(finite(a.excess_vs_baseline_pp)||0))[0]||null;
+    const metrics=FORWARD.map(h=>{const effective=effectiveRow(row,h);return{metric:metricFor(effective,h,h),row:effective}}).filter(x=>finite(x.metric?.excess_vs_baseline_pp)!==null);
+    return metrics.sort((a,b)=>(EVIDENCE_ORDER[evidenceStatus(b.row,b.metric)]??0)-(EVIDENCE_ORDER[evidenceStatus(a.row,a.metric)]??0)||Math.abs(finite(b.metric.excess_vs_baseline_pp)||0)-Math.abs(finite(a.metric.excess_vs_baseline_pp)||0))[0]?.metric||null;
   }
   function marketOpportunities(){
     return MARKET_ORDER.map(market=>{
@@ -130,11 +127,11 @@
   }
 
   function thresholdWatchlist(limit=8){
-    const edges=Object.values(state.registry?.threshold_edges||{}),rows=Object.values(state.current?.actor_states||{}),candidates=[];
+    const edges=Object.values(state.registry?.all_taxonomy_threshold_edges||state.registry?.threshold_edges||{}),rows=Object.values(allActorStates()),candidates=[];
     for(const row of rows){
       const magnitude=finite(row.change_magnitude_percentile),direction=String(row.direction||"");
       if(magnitude===null||!['ADD','CUT'].includes(direction))continue;
-      const future=edges.filter(edge=>edge.series===row.series&&edge.direction===direction&&WATCH_CLASSES.has(String(edge.best_classification||""))&&finite(edge.threshold)!==null&&finite(edge.threshold)>magnitude).map(edge=>({...edge,distance:finite(edge.threshold)-magnitude})).sort((a,b)=>a.distance-b.distance||(EVIDENCE_ORDER[b.best_classification]??0)-(EVIDENCE_ORDER[a.best_classification]??0));
+      const future=edges.filter(edge=>edge.series===row.series&&edge.direction===direction&&String(edge.best_horizon||"")===state.horizon&&WATCH_CLASSES.has(String(edge.best_classification||""))&&finite(edge.best_independent_n)>=15&&finite(edge.threshold)!==null&&finite(edge.threshold)>magnitude).map(edge=>({...edge,distance:finite(edge.threshold)-magnitude})).sort((a,b)=>a.distance-b.distance||(EVIDENCE_ORDER[b.best_classification]??0)-(EVIDENCE_ORDER[a.best_classification]??0));
       if(!future.length)continue;
       const edge=future[0],edgeSign=sign(edge.best_holdout_edge_pp),edgeDirection=edgeSign>0?{label:"BULLISH",tone:"positive"}:edgeSign<0?{label:"BEARISH",tone:"negative"}:{label:"NEUTRAL",tone:"neutral"};
       candidates.push({market:row.market,row,edge,distance:edge.distance,direction:edgeDirection,grade:evidenceGrade(edge.best_classification)});
@@ -202,17 +199,47 @@
     // leaves the decision header/current actor table on the previous report.
     // Wait explicitly for the runtime COT authority instead.
     const runtimeReady=waitForRuntimeCot();
-    const[current,active,live,registry,sentiment]=await Promise.all([
-      fetchJson("worldclass/cot-current-state.json"),fetchJson("worldclass/cot-active-edges.json"),fetchJson("worldclass/live-track-record.json",true),fetchJson("worldclass/cot-edge-registry.json"),fetchJson("worldclass/market-sentiment.json",true)
+    const[current,active,live,registry,sentiment,candidates]=await Promise.all([
+      fetchJson("worldclass/cot-current-state.json"),fetchJson("worldclass/cot-active-edges.json"),fetchJson("worldclass/live-track-record.json",true),fetchJson("worldclass/cot-edge-registry.json"),fetchJson("worldclass/market-sentiment.json",true),fetchJson("worldclass/cot-threshold-candidates.json",true)
     ]);
     await runtimeReady;
-    state.current=overlayRuntimeCurrent(current);state.active=active;state.live=live||{};state.registry=registry;state.sentiment=sentiment||{};state.market=selectedMarket();return state;
+    state.current=overlayRuntimeCurrent(current);state.active=rebuildActive(candidates,active);state.live=live||{};state.registry=registry;state.sentiment=sentiment||{};state.market=selectedMarket();return state;
   }
 
+  function rebuildActive(candidates,fallback){
+    if(!candidates?.historical_research_frozen){
+      if(!window.__COT_LIVE_API__?.markets)return fallback;
+      // Fresh actors cannot be compared against an old, preselected trigger
+      // list when the complete frozen candidate profiles failed to load.
+      const byMarket={...(fallback?.all_taxonomy_by_market||fallback?.by_market||{})};
+      for(const market of ['sp500','nq'])byMarket[market]={active_thresholds:[]};
+      return{...fallback,by_market:byMarket,all_taxonomy_by_market:byMarket};
+    }
+    const allByMarket={};
+    for(const source of candidates.candidates||[]){
+      const current=actorState(source.series),mag=finite(current?.change_magnitude_percentile);
+      if(!current||current.direction!==source.direction||mag===null)continue;
+      const crossed=Object.entries(source.threshold_profiles||{}).filter(([threshold])=>Number(threshold)<=mag);
+      const selections={};
+      for(const horizon of FORWARD){
+        const rank=metric=>[EVIDENCE_ORDER[metric.evidence_status]??0,finite(metric.independent_n)>=15?1:0];
+        const options=crossed.map(([threshold,metrics])=>({threshold:Number(threshold),metric:metrics.find(m=>m.horizon===horizon)})).filter(x=>x.metric);
+        options.sort((a,b)=>rank(b.metric)[0]-rank(a.metric)[0]||rank(b.metric)[1]-rank(a.metric)[1]||b.threshold-a.threshold||(finite(b.metric.independent_n)||0)-(finite(a.metric.independent_n)||0));
+        const best=options[0];
+        if(best)selections[horizon]={selected_threshold:best.threshold,evidence_status:best.metric.evidence_status,independent_n:best.metric.independent_n,excess_vs_baseline_pp:best.metric.excess_vs_baseline_pp};
+      }
+      const first=selections['1w']||Object.values(selections)[0];
+      if(!first)continue;
+      const row={...source,actor_label:current.actor_label,actor_role:current.actor_role,current_change_percentile:mag,current_position_percentile:current.position_percentile,current_delta_net_contracts:current.delta_net_contracts,current_delta_net_oi_pp:current.delta_net_oi_pp,selected_threshold:first.selected_threshold,horizon_selections:selections,metrics:source.threshold_profiles[String(first.selected_threshold)],evidence_status:first.evidence_status};
+      (allByMarket[source.market]||=( {active_thresholds:[]} )).active_thresholds.push(row);
+    }
+    const selected=state.current?.presentation_selection?.financial_report;
+    const byMarket=Object.fromEntries(Object.entries(allByMarket).map(([market,block])=>[market,{...block,active_thresholds:block.active_thresholds.filter(r=>!selected||!['tff','legacy'].includes(r.dataset)||r.dataset===selected)}]));
+    return{...fallback,by_market:byMarket,all_taxonomy_by_market:allByMarket,runtime_current_selection:true};
+  }
   function edgeGrade(metric){return metric?evidenceGrade(evidenceStatus(null,metric)):null}
-  function liveForecast(market=state.market,horizon="1w"){
-    const rows=(state.live?.current_predictions||[]).filter(row=>row?.market===market),combined=rows.filter(row=>row?.model_family==="combined");
-    const model=(combined.length?combined:rows).at(-1)||null;
+  function liveForecast(market=state.market,horizon="1w",family="combined"){
+    const model=matchingLivePredictions(market,family).at(-1)||null;
     if(!model)return null;
     const expected=finite(model[`expected_${horizon}_return_pct`]??model[`expected_${horizon}_return`]??model?.historical_horizons?.[horizon]?.expected_return_pct);
     const probability=finite(model[`probability_positive_${horizon}`]??model[`probability_positive_${horizon}_pct`]??model?.historical_horizons?.[horizon]?.probability_positive);
@@ -220,5 +247,5 @@
     return{model,expected,probability,confidence:model.confidence||model?.historical_horizons?.[horizon]?.confidence||"n/a"};
   }
 
-  window.__COT_CURRENT_EDGE_MODEL__={MARKETS,MARKET_ORDER,ROLE_ORDER,ROLE_LABEL,EVIDENCE_ORDER,EVIDENCE_LABEL,FORWARD,state,finite,currentRows,activeRows,metricFor,evidenceStatus,evidenceGrade,edgeGrade,liveForecast,sampleLabel,rankedEdges,edgeDirection,edgeExplanation,modelTone,corePrediction,actorLivePredictions,reportDates,directionalRead,summary,bestForwardMetric,marketOpportunities,thresholdWatchlist,macroSnapshot,factorSentiment,sentimentSnapshot,layerAlignment,selectedMarket,load};
+  window.__COT_CURRENT_EDGE_MODEL__={MARKETS,MARKET_ORDER,ROLE_ORDER,ROLE_LABEL,EVIDENCE_ORDER,EVIDENCE_LABEL,VALIDATED_CLASSES,FORWARD,state,finite,currentRows,allActorStates,actorState,selectionFor,profileFor,effectiveRow,activeRows,metricFor,evidenceStatus,evidenceGrade,edgeGrade,liveForecast,sampleLabel,rankedEdges,edgeDirection,edgeExplanation,modelTone,corePrediction,actorLivePredictions,reportDates,directionalRead,summary,bestForwardMetric,marketOpportunities,thresholdWatchlist,macroSnapshot,factorSentiment,sentimentSnapshot,layerAlignment,selectedMarket,rebuildActive,load};
 })();

@@ -48,7 +48,7 @@ def main():
  for src in sorted((SNAP/'cot-edge-details-v2').glob('*.json')):atomic_copy(src,CANON_DETAILS/src.name)
  inference=RESEARCH/'cot-threshold-inference-v2.json';actor=RESEARCH/'cot-actor-event-research.json';summary=RESEARCH/'cot-actor-event-summary.json';extract_gz(SNAP/'cot-threshold-inference-v2.json.gz',inference);extract_gz(SNAP/'cot-actor-event-research.json.gz',actor);atomic_copy(SNAP/'cot-actor-event-summary.json',summary)
  try:
-  run('build_cot_current_state.py');run('build_cot_active_edges_v2.py');run('build_cot_cross_market_runtime_v2.py');atomic_copy(WC/'cot-active-edges-v2.json',CANON_ACTIVE);atomic_copy(WC/'cot-cross-market-v2.json',CANON_CROSS);current=load(WC/'cot-current-state.json');active=load(CANON_ACTIVE);registry=load(CANON_REG);cross=load(CANON_CROSS)
+  run('build_cot_current_state.py');run('build_cot_active_edges_v2.py');run('build_cot_threshold_candidates.py');run('build_cot_cross_market_runtime_v2.py');atomic_copy(WC/'cot-active-edges-v2.json',CANON_ACTIVE);atomic_copy(WC/'cot-cross-market-v2.json',CANON_CROSS);current=load(WC/'cot-current-state.json');active=load(CANON_ACTIVE);registry=load(CANON_REG);cross=load(CANON_CROSS)
   if registry.get('research_generation')!='release-corrected-v2' or active.get('research_generation')!='release-corrected-v2' or cross.get('research_generation')!='release-corrected-v2':raise RuntimeError('canonical runtime mixed research generations')
   if registry.get('automatic_promotion_allowed') is not False or active.get('automatic_promotion_allowed') is not False:raise RuntimeError('automatic promotion unexpectedly enabled')
   if active.get('schema_version')!=5 or CANON_ACTIVE.stat().st_size>180000:raise RuntimeError('canonical active-edge runtime violates compact schema/budget')

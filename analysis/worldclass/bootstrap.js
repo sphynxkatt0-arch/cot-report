@@ -230,10 +230,10 @@
   }
 
   function buildRuntimeRecord(dataset, apiMarket) {
-    const date = reportDay(apiMarket?.reportDate);
+    const date = reportDay(dataset === 'legacy' ? apiMarket?.legacy?.reportDate : apiMarket?.reportDate);
     const openInterest = finiteNumber(apiMarket?.openInterest);
     if (!date || openInterest === null) return null;
-    const record = { date, open_interest: openInterest };
+    const record = { date, open_interest: openInterest, change_open_interest: finiteNumber(apiMarket?.changeOpenInterest), runtime_authority: '/api/cot' };
     const actors = dataset === "tff"
       ? {
           dealer: runtimeActorRow(apiMarket?.tff?.dealer, openInterest),
@@ -282,7 +282,12 @@
       for (const dataset of ["tff", "legacy"]) {
         const payload = base.COT_DATA?.[dataset]?.[market];
         if (!payload) continue;
-        upsertRuntimeRecord(payload, buildRuntimeRecord(dataset, apiMarket));
+        const history = apiMarket.history?.[dataset];
+        if (Array.isArray(history) && history.length) {
+          for (const record of history) upsertRuntimeRecord(payload, record);
+        } else {
+          upsertRuntimeRecord(payload, buildRuntimeRecord(dataset, apiMarket));
+        }
       }
     }
     base.bundle_meta = { ...(base.bundle_meta || {}), runtime_cot_api: {
@@ -293,6 +298,70 @@
     } };
     return base;
   }
+
+  // One current-data owner for the workbench and decision shell. Historical
+  // model estimates/immutable forecasts are not silently restamped as current.
+  function applyCurrent(current) {
+    const base = window.__COT_WORLDCLASS_BASE__;
+    if (!base?.COT_DATA || !window.__COT_LIVE_API__?.markets) return current;
+    const all = { ...(current?.all_taxonomy_actor_states || {}), ...(current?.actor_states || {}) };
+    for (const market of ['sp500', 'nq']) for (const dataset of ['tff', 'legacy']) {
+      const payload = base.COT_DATA[dataset]?.[market], records = payload?.records || [];
+      const row = records.at(-1), prior = records.at(-2);
+      if (!row?.runtime_authority) continue;
+      const comparable = prior && row.prior_report_date === prior.date;
+      for (const [actor, label] of Object.entries(payload.categories || {})) {
+        const series = `${dataset}:${market}:${actor}`, old = all[series] || {};
+        const get = suffix => finiteNumber(row[`${actor}_${suffix}`]);
+        const level = get('net_oi_pct'), before = comparable ? finiteNumber(prior[`${actor}_net_oi_pct`]) : null;
+        const delta = level !== null && before !== null ? level - before : null;
+        const dl = get('delta_long'), ds = get('delta_short'), dn = get('delta_net');
+        all[series] = { ...old, series, dataset, market, actor, actor_label: label,
+          report_date_tuesday: row.date, release_date_friday: row.release_date || null,
+          availability_at_utc: null, availability_source_type: row.release_source || 'UNVERIFIED', signal_date: row.release_date || null,
+          observed_at_utc: window.__COT_LIVE_API__.fetchedAt,
+          long_contracts: get('long'), short_contracts: get('short'), net_contracts: get('net'),
+          open_interest: row.open_interest, long_oi_pct: pct(get('long'), row.open_interest), short_oi_pct: get('short_oi_pct'), net_oi_pct: level,
+          position_percentile: get('position_percentile'), change_magnitude_percentile: get('change_percentile'),
+          delta_long_contracts: dl, delta_short_contracts: ds, delta_net_contracts: dn, delta_net_oi_pp: delta,
+          direction: delta === null ? 'UNAVAILABLE' : Math.abs(delta) <= 1e-12 ? 'FLAT' : delta > 0 ? 'ADD' : 'CUT',
+          action_type: dl > 0 && ds < 0 ? 'LONG_ADD_SHORT_COVER' : dl < 0 && ds > 0 ? 'LONG_LIQUIDATE_SHORT_ADD' : dn > 0 ? 'NET_ADD' : dn < 0 ? 'NET_CUT' : 'FLAT',
+          delta_open_interest: finiteNumber(row.change_open_interest),
+          delta_open_interest_pct: comparable && prior.open_interest ? row.change_open_interest / prior.open_interest * 100 : null,
+          prior_report_date: row.prior_report_date || null, runtime_authority: '/api/cot' };
+      }
+    }
+    const selected = current?.presentation_selection?.financial_report;
+    return { ...current, all_taxonomy_actor_states: all,
+      actor_states: Object.fromEntries(Object.entries(all).filter(([, row]) => !selected || !['tff', 'legacy'].includes(row.dataset) || row.dataset === selected)) };
+  }
+
+  function scoreAt(dataset, row) {
+    if (!row) return null;
+    const weights = window.__COT_WORLDCLASS_BASE__?.MODEL_SPEC?.score_models?.[dataset]?.category_weights || {};
+    let sum = 0, weightSum = 0;
+    for (const [actor, value] of Object.entries(weights)) {
+      const weight = finiteNumber(value);
+      if (!weight) continue;
+      const rank = finiteNumber(row[`${actor}_position_percentile`]);
+      if (rank === null) return null;
+      sum += weight * (rank - 50); weightSum += Math.abs(weight);
+    }
+    return weightSum ? Math.max(0, Math.min(100, 50 + sum / weightSum)) : null;
+  }
+  function regimeCurrent(dataset, market, fallback) {
+    const records = window.__COT_WORLDCLASS_BASE__?.COT_DATA?.[dataset]?.[market]?.records || [];
+    const row = records.at(-1);
+    if (!row?.runtime_authority) return fallback;
+    const score = scoreAt(dataset, row), thresholds = window.__COT_WORLDCLASS_BASE__?.MODEL_SPEC?.thresholds || {};
+    const cotState = score === null ? 'unavailable' : score >= (thresholds.bullish ?? 60) ? 'bullish' : score <= (thresholds.bearish ?? 40) ? 'bearish' : 'neutral';
+    const beforeDate = new Date(`${row.date}T12:00:00Z`); beforeDate.setUTCDate(beforeDate.getUTCDate() - 28);
+    const priorScore = scoreAt(dataset, records.find(r => r.date === beforeDate.toISOString().slice(0, 10)));
+    return { ...fallback, report_date: row.date, release_target_date: row.release_date || null,
+      cot_score: score, cot_state: cotState, cot_score_delta_4w: score !== null && priorScore !== null ? score - priorScore : null,
+      combined_state: `${cotState} COT / ${fallback?.macro_state || 'unavailable'} macro`, runtime_authority: '/api/cot' };
+  }
+  window.__COT_RUNTIME_COHERENCE__ = { applyCurrent, regimeCurrent };
 
   function buildRuntimeReleaseOverride(api) {
     const markets = {};

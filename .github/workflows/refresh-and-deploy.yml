@@ -49,6 +49,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: {fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -74,6 +76,10 @@ jobs:
           node --check analysis/worldclass/cot-intelligence.js
       - name: '[VALIDATING] governed macro and regime sampling contract'
         run: python analysis/tests/test_governed_cot_contract.py
+      - name: '[VALIDATING] current-report data coherence and shell rebuild'
+        run: |
+          npm run test:cot
+          python -m unittest discover -s analysis/tests -p 'test_runtime_shell.py'
       - name: '[VALIDATING] materialize immutable v2 research snapshot'
         shell: bash
         run: |

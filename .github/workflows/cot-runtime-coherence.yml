@@ -1,0 +1,30 @@
+name: Current COT runtime coherence
+
+on:
+  pull_request:
+    paths:
+      - 'api/cot.js'
+      - 'package.json'
+      - 'analysis/worldclass/**'
+      - 'analysis/reference/cftc_release_calendar.json'
+      - 'analysis/tests/runtime-cot.test.mjs'
+      - 'analysis/tests/test_runtime_shell.py'
+      - 'analysis/install_cot_intelligence_shell.py'
+      - 'analysis/worldclass_dashboard.html'
+      - '.github/workflows/cot-runtime-coherence.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  coherence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: npm run test:cot
+      - run: python -m unittest discover -s analysis/tests -p 'test_runtime_shell.py'

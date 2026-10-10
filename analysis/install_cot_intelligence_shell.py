@@ -2,9 +2,11 @@
 """Install cache-busted COT Intelligence assets into the lightweight dashboard shell."""
 from __future__ import annotations
 import hashlib
+import re
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent
 HTML=ROOT/"worldclass_dashboard.html"
+BOOTSTRAP=ROOT/"worldclass"/"bootstrap.js"
 JS=ROOT/"worldclass"/"cot-intelligence.js"
 CSS=ROOT/"worldclass"/"cot-intelligence.css"
 LIGHT_CSS=ROOT/"worldclass"/"cot-intelligence-light.css"
@@ -39,9 +41,13 @@ def read_html(path:Path)->str:
         print(f"WARNING: repaired non-UTF-8 dashboard byte(s) while installing shell assets: {exc}")
         return "".join(repaired)
 def main()->None:
-    for path in (HTML,JS,CSS,LIGHT_CSS,CURRENT_EDGE_MODEL,CURRENT_EDGE_JS,CURRENT_EDGE_CSS,MOBILE_UX_CSS,MOBILE_UX_RUNTIME,WORLDCLASS_UX_CSS,WORLDCLASS_UX_RUNTIME,REPORT_TAXONOMY_CSS,REPORT_TAXONOMY_RUNTIME,UX_HARDENING_CSS,UX_HARDENING_RUNTIME):
+    for path in (HTML,BOOTSTRAP,JS,CSS,LIGHT_CSS,CURRENT_EDGE_MODEL,CURRENT_EDGE_JS,CURRENT_EDGE_CSS,MOBILE_UX_CSS,MOBILE_UX_RUNTIME,WORLDCLASS_UX_CSS,WORLDCLASS_UX_RUNTIME,REPORT_TAXONOMY_CSS,REPORT_TAXONOMY_RUNTIME,UX_HARDENING_CSS,UX_HARDENING_RUNTIME):
         if not path.exists() or path.stat().st_size<=0: raise FileNotFoundError(path)
     text=read_html(HTML)
+    # Rebuilds must execute the canonical data owner, rather than a tracked
+    # content-hashed copy containing an older API merge implementation.
+    text=re.sub(r'worldclass/bootstrap(?:\.[0-9a-f]{12})?\.js', 'worldclass/bootstrap.js', text)
+    text=re.sub(r'const shellAssetRevision = "[^"]*";', f'const shellAssetRevision = "bootstrap-{digest(BOOTSTRAP)}";', text)
     lines=[line for line in text.splitlines() if 'data-cot-intelligence-asset=' not in line]
     text="\n".join(lines)+("\n" if text.endswith("\n") else "")
     css_tag=f'<link rel="stylesheet" href="worldclass/cot-intelligence.css?v={digest(CSS)}" data-cot-intelligence-asset="css">'

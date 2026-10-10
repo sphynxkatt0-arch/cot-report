@@ -95,6 +95,8 @@
   }
 
   function governedScore(dataset, market) {
+    const runtime = window.__COT_RUNTIME_COHERENCE__?.regimeCurrent(dataset, market, null);
+    if (runtime?.runtime_authority) return runtime.cot_score;
     const block = payload(dataset, market);
     const rows = (block?.records || []).filter(row => row?.date);
     const categories = block?.categories || {};

@@ -9,13 +9,13 @@
   <link rel="stylesheet" href="worldclass/styles.css?v=34cae95ac2c1">
   <link rel="stylesheet" href="worldclass/live-track-record-panel.css?v=20260809-cache-safe-runtime-v1">
   <!-- Runtime JS is loaded below with the current release timestamp as a cache key. -->
-  <link rel="stylesheet" href="worldclass/cot-intelligence.css?v=20260920-simplified-navigation-v1" data-cot-intelligence-asset="css">
-  <link rel="stylesheet" href="worldclass/cot-intelligence-light.css?v=41fe1a53c612" data-cot-intelligence-asset="light-css">
-  <link rel="stylesheet" href="worldclass/current-edge-command.css?v=20260920-simplified-navigation-v1" data-cot-intelligence-asset="current-edge-css">
+  <link rel="stylesheet" href="worldclass/cot-intelligence.css?v=8daccd11177f" data-cot-intelligence-asset="css">
+  <link rel="stylesheet" href="worldclass/cot-intelligence-light.css?v=93b975b161a0" data-cot-intelligence-asset="light-css">
+  <link rel="stylesheet" href="worldclass/current-edge-command.css?v=b4ed186a9021" data-cot-intelligence-asset="current-edge-css">
   <link rel="stylesheet" href="worldclass/mobile-ux.css?v=e82d2d21b0ad" data-cot-intelligence-asset="mobile-ux-css">
-  <link rel="stylesheet" href="worldclass/cot-intelligence-worldclass-ux.css?v=79df89ef29e3" data-cot-intelligence-asset="worldclass-ux-css">
+  <link rel="stylesheet" href="worldclass/cot-intelligence-worldclass-ux.css?v=c495cea0a4d5" data-cot-intelligence-asset="worldclass-ux-css">
   <link rel="stylesheet" href="worldclass/report-taxonomy.css?v=f6242fd51afa" data-cot-intelligence-asset="report-taxonomy-css">
-  <link rel="stylesheet" href="worldclass/ux-hardening.css?v=075ed7ccdef4" data-cot-intelligence-asset="ux-hardening-css">
+  <link rel="stylesheet" href="worldclass/ux-hardening.css?v=66c20b87b225" data-cot-intelligence-asset="ux-hardening-css">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to market analysis</a>
@@ -185,7 +185,7 @@
         return script;
       };
       const versioned = (path, version) => `${path}${path.includes("?") ? "&" : "?"}v=${encodeURIComponent(version)}`;
-      const shellAssetRevision = "20260920-simplified-navigation-v1";
+      const shellAssetRevision = "bootstrap-585ca282c8e7";
 
       async function startCurrentRelease() {
         let releaseVersion = null;
@@ -203,7 +203,7 @@
         // invalidate app/bootstrap caches without changing the release data itself.
         const runtimeVersion = `${releaseVersion || Date.now()}-${shellAssetRevision}`;
         window.__COT_RUNTIME_VERSION__ = runtimeVersion;
-        const bootstrap = addScript(versioned("worldclass/bootstrap.78b7dd7edb1c.js", runtimeVersion));
+        const bootstrap = addScript(versioned("worldclass/bootstrap.js", runtimeVersion));
         addScript(versioned("worldclass/live-track-record-panel.1d80930a3496.js", runtimeVersion));
         bootstrap.addEventListener("load", async () => {
           try {
@@ -218,13 +218,13 @@
       startCurrentRelease();
     })();
   </script>
-  <script defer src="worldclass/cot-intelligence.js?v=20260920-simplified-navigation-v1" data-cot-intelligence-asset="js"></script>
-  <script defer src="worldclass/report-taxonomy.js?v=96513ba22237" data-cot-intelligence-asset="report-taxonomy-js"></script>
-  <script defer src="worldclass/current-edge-model.js?v=2cf9e7df68ed" data-cot-intelligence-asset="current-edge-model"></script>
-  <script defer src="worldclass/current-edge-command.js?v=20260920-simplified-navigation-v1" data-cot-intelligence-asset="current-edge-js"></script>
+  <script defer src="worldclass/cot-intelligence.js?v=09f0cf3e113d" data-cot-intelligence-asset="js"></script>
+  <script defer src="worldclass/report-taxonomy.js?v=3c46514cd069" data-cot-intelligence-asset="report-taxonomy-js"></script>
+  <script defer src="worldclass/current-edge-model.js?v=6a80fb7b27c8" data-cot-intelligence-asset="current-edge-model"></script>
+  <script defer src="worldclass/current-edge-command.js?v=37523ef649f3" data-cot-intelligence-asset="current-edge-js"></script>
   <script defer src="worldclass/mobile-ux-runtime.js?v=b0a5974b3782" data-cot-intelligence-asset="mobile-ux-runtime"></script>
-  <script defer src="worldclass/cot-intelligence-worldclass-ux.js?v=2cd8b367c8ee" data-cot-intelligence-asset="worldclass-ux-runtime"></script>
+  <script defer src="worldclass/cot-intelligence-worldclass-ux.js?v=b5ab0ea4b0be" data-cot-intelligence-asset="worldclass-ux-runtime"></script>
   <script defer src="worldclass/ux-hardening.js?v=0482543ac41f" data-cot-intelligence-asset="ux-hardening-js"></script>
-  <script defer src="worldclass/cot-intelligence-v2-copy.js?v=ed66f5d5873f" data-cot-intelligence-asset="v2-copy-js"></script>
+  <script defer src="worldclass/cot-intelligence-v2-copy.js?v=b179c7400af8" data-cot-intelligence-asset="v2-copy-js"></script>
 </body>
 </html>

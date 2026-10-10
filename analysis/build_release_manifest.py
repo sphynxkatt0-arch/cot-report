@@ -22,6 +22,7 @@ DEFAULT_MANIFEST = Path("worldclass/release-manifest.json")
 RUNTIME_SUFFIXES = {".html", ".js", ".css", ".json"}
 EXCLUDED_NAMES = {"release-manifest.json"}
 REQUIRED_RUNTIME_PATHS = (
+    "worldclass/cot-threshold-candidates.json",
     "index.html",
     "worldclass/base.json",
     "worldclass/model-spec.json",

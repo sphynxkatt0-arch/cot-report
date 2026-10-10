@@ -247,6 +247,10 @@ def build(ledger_root: Path, generated_at: datetime) -> dict[str, Any]:
         if status != "complete":
             current_predictions.append({
                 "signal_id": signal_id,
+                "report_date": forecast.get("report_date"),
+                "release_target_date": forecast.get("release_target_date"),
+                "created_at_utc": forecast.get("created_at_utc"),
+                "forecast_hash": forecast_hashes[signal_id],
                 "market": forecast.get("market"),
                 "dataset": forecast.get("dataset"),
                 "model_family": forecast.get("model_family"),
