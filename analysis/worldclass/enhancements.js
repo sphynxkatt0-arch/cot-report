@@ -90,13 +90,23 @@
     toolbar.id = "wcChartToolbar";
     toolbar.className = "wc-chart-toolbar";
     toolbar.innerHTML = `
-      <button class="wc-chart-tool active" data-wc-chart="pan" type="button">Pan</button>
-      <button class="wc-chart-tool" data-wc-chart="zoom" type="button">Zoom</button>
-      <button class="wc-chart-tool active" data-wc-chart="autoy" type="button">Auto-fit Y</button>
-      <button class="wc-chart-tool" data-wc-chart="fit" type="button">Fit visible</button>
-      <button class="wc-chart-tool" data-wc-chart="timeline" type="button">Timeline</button>
-      <button class="wc-chart-tool" data-wc-chart="reset" type="button">Reset</button>
-      <span class="wc-chart-help">Wheel zooms · drag mode is explicit · Y axes can follow the visible date window</span>`;
+      <div class="wc-chart-preset-group" role="group" aria-label="Chart view presets">
+        <span class="wc-chart-group-label">Views</span>
+        <button class="wc-chart-tool wc-chart-preset" data-wc-preset="cot_price" type="button">COT + Price</button>
+        <button class="wc-chart-tool wc-chart-preset" data-wc-preset="weekly_flow" type="button">Weekly Flow</button>
+        <button class="wc-chart-tool wc-chart-preset" data-wc-preset="position_only" type="button">Positions Only</button>
+        <button class="wc-chart-tool wc-chart-preset" data-wc-preset="macro_context" type="button">Macro Context</button>
+      </div>
+      <div class="wc-chart-tool-group" role="group" aria-label="Chart interaction controls">
+        <span class="wc-chart-group-label">Navigate</span>
+        <button class="wc-chart-tool active" data-wc-chart="pan" type="button">Pan</button>
+        <button class="wc-chart-tool" data-wc-chart="zoom" type="button">Zoom</button>
+        <button class="wc-chart-tool active" data-wc-chart="autoy" type="button">Auto-fit Y</button>
+        <button class="wc-chart-tool" data-wc-chart="fit" type="button">Fit visible</button>
+        <button class="wc-chart-tool" data-wc-chart="timeline" type="button">Timeline</button>
+        <button class="wc-chart-tool" data-wc-chart="reset" type="button">Reset all</button>
+      </div>
+      <span class="wc-chart-help">Preset buttons change only the chart view. Wheel zooms · drag mode is explicit · Reset all restores the full date range.</span>`;
     actions.appendChild(toolbar);
   }
 
@@ -153,8 +163,13 @@
   }
 
   function setToolbarMode(mode) {
-    $$("#wcChartToolbar [data-wc-chart='pan'], #wcChartToolbar [data-wc-chart='zoom']")
+    document.querySelectorAll("#wcChartToolbar [data-wc-chart='pan'], #wcChartToolbar [data-wc-chart='zoom']")
       .forEach(button => button.classList.toggle("active", button.dataset.wcChart === mode));
+  }
+
+  function setPresetMode(preset) {
+    document.querySelectorAll("#wcChartToolbar [data-wc-preset]")
+      .forEach(button => button.classList.toggle("active", button.dataset.wcPreset === preset));
   }
 
   function handleChartAction(action, button) {
@@ -182,12 +197,18 @@
       return;
     }
     if (action === "reset") {
-      Plotly.relayout(chart, {
+      window.__COT_WORLDCLASS_CHART__?.setRange?.("all");
+      const target = chartElement() || chart;
+      Plotly.relayout(target, {
         "xaxis.autorange": true,
+        "xaxis.rangeslider.visible": false,
         "yaxis.autorange": true,
         "yaxis2.autorange": true,
         dragmode: "pan"
       });
+      autoFitY = true;
+      document.querySelectorAll("#wcChartToolbar [data-wc-chart='autoy']").forEach(item => item.classList.add("active"));
+      document.querySelectorAll("#wcChartToolbar [data-wc-chart='timeline']").forEach(item => item.classList.remove("active"));
       setToolbarMode("pan");
     }
   }
@@ -200,15 +221,25 @@
   }
 
   document.addEventListener("click", event => {
+    const preset = event.target.closest("[data-wc-preset]");
+    if (preset) {
+      if (window.__COT_WORLDCLASS_CHART__?.applyPreset?.(preset.dataset.wcPreset)) {
+        setPresetMode(preset.dataset.wcPreset);
+        window.setTimeout(sync, 40);
+      }
+      return;
+    }
     const tool = event.target.closest("[data-wc-chart]");
     if (tool) {
       handleChartAction(tool.dataset.wcChart, tool);
       return;
     }
     if (event.target.closest("[data-market], [data-category], [data-price-overlay], [data-factor-overlay], [data-range]")) {
+      setPresetMode("");
       window.setTimeout(sync, 80);
     }
   });
+  document.addEventListener("cot:chart-preset", event => setPresetMode(event.detail?.preset || ""));
   document.addEventListener("change", event => {
     if (event.target.closest("[data-control]")) window.setTimeout(sync, 80);
   });
