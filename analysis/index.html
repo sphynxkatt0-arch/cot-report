@@ -16,6 +16,8 @@
   <link rel="stylesheet" href="worldclass/cot-intelligence-worldclass-ux.css?v=c495cea0a4d5" data-cot-intelligence-asset="worldclass-ux-css">
   <link rel="stylesheet" href="worldclass/report-taxonomy.css?v=f6242fd51afa" data-cot-intelligence-asset="report-taxonomy-css">
   <link rel="stylesheet" href="worldclass/ux-hardening.css?v=66c20b87b225" data-cot-intelligence-asset="ux-hardening-css">
+  <link rel="stylesheet" href="worldclass/market-view.css?v=3041574c28f9" data-cot-intelligence-asset="market-view-css">
+  <link rel="stylesheet" href="worldclass/arc-theme.css?v=859cd0d54cc6" data-cot-intelligence-asset="arc-theme-css">
 </head>
 <body>
   <a class="skip-link" href="#mainContent">Skip to market analysis</a>
@@ -59,6 +61,9 @@
       <section id="liveWorkspace" class="dashboard-workspace live-workspace" aria-label="Prospective live evidence workspace"></section>
       <section id="dataWorkspace" class="dashboard-workspace data-workspace" aria-label="Charts and market data workspace">
 
+      <details id="chartFold" class="decision-fold market-fold" data-fold>
+        <summary><span>Chart workbench</span><small>Holdings history · price overlay · headline metrics</small></summary>
+        <div class="decision-fold-body">
       <section class="controls-surface">
         <details id="mobileControls" class="mobile-controls">
           <summary>Chart controls <span id="mobileControlSummary"></span></summary>
@@ -89,7 +94,11 @@
         </div>
         <div id="mainChart" class="main-chart"></div>
       </section>
+        </div>
+      </details>
 
+      <!-- Retired duplicate actor table: the Market actor table carries these columns behind "All columns". -->
+      <div id="legacyWeeklyChanges" hidden>
       <section id="weeklySectionHeading" class="section-heading">
         <div>
           <div class="section-number">01</div>
@@ -113,7 +122,11 @@
           </table>
         </div>
       </section>
+      </div>
 
+      <details id="positioningFold" class="decision-fold market-fold" data-fold>
+        <summary><span>Positioning regime &amp; score breakdown</span><small>Historical extremes · score contribution · advanced stance</small></summary>
+        <div class="decision-fold-body">
       <section id="positioningColumns" class="two-column">
         <section class="panel">
           <div class="panel-head compact">
@@ -127,7 +140,12 @@
           <div id="cotScorePanel"></div>
         </section>
       </section>
+        </div>
+      </details>
 
+      <details id="macroFold" class="decision-fold market-fold" data-fold>
+        <summary><span>Macro liquidity</span><small>Liquidity plumbing · funding · real rates · credit</small></summary>
+        <div class="decision-fold-body">
       <section id="macroSectionHeading" class="section-heading">
         <div><div class="section-number">02</div><div><h2>Macro liquidity</h2><p>Liquidity plumbing, funding stress, real rates, credit, dollar and volatility.</p></div></div>
       </section>
@@ -144,7 +162,12 @@
           <div id="macroDrivers" class="driver-list"></div>
         </section>
       </section>
+        </div>
+      </details>
 
+      <details id="methodologyFold" class="decision-fold market-fold" data-fold>
+        <summary><span>Data integrity &amp; methodology</span><small>Score versions · actor roles · release timing</small></summary>
+        <div class="decision-fold-body">
       <section id="methodologySectionHeading" class="section-heading">
         <div><div class="section-number">03</div><div><h2>Data integrity & methodology</h2><p>Every score stays tied to the underlying weekly report, governed model version and source taxonomy.</p></div></div>
       </section>
@@ -167,6 +190,8 @@
           <p>COT observations are Tuesday "as of" positions released later in the week. Secondary actors only receive future non-zero production weight after precommitted lookahead-safe holdout evidence demonstrates incremental value.</p>
         </div>
       </section>
+        </div>
+      </details>
       </section>
     </main>
 
@@ -185,7 +210,7 @@
         return script;
       };
       const versioned = (path, version) => `${path}${path.includes("?") ? "&" : "?"}v=${encodeURIComponent(version)}`;
-      const shellAssetRevision = "bootstrap-585ca282c8e7";
+      const shellAssetRevision = "bootstrap-53157e9484d9";
 
       async function startCurrentRelease() {
         let releaseVersion = null;
@@ -218,13 +243,13 @@
       startCurrentRelease();
     })();
   </script>
-  <script defer src="worldclass/cot-intelligence.js?v=09f0cf3e113d" data-cot-intelligence-asset="js"></script>
-  <script defer src="worldclass/report-taxonomy.js?v=3c46514cd069" data-cot-intelligence-asset="report-taxonomy-js"></script>
-  <script defer src="worldclass/current-edge-model.js?v=6a80fb7b27c8" data-cot-intelligence-asset="current-edge-model"></script>
-  <script defer src="worldclass/current-edge-command.js?v=37523ef649f3" data-cot-intelligence-asset="current-edge-js"></script>
+  <script defer src="worldclass/cot-intelligence.js?v=54de58faabbd" data-cot-intelligence-asset="js"></script>
+  <script defer src="worldclass/report-taxonomy.js?v=d034f838a52c" data-cot-intelligence-asset="report-taxonomy-js"></script>
+  <script defer src="worldclass/current-edge-model.js?v=99c5b09424ee" data-cot-intelligence-asset="current-edge-model"></script>
+  <script defer src="worldclass/current-edge-command.js?v=e3c2ac77b00a" data-cot-intelligence-asset="current-edge-js"></script>
   <script defer src="worldclass/mobile-ux-runtime.js?v=b0a5974b3782" data-cot-intelligence-asset="mobile-ux-runtime"></script>
   <script defer src="worldclass/cot-intelligence-worldclass-ux.js?v=b5ab0ea4b0be" data-cot-intelligence-asset="worldclass-ux-runtime"></script>
-  <script defer src="worldclass/ux-hardening.js?v=0482543ac41f" data-cot-intelligence-asset="ux-hardening-js"></script>
+  <script defer src="worldclass/ux-hardening.js?v=f936e9f5d07e" data-cot-intelligence-asset="ux-hardening-js"></script>
   <script defer src="worldclass/cot-intelligence-v2-copy.js?v=b179c7400af8" data-cot-intelligence-asset="v2-copy-js"></script>
 </body>
 </html>

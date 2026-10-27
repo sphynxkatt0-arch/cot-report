@@ -17,6 +17,7 @@ test('metal taxonomy copy is driven by v1.3 governed weights', async ({ page }) 
   await page.locator('#instrumentTabs [data-market="gold"]').click();
 
   await expect(page.locator('#dataWorkspace')).toBeVisible();
+  await page.locator('#chartFold > summary').click();
   const banner = page.locator('#wcTaxonomyBanner');
   await expect(banner).toBeVisible();
   await expect(banner).not.toContainText('modeled inversely');

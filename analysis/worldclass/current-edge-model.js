@@ -129,6 +129,9 @@
   function thresholdWatchlist(limit=8){
     const edges=Object.values(state.registry?.all_taxonomy_threshold_edges||state.registry?.threshold_edges||{}),rows=Object.values(allActorStates()),candidates=[];
     for(const row of rows){
+      // Same actor de-duplication as active edges: TFF and Legacy both carry a
+      // non-reportable series, so only the market's primary report may watch it.
+      if(!isCanonicalActiveRow(row,row.market))continue;
       const magnitude=finite(row.change_magnitude_percentile),direction=String(row.direction||"");
       if(magnitude===null||!['ADD','CUT'].includes(direction))continue;
       const future=edges.filter(edge=>edge.series===row.series&&edge.direction===direction&&String(edge.best_horizon||"")===state.horizon&&WATCH_CLASSES.has(String(edge.best_classification||""))&&finite(edge.best_independent_n)>=15&&finite(edge.threshold)!==null&&finite(edge.threshold)>magnitude).map(edge=>({...edge,distance:finite(edge.threshold)-magnitude})).sort((a,b)=>a.distance-b.distance||(EVIDENCE_ORDER[b.best_classification]??0)-(EVIDENCE_ORDER[a.best_classification]??0));
@@ -185,7 +188,9 @@
   async function waitForRuntimeCot(timeoutMs=8000){
     const started=Date.now();
     while(Date.now()-started<timeoutMs){
-      if(window.__COT_WORLDCLASS_BASE__?.COT_DATA&&window.__COT_LIVE_API__?.markets)return true;
+      // bootstrap installs the base only after the /api/cot attempt settles, so a
+      // base without live markets means the static bundle is final: stop waiting.
+      if(window.__COT_WORLDCLASS_BASE__?.COT_DATA)return Boolean(window.__COT_LIVE_API__?.markets);
       if(window.__COT_BOOTSTRAP_ERROR__)return false;
       await new Promise(resolve=>window.setTimeout(resolve,50));
     }

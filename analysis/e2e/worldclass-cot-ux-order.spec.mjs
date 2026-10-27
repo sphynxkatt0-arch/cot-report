@@ -7,6 +7,14 @@ async function open(page, query = '?market=nq&view=today') {
   await expect(page.locator('.instrument-bar')).toBeVisible();
 }
 
+// Secondary Market sections are collapsed by default; open one before asserting on it.
+async function openFold(page, id) {
+  const fold = page.locator(`#${id}`);
+  await expect(fold).toBeVisible();
+  if (!(await fold.evaluate(node => node.open))) await fold.locator(':scope > summary').click();
+  await expect(fold).toHaveAttribute('open', '');
+}
+
 test('Market is the default decision surface and includes the analytical workbench', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await open(page);
@@ -16,15 +24,19 @@ test('Market is the default decision surface and includes the analytical workben
   await expect(page.locator('[data-decision-view="today"]')).toHaveClass(/active/);
   await expect(page.locator('.decision-title-row')).toBeVisible();
   await expect(page.locator('[data-decision-surface="latest-cot-changes"]')).toBeVisible();
-  await expect(page.locator('[data-decision-surface="latest-cot-changes"]')).toContainText('LATEST COT POSITION CHANGES');
+  await expect(page.locator('[data-decision-surface="latest-cot-changes"]')).toContainText('Latest COT position changes');
   await expect(page.locator('[data-decision-surface="latest-cot-changes"]')).toContainText(/Positions as of/i);
   await expect(page.locator('[data-decision-surface="latest-cot-changes"]')).toContainText(/released/i);
   await expect(page.locator('[data-decision-surface="latest-cot-changes"]')).toContainText(/versus the prior COT report/i);
   await expect(page.locator('.decision-cot-change-row').first()).toContainText(/Long|Short|Primary|Secondary|Context|Hedger|Intermediary|Aggregate/i);
-  await expect(page.locator('.decision-cot-score-bridge')).toContainText('Governed COT score');
-  await expect(page.locator('.decision-cot-score-bridge')).toContainText('4W score change');
+  await expect(page.locator('.decision-chips')).toContainText('Governed COT score');
+  await expect(page.locator('.decision-chips')).toContainText('4W score change');
+  await expect(page.locator('.decision-chips > *')).toHaveCount(4);
   await expect(page.locator('#dataWorkspace')).toBeVisible();
-  await expect(page.locator('.workbench-panel')).toBeVisible();
+  await expect(page.locator('.workbench-panel')).toBeHidden();
+  for (const id of ['edgeFold', 'weekFold', 'chartFold', 'positioningFold', 'macroFold', 'methodologyFold']) {
+    await expect(page.locator(`#${id}`)).not.toHaveAttribute('open', '');
+  }
 
   const currentRows = await page.evaluate(() => window.__COT_CURRENT_EDGE_MODEL__.currentRows('nq').length);
   await expect(page.locator('.decision-cot-change-row')).toHaveCount(currentRows);
@@ -35,9 +47,10 @@ test('Market is the default decision surface and includes the analytical workben
   });
   expect(bounds.selector).toBeLessThan(1000);
   expect(bounds.read).toBeLessThan(1000);
-  expect(bounds.latest).toBeLessThan(1000);
+  expect(bounds.latest).toBeGreaterThan(bounds.read);
 
   await expect(page.locator('#cotIntelligence')).toBeHidden();
+  await openFold(page, 'chartFold');
   await expect(page.locator('.workbench-panel')).toBeVisible();
 });
 
@@ -96,8 +109,9 @@ test('financial and metals markets keep their correct actor taxonomies', async (
 
 test('score, model estimate and live record stay distinct while the active edge has one headline', async ({ page }) => {
   await open(page, '?market=sp500&view=today');
+  await openFold(page, 'edgeFold');
 
-  await expect(page.locator('.decision-title-row')).toContainText(/Governed COT score/i);
+  await expect(page.locator('.decision-verdict')).toContainText(/Governed COT score/i);
   const semantics = page.locator('.decision-semantics');
   await expect(semantics).toContainText('CURRENT MODEL ESTIMATE');
   await expect(semantics).toContainText('LIVE PROSPECTIVE');
@@ -107,13 +121,14 @@ test('score, model estimate and live record stay distinct while the active edge 
   const estimate = semantics.locator('.decision-semantic').filter({ hasText: 'CURRENT MODEL ESTIMATE' });
   await expect(estimate).toContainText(/P\(positive\)|No .* regime estimate/i);
   const live = semantics.locator('.decision-semantic').filter({ hasText: /LIVE PROSPECTIVE/ });
-  expect(await live.innerText()).toMatch(/FROZEN|NOT YET FROZEN/);
+  expect(await live.innerText()).toMatch(/frozen/i);
 });
 
 test('macro changes model family view but never rewrites the raw COT score or actor deltas', async ({ page }) => {
   await open(page, '?market=sp500&horizon=1w&view=today&model=combined');
+  await openFold(page, 'edgeFold');
 
-  const scoreBefore = await page.locator('.decision-title-row').innerText();
+  const scoreBefore = await page.locator('.decision-verdict').innerText();
   const deltasBefore = await page.locator('.decision-latest-cot').innerText();
   const combined = page.locator('.decision-semantic').filter({ hasText: 'CURRENT MODEL ESTIMATE' });
   const combinedText = await combined.innerText();
@@ -123,7 +138,7 @@ test('macro changes model family view but never rewrites the raw COT score or ac
   const macroText = await page.locator('.decision-semantic').filter({ hasText: 'CURRENT MODEL ESTIMATE' }).innerText();
   expect(macroText).not.toBe(combinedText);
 
-  const scoreAfter = await page.locator('.decision-title-row').innerText();
+  const scoreAfter = await page.locator('.decision-verdict').innerText();
   expect(scoreAfter.match(/Governed COT score[^.]+/)?.[0]).toBe(scoreBefore.match(/Governed COT score[^.]+/)?.[0]);
   expect(await page.locator('.decision-latest-cot').innerText()).toBe(deltasBefore);
 });
@@ -133,6 +148,8 @@ test('Market contains strongest edge, week path and coming edge without separate
 
   await expect(page.locator('[data-decision-view="edges"]')).toHaveCount(0);
   await expect(page.locator('[data-decision-view="week"]')).toHaveCount(0);
+  await openFold(page, 'edgeFold');
+  await openFold(page, 'weekFold');
   await expect(page.locator('.decision-strongest')).toBeVisible();
   await expect(page.locator('[data-decision-surface="week-path"]')).toBeVisible();
   await expect(page.locator('[data-decision-surface="coming-edge"]')).toBeVisible();
@@ -161,6 +178,7 @@ test('market, horizon and model family persist in URL and synchronize Today', as
   await expect(page.locator('[data-decision-horizon="2w"]')).toHaveClass(/active/);
   await expect(page).toHaveURL(/horizon=2w/);
 
+  await openFold(page, 'edgeFold');
   await page.locator('[data-model-family="macro"]').click();
   await expect(page).toHaveURL(/model=macro/);
 });
@@ -220,8 +238,9 @@ test('top-level navigation keeps one shell and preserves selection state across 
 
   await page.locator('[data-decision-view="today"]').click();
   await expect(page.locator('#dataWorkspace')).toBeVisible();
+  await openFold(page, 'chartFold');
   await expect(page.locator('.controls-surface')).toBeVisible();
-  expect(await page.locator('.controls-surface').evaluate(node => node.parentElement?.id)).toBe('dataWorkspace');
+  expect(await page.locator('.controls-surface').evaluate(node => node.closest('#dataWorkspace, #researchWorkspace, #liveWorkspace')?.id)).toBe('dataWorkspace');
   await expect(page.locator('#instrumentTabs [data-market="nq"]')).toHaveClass(/active/);
   await expect(page.locator('[data-model-family="macro"]')).toHaveClass(/active/);
   await expect(page.locator('[data-decision-horizon="4w"]')).toHaveClass(/active/);
@@ -233,12 +252,21 @@ test('Market view includes holdings history, controls and analytical components'
 
   await expect(page).toHaveURL(/view=today/);
   await expect(page.locator('[data-decision-view="today"]')).toHaveClass(/active/);
+  for (const id of ['chartFold', 'positioningFold', 'macroFold', 'methodologyFold']) await openFold(page, id);
   await expect(page.locator('.controls-surface')).toBeVisible();
   await expect(page.locator('.workbench-panel')).toBeVisible();
-  await expect(page.locator('#weeklyChangePanel')).toBeVisible();
   await expect(page.locator('#positioningColumns')).toBeVisible();
   await expect(page.locator('#macroCards')).toBeVisible();
   await expect(page.locator('#methodologyPanel')).toBeVisible();
+
+  // The duplicate weekly table is retired; its extra columns sit behind "All columns".
+  await expect(page.locator('#weeklyChangePanel')).toBeHidden();
+  const extra = page.locator('.decision-cot-change-row').first().locator('.decision-col-extra').first();
+  await expect(extra).toBeHidden();
+  await page.locator('[data-actor-columns]').click();
+  await expect(page.locator('[data-actor-columns]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(extra).toBeVisible();
+  await expect(page.locator('.decision-cot-change-head')).toContainText('Net / OI');
 
   await page.waitForFunction(() => Array.isArray(document.querySelector('#mainChart')?.data) && document.querySelector('#mainChart').data.length > 0);
   const chart = await page.evaluate(() => ({
@@ -265,6 +293,7 @@ test('Market workbench COT score and actor percentiles use the governed full-his
     await page.goto(`/worldclass_dashboard.html?market=${market}&view=data${report ? `&report=${report}` : ''}`);
     await page.waitForFunction(() => document.documentElement.classList.contains('cot-worldclass-ux-ready'));
     await expect(page.locator('.instrument-bar')).toBeVisible();
+    await openFold(page, 'positioningFold');
     await expect(page.locator('#cotScorePanel')).toBeVisible();
 
     const expected = await page.evaluate(async ({ currentMarket, requestedReport }) => {
@@ -309,6 +338,7 @@ test('Market workbench COT score and actor percentiles use the governed full-his
 
 test('price overlays follow the selected market and multi-market indexing uses one common base date', async ({ page }) => {
   await open(page, '?market=nq&view=data');
+  await openFold(page, 'chartFold');
   await page.waitForFunction(() => Array.isArray(document.querySelector('#mainChart')?.data));
 
   const priceTraceNames = () => page.evaluate(() => (document.querySelector('#mainChart')?.data || [])
@@ -358,6 +388,7 @@ test('Market keeps one governed edge headline and does not mount a second data/b
     });
 
     await expect(page.locator('#dataWorkspace')).toBeVisible();
+    await openFold(page, 'edgeFold');
     const headlineEdge = page.locator('.decision-strongest');
     await expect(headlineEdge).toBeVisible();
     await expect(page.locator('.decision-data-edge')).toHaveCount(0);
@@ -382,6 +413,7 @@ test('Market keeps one governed edge headline and does not mount a second data/b
 
 test('holdings chart can plot historical weekly net changes with short date ranges', async ({ page }) => {
   await open(page, '?market=nq&view=data');
+  await openFold(page, 'chartFold');
   const metric = page.locator('#desktopControls [data-control="metric"]');
   await expect(metric).toBeVisible();
   await metric.selectOption('net_change');
@@ -413,8 +445,9 @@ test('Legacy report selection stays synchronized with the visible workbench', as
 
 test('weekday path preserves release timing language on Today', async ({ page }) => {
   await open(page, '?market=nq&view=today');
+  await openFold(page, 'weekFold');
   const panel = page.locator('[data-decision-surface="week-path"]');
-  await expect(panel).toContainText('THIS WEEK — CUMULATIVE HISTORICAL PATH');
+  await expect(panel).toContainText('This week — cumulative historical path');
   if (await panel.locator('.decision-week-path article').count()) {
     await expect(panel).toContainText('previous Tuesday COT positioning');
     await expect(panel).toContainText('publicly available Friday');
@@ -424,7 +457,7 @@ test('weekday path preserves release timing language on Today', async ({ page })
 
 test('important index and VIX option expiries remain visible on Today', async ({ page }) => {
   await open(page, '?market=nq&horizon=1w&view=today');
-  const overview = page.locator('.decision-current');
+  const overview = page.locator('#weekFold');
   await expect(overview).toContainText('Important expiries');
   await expect(overview).toContainText('Next index OPEX');
   await expect(overview).toContainText('Next VIX settlement');
@@ -440,7 +473,8 @@ test('mobile has no page-level horizontal overflow and latest COT changes become
   const firstChange = page.locator('.decision-cot-change-row').first();
   await expect(firstChange).toBeVisible();
   await expect(firstChange.locator(':scope > strong')).toHaveCount(2);
-  await expect(firstChange.locator(':scope > span')).toHaveCount(4);
+  await expect(firstChange.locator(':scope > span:not(.decision-col-extra)')).toHaveCount(4);
+  await expect(firstChange.locator(':scope > .decision-col-extra').first()).toBeHidden();
   const box = await firstChange.boundingBox();
   expect(box.width).toBeLessThanOrEqual(390);
 
@@ -452,6 +486,7 @@ test('mobile has no page-level horizontal overflow and latest COT changes become
 test('mobile Market keeps controls and the holdings graph inside the viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await open(page, '?market=nq&view=data');
+  await openFold(page, 'chartFold');
   await expect(page.locator('.workbench-panel')).toBeVisible();
   await expect(page.locator('#mobileControls')).toBeVisible();
   await page.locator('#mobileControls > summary').click();

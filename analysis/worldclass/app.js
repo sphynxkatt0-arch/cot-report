@@ -307,6 +307,14 @@
     return current?.actor_states?.[`${dataset}:${market}:${category}`] || current?.all_taxonomy_actor_states?.[`${dataset}:${market}:${category}`] || null;
   }
 
+  function governedRegimeCurrent(dataset = state.dataset, market = state.market) {
+    return db.REGIME_BACKTEST?.markets?.[market]?.datasets?.[dataset]?.current || null;
+  }
+
+  function governedActorState(category, dataset = state.dataset, market = state.market) {
+    return db.COT_CURRENT_STATE?.actor_states?.[`${dataset}:${market}:${category}`] || null;
+  }
+
   function signed(value, digits = 0, suffix = "") {
     const number = finite(value);
     if (number === null) return "n/a";

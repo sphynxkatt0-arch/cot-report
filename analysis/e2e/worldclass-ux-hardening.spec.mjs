@@ -14,7 +14,7 @@ test('latest COT changes expose complete table semantics', async ({ page }) => {
   const table = page.locator('.decision-cot-change-table');
   await expect(table).toHaveAttribute('role', 'table');
   await expect(table).toHaveAttribute('aria-colcount', '7');
-  const headers = table.locator('.decision-cot-change-head > *');
+  const headers = table.locator('.decision-cot-change-head > :not(.decision-col-extra)');
   await expect(headers).toHaveCount(7);
   for (let index = 0; index < 7; index += 1) {
     await expect(headers.nth(index)).toHaveAttribute('role', 'columnheader');
@@ -25,6 +25,9 @@ test('latest COT changes expose complete table semantics', async ({ page }) => {
   await expect(firstRow.locator(':scope > *').nth(1)).toHaveAttribute('role', 'cell');
   const rowCount = Number(await table.getAttribute('aria-rowcount'));
   expect(rowCount).toBeGreaterThanOrEqual(2);
+
+  await page.locator('[data-actor-columns]').click();
+  await expect(table).toHaveAttribute('aria-colcount', '11');
 });
 
 test('financial futures switch TFF and Legacy as one coherent report taxonomy', async ({ page }) => {
@@ -107,6 +110,8 @@ test('important expiries are generated from the calendar instead of a frozen dat
 
 test('mobile decision controls provide touch-sized targets and visible keyboard focus', async ({ page }) => {
   await openToday(page, { width: 390, height: 844 });
+  // Open without a pointer click so :focus-visible below still reflects keyboard focus.
+  await page.locator('#edgeFold').evaluate(node => { node.open = true; });
 
   const selectors = [
     '#instrumentTabs [data-market="nq"]',

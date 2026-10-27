@@ -26,6 +26,7 @@ test('decision layer separates model/prospective estimates from the single histo
   await expect(panel).toContainText('CURRENT MODEL ESTIMATE');
   await expect(panel).toContainText('LIVE PROSPECTIVE');
   await expect(panel).not.toContainText('ACTIVE HISTORICAL EDGE');
+  await page.locator('#edgeFold > summary').click();
   await expect(page.locator('.decision-strongest')).toBeVisible();
   await expect(page.locator('#cotIntelligence')).toBeHidden();
   await expect(page.locator('#wcCommandCenter')).toBeHidden();

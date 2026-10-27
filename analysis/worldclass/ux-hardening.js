@@ -86,7 +86,9 @@
     const table = $(".decision-cot-change-table", root);
     if (!table) return;
     const head = $(".decision-cot-change-head", table);
-    const columnCount = head?.children?.length || 0;
+    // Columns behind the "All columns" toggle are display:none until it is on.
+    const showAll = table.classList.contains("show-all");
+    const columnCount = head ? [...head.children].filter(cell => showAll || !cell.classList.contains("decision-col-extra")).length : 0;
     if (head) {
       [...head.children].forEach(cell => cell.setAttribute("role", "columnheader"));
     }

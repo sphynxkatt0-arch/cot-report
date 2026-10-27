@@ -66,8 +66,10 @@ def main()->None:
     ux_hardening_runtime_tag=f'<script defer src="worldclass/ux-hardening.js?v={digest(UX_HARDENING_RUNTIME)}" data-cot-intelligence-asset="ux-hardening-js"></script>'
     v2_copy_path=ROOT/"worldclass"/"cot-intelligence-v2-copy.js"
     v2_copy_tag=f'<script defer src="worldclass/cot-intelligence-v2-copy.js?v={digest(v2_copy_path)}" data-cot-intelligence-asset="v2-copy-js"></script>' if v2_copy_path.exists() else ""
+    # Market view layout, then the Arc theme, load after every other stylesheet.
+    theme_css_tags="".join(f'  <link rel="stylesheet" href="worldclass/{name}.css?v={digest(ROOT/"worldclass"/f"{name}.css")}" data-cot-intelligence-asset="{name}-css">\n' for name in ("market-view","arc-theme") if (ROOT/"worldclass"/f"{name}.css").exists())
     if "</head>" not in text or "</body>" not in text: raise RuntimeError("worldclass_dashboard.html is missing closing head/body")
-    text=text.replace("</head>",f"  {css_tag}\n  {light_css_tag}\n  {edge_css_tag}\n  {mobile_css_tag}\n  {worldclass_ux_css_tag}\n  {report_taxonomy_css_tag}\n  {ux_hardening_css_tag}\n</head>",1).replace("</body>",f"  {js_tag}\n  {report_taxonomy_runtime_tag}\n  {edge_model_tag}\n  {edge_js_tag}\n  {mobile_runtime_tag}\n  {worldclass_ux_runtime_tag}\n  {ux_hardening_runtime_tag}\n  {v2_copy_tag}\n</body>",1)
+    text=text.replace("</head>",f"  {css_tag}\n  {light_css_tag}\n  {edge_css_tag}\n  {mobile_css_tag}\n  {worldclass_ux_css_tag}\n  {report_taxonomy_css_tag}\n  {ux_hardening_css_tag}\n{theme_css_tags}</head>",1).replace("</body>",f"  {js_tag}\n  {report_taxonomy_runtime_tag}\n  {edge_model_tag}\n  {edge_js_tag}\n  {mobile_runtime_tag}\n  {worldclass_ux_runtime_tag}\n  {ux_hardening_runtime_tag}\n  {v2_copy_tag}\n</body>",1)
     HTML.write_text(text,encoding="utf-8")
     print(f"Installed COT Intelligence shell assets · css={digest(CSS)} light-css={digest(LIGHT_CSS)} js={digest(JS)} report-taxonomy={digest(REPORT_TAXONOMY_RUNTIME)} current-edge={digest(CURRENT_EDGE_JS)} mobile-ux={digest(MOBILE_UX_CSS)} worldclass-ux={digest(WORLDCLASS_UX_CSS)} ux-hardening={digest(UX_HARDENING_CSS)}")
 if __name__=="__main__":main()
