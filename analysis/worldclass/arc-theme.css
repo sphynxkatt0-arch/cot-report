@@ -65,6 +65,7 @@ html[data-theme="dark"] {
   --radius-sm: 8px;
   --hero-from: #ffffff;
   --hero-to: #9b9b9b;
+  --track: var(--surface-2);
 
   --obs-display: var(--font-display);
   --obs-mono: var(--font-body);
@@ -103,6 +104,8 @@ html[data-theme="light"] {
   --shadow-raised: 0 8px 16px oklch(0% 0 0 / .065), 0 1px 4px oklch(0% 0 0 / .035);
   --hero-from: #000000;
   --hero-to: #666666;
+  /* Segmented tracks need more contrast than surface-2 against the light page. */
+  --track: oklch(95% 0 0);
 }
 
 /* Base: one family, one tracking, tabular numbers, no all-caps, no italics ------ */
@@ -225,9 +228,11 @@ html body :not(#_):is(strong, span).neutral { color: var(--text) !important; }
 
 /* Surfaces: one card style, borders all the way around, resting shadow -------- */
 
-/* The top bar floats off the page edge on a translucent, blurred surface. */
+/* The top bar floats off the page edge on a translucent, blurred surface. Its edges
+   line up with the cards below and its 24px inset matches their content. */
 .topbar {
-  margin: 8px 16px 0 !important;
+  margin: 8px 0 0 !important;
+  padding: 8px 24px !important;
   border: 1px solid var(--line) !important;
   border-radius: var(--radius-lg) !important;
   background: color-mix(in oklch, var(--surface) 82%, transparent) !important;
@@ -236,6 +241,7 @@ html body :not(#_):is(strong, span).neutral { color: var(--text) !important; }
   backdrop-filter: blur(16px) !important;
 }
 .brand-mark {
+  border-radius: var(--radius-sm) !important;
   border: 1px solid var(--line) !important;
   background: var(--surface) !important;
   box-shadow: none !important;
@@ -290,11 +296,13 @@ html body :not(#_):is(strong, span).neutral { color: var(--text) !important; }
   padding: 4px !important;
   border: 0 !important;
   border-radius: 999px !important;
-  background: var(--surface-2) !important;
+  background: var(--track) !important;
   box-shadow: none !important;
 }
-/* The sticky view row keeps scrolled content faintly visible behind a blur. */
+/* The sticky view row keeps scrolled content faintly visible behind a blur. No side
+   inset, so its tracks line up with the cards. */
 .decision-nav {
+  padding: 8px 0 !important;
   border: 0 !important;
   background: color-mix(in oklch, var(--bg) 82%, transparent) !important;
   box-shadow: none !important;
@@ -399,7 +407,15 @@ html[data-theme="dark"] :is(.instrument-tab.active, .decision-nav nav button.act
   color: var(--muted) !important;
 }
 
-.decision-scanner { padding: 24px !important; }
+/* Report type: label then track, no one-sided divider. */
+.report-taxonomy-control {
+  gap: 12px !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+/* The scanner spans both overview rows; stretch it so its bottom meets the table's. */
+.decision-scanner { padding: 24px !important; align-self: stretch !important; }
 .decision-scanner-list { gap: 4px !important; }
 .decision-scanner-list button {
   border: 1px solid transparent !important;
@@ -479,7 +495,12 @@ footer { border-top: 1px solid var(--line) !important; }
 }
 @media (max-width: 700px) {
   html body .decision-title-row h2:not(#_) { font-size: var(--t-lg) !important; line-height: var(--lh-lg); }
-  .topbar { margin: 8px 8px 0 !important; }
+  .topbar { padding: 8px 16px !important; }
+  /* Tracks wrap to two rows on phones, so a pill shape no longer fits: card corners,
+     with inner pills at 16 - 4 = 12px. */
+  html body .instrument-bar:not(#_) { padding-inline: 0 !important; }
+  html body :is(.instrument-tabs, .decision-horizons):not(#_) { border-radius: var(--radius-lg) !important; }
+  html body :is(.instrument-tab, .decision-horizons button):not(#_) { border-radius: var(--radius-md) !important; }
   .decision-verdict { padding: 16px !important; }
   .decision-chips { margin: 16px 0 0 !important; }
   .decision-chips > * { padding: 12px !important; }
