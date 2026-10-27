@@ -1,44 +1,56 @@
-/* Arc theme: one quiet design language for the whole dashboard, modelled on the
-   Arc UI system (uiarc.dev). Loaded last so it can collapse the earlier layers to
-   a single type scale and a neutral palette. Visual only.
+/* Arc theme: one quiet design language for the whole dashboard. Loaded last so it
+   can collapse the earlier layers to a single type scale and a neutral palette.
+   Visual only. Values follow the visual system in
+   .claude/skills/landing-page-design (Part B).
 
-   Type scale: 12 (labels, meta) · 14 (body, controls, cells) · 16 (titles)
-               20 (metric values) · 28 (verdict headline)
-   Weights: 400 and 500. Fonts: Inter for everything, Geist for display numbers
-   and the headline. Color carries meaning only: success, danger, warning. */
+   Type scale (Tailwind steps, size/line height):
+     12/16 labels, meta · 14/20 body, controls, cells · 16/24 titles
+     20/28 metric values · 24/32 verdict headline
+   Weights: 400, 500 for emphasis, 600 for buttons. One typeface: Geist. No italics.
+   Spacing: 2 4 8 12 16 24 32 40 48 64 80 96. Radius: 16 cards, 8 nested, full pills.
+   Backgrounds are flat. Color carries meaning only: success, danger, warning.
+   Motion: cubic-bezier(.22, 1, .36, 1); 300ms for color, 500ms for movement. */
 
-@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500&family=Inter:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap");
 
 :root,
 html[data-theme="dark"] {
   color-scheme: dark;
-  --font-body: Inter, ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
-  --font-display: Geist, Inter, ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
+  --font-body: Geist, ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-body);
   --t-xs: 12px;
   --t-sm: 14px;
   --t-md: 16px;
   --t-lg: 20px;
-  --t-xl: 28px;
+  --t-xl: 24px;
+  --lh-xs: 16px;
+  --lh-sm: 20px;
+  --lh-md: 24px;
+  --lh-lg: 28px;
+  --lh-xl: 32px;
   --ease: cubic-bezier(.22, 1, .36, 1);
+  --dur-color: .3s;
+  --dur-move: .5s;
 
-  --bg: oklch(19% 0 0);
-  --bg-2: oklch(19% 0 0);
-  --surface: oklch(21.5% 0 0);
-  --surface-2: oklch(24% 0 0);
-  --surface-3: oklch(26% 0 0);
-  --surface-soft: oklch(24% 0 0);
+  /* Dark surfaces come only from the approved set: #181818 #1F1F1F #272727 #313131. */
+  --bg: #181818;
+  --bg-2: #181818;
+  --surface: #1f1f1f;
+  --surface-2: #272727;
+  --surface-3: #313131;
+  --surface-soft: #272727;
   --panel: var(--surface);
   --panel-soft: var(--surface-2);
-  --line: oklch(28.5% .004 70);
-  --line-soft: oklch(25% .004 70);
+  --line: #2e2e2e;
+  --line-soft: #262626;
   --border: var(--line);
-  --line-strong: oklch(37% .004 70);
+  --line-strong: #474747;
   --text: oklch(96% 0 0);
   --muted: oklch(68% .005 75);
   --muted-2: oklch(56% .005 75);
   --cyan: oklch(92% 0 0);
-  --cyan-soft: oklch(100% 0 0 / .07);
-  --accent-soft: oklch(100% 0 0 / .07);
+  --cyan-soft: #272727;
+  --accent-soft: #272727;
   --green: oklch(74% .12 150);
   --green-soft: oklch(74% .12 150 / .12);
   --red: oklch(70% .15 28);
@@ -47,10 +59,12 @@ html[data-theme="dark"] {
   --amber-soft: oklch(80% .12 78 / .12);
   --purple: oklch(72% .08 290);
   --shadow: 0 1px 2px oklch(0% 0 0 / .25);
-  --shadow-raised: 0 6px 18px oklch(0% 0 0 / .3), 0 1px 3px oklch(0% 0 0 / .2);
-  --radius-lg: 20px;
-  --radius-md: 14px;
-  --radius-sm: 10px;
+  --shadow-raised: 0 8px 16px oklch(0% 0 0 / .3), 0 1px 4px oklch(0% 0 0 / .2);
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --hero-from: #ffffff;
+  --hero-to: #9b9b9b;
 
   --obs-display: var(--font-display);
   --obs-mono: var(--font-body);
@@ -76,8 +90,8 @@ html[data-theme="light"] {
   --muted: oklch(46% 0 0);
   --muted-2: oklch(59% 0 0);
   --cyan: oklch(20% 0 0);
-  --cyan-soft: oklch(0% 0 0 / .05);
-  --accent-soft: oklch(0% 0 0 / .05);
+  --cyan-soft: oklch(96% 0 0);
+  --accent-soft: oklch(96% 0 0);
   --green: oklch(49% .19 150);
   --green-soft: oklch(49% .19 150 / .09);
   --red: oklch(54% .21 25);
@@ -86,15 +100,17 @@ html[data-theme="light"] {
   --amber-soft: oklch(58% .18 75 / .1);
   --purple: oklch(50% .12 290);
   --shadow: 0 1px 2px oklch(0% 0 0 / .035);
-  --shadow-raised: 0 6px 18px oklch(0% 0 0 / .065), 0 1px 3px oklch(0% 0 0 / .035);
+  --shadow-raised: 0 8px 16px oklch(0% 0 0 / .065), 0 1px 4px oklch(0% 0 0 / .035);
+  --hero-from: #000000;
+  --hero-to: #666666;
 }
 
-/* Base: one family, one tracking, tabular numbers, no all-caps ------------------ */
+/* Base: one family, one tracking, tabular numbers, no all-caps, no italics ------ */
 
 html body {
   background: var(--bg) !important;
   color: var(--text);
-  font: 400 var(--t-sm)/1.45 var(--font-body);
+  font: 400 var(--t-sm)/var(--lh-sm) var(--font-body);
   letter-spacing: -.01em;
   -webkit-font-smoothing: antialiased;
 }
@@ -107,19 +123,32 @@ body :not(svg, svg *, #_) {
   font-family: var(--font-body) !important;
   font-size: var(--t-sm) !important;
   font-weight: 400 !important;
+  font-style: normal !important;
   letter-spacing: -.01em !important;
   text-transform: none !important;
   text-shadow: none !important;
   font-variant-numeric: tabular-nums;
 }
+html body :not(#_):is(h1, h2, h3, h4, h5, h6, summary > span) { text-wrap: balance; }
+html body :not(#_):is(p, li, small) { text-wrap: pretty; }
 
-/* Emphasis is a single step: 500. */
-html body :not(#_):is(b, strong, th, label, summary, button, h1, h2, h3, h4, h5, h6),
+/* Backgrounds are flat. The score ring keeps its conic fill because it is data. */
+html body :not(#_):not(svg, svg *, canvas, .score-ring, .decision-title-row h2) {
+  background-image: none !important;
+  border-image: none !important;
+}
+
+/* Emphasis is a single step: 500. Buttons are 600. */
+html body :not(#_):is(b, strong, th, label, summary, h1, h2, h3, h4, h5, h6),
 html body :not(#_):is(.decision-cot-change-row > :first-child, .position-label, .driver-label, .score-component-name, .score-component-value) {
   font-weight: 500 !important;
 }
+html body :not(#_):is(.icon-button, .decision-columns-toggle, .wc-chart-tool, .wc-health-button, .instrument-tab > :first-child,
+  .decision-nav nav button, .decision-horizons button, .range-buttons button, .report-taxonomy-buttons button) {
+  font-weight: 600 !important;
+}
 
-/* Labels, captions and meta: 12px muted. */
+/* Labels, captions and meta: 12/16 muted. */
 html body :not(#_):is(small, th, caption, footer, .eyebrow, .decision-kicker, .panel-kicker, .wc-kicker, .control-label,
   .metric-label, .metric-sub, .macro-card-label, .score-ring-label, .report-taxonomy-label, .decision-horizon-label,
   .decision-cot-change-head > *, .decision-chips > * > span, .decision-edge-metrics span, .decision-scanner-note,
@@ -128,7 +157,7 @@ html body :not(#_):is(small, th, caption, footer, .eyebrow, .decision-kicker, .p
   .instrument-tab-meta *, .status-pill, .status-pill *, .decision-semantic > span, .decision-invalidation > strong,
   .decision-week-path span, .decision-fold > summary small) {
   font-size: var(--t-xs) !important;
-  line-height: 1.4;
+  line-height: var(--lh-xs);
 }
 html body :not(#_):is(small, caption, footer, .eyebrow, .decision-kicker, .panel-kicker, .wc-kicker, .control-label,
   .metric-label, .metric-sub, .macro-card-label, .score-ring-label, .report-taxonomy-label, .decision-horizon-label,
@@ -152,28 +181,36 @@ html body :not(#_):is(.decision-strongest .decision-kicker, .decision-semantic >
 }
 html body :not(#_).decision-direction { display: inline-block; }
 
-/* Titles: 16px. Values: 20px Geist. Headline: 28px Geist. */
+/* Titles: 16/24. Values: 20/28. Headline: 24/32. */
 html body :not(#_):is(h1, h3, h4, .section-heading h2, .decision-view-panel h2, .decision-fold > summary > span, .loading-card strong) {
   font-size: var(--t-md) !important;
-  line-height: 1.3;
+  line-height: var(--lh-md);
   letter-spacing: -.015em !important;
   color: var(--text);
 }
 html body :not(#_):is(.metric-value, .macro-card-value, .score-ring-value, .decision-chips strong, .decision-semantic > strong,
   .decision-edge-metrics strong) {
-  font-family: var(--font-display) !important;
   font-size: var(--t-lg) !important;
-  font-weight: 400 !important;
-  line-height: 1.15;
+  font-weight: 500 !important;
+  line-height: var(--lh-lg);
   letter-spacing: -.02em !important;
 }
 html body .decision-title-row h2:not(#_) {
-  font-family: var(--font-display) !important;
+  max-width: 680px;
   font-size: var(--t-xl) !important;
-  font-weight: 400 !important;
-  line-height: 1.1;
-  letter-spacing: -.03em !important;
+  font-weight: 500 !important;
+  line-height: var(--lh-xl);
+  letter-spacing: -.025em !important;
   color: var(--text) !important;
+}
+/* A neutral verdict is the page's hero heading: left to right text gradient.
+   Bullish and bearish verdicts keep their semantic color instead. */
+html body .decision-title-row h2.neutral:not(#_) {
+  width: fit-content;
+  background-image: linear-gradient(90deg, var(--hero-from), var(--hero-to)) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent;
 }
 .section-heading h2 {
   background: none !important;
@@ -186,14 +223,17 @@ html body :not(#_):is(.negative, .bearish) { color: var(--red) !important; }
 html body :not(#_):is(.caution, .warning) { color: var(--amber) !important; }
 html body :not(#_):is(strong, span).neutral { color: var(--text) !important; }
 
-/* Surfaces: one card style, hairline borders, resting shadow ----------------- */
+/* Surfaces: one card style, borders all the way around, resting shadow -------- */
 
+/* The top bar floats off the page edge on a translucent, blurred surface. */
 .topbar {
-  background: var(--bg) !important;
-  border-bottom: 1px solid var(--line) !important;
-  border-image: none !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
+  margin: 8px 16px 0 !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius-lg) !important;
+  background: color-mix(in oklch, var(--surface) 82%, transparent) !important;
+  box-shadow: var(--shadow) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  backdrop-filter: blur(16px) !important;
 }
 .brand-mark {
   border: 1px solid var(--line) !important;
@@ -215,19 +255,26 @@ html body :not(#_):is(strong, span).neutral { color: var(--text) !important; }
 :is(.metric-card, .panel)::after { display: none !important; }
 .panel:hover { border-color: var(--line) !important; }
 
-/* Cards nested in a card are flat: hairline only. */
+/* Cards nested in a card are flat: hairline only. Their gap to the parent edge is
+   16px or more, so outer minus gap falls below 2 and they take the small radius. */
 .decision-fold-body :is(.decision-view-panel, .decision-strongest, .panel),
 :is(.decision-semantic, .metric-card, .macro-card, .decision-invalidation, .decision-watch, .decision-forward,
   .decision-week-path > article) {
   border: 1px solid var(--line) !important;
-  border-radius: var(--radius-md) !important;
+  border-radius: var(--radius-sm) !important;
   background: transparent !important;
   box-shadow: none !important;
   transform: none !important;
   animation: none !important;
 }
 .decision-semantic.prospective,
-.decision-semantic.historical { border-top-width: 1px !important; border-top-color: var(--line) !important; }
+.decision-semantic.historical { border-width: 1px !important; border-color: var(--line) !important; }
+
+/* Older layers left 10 and 11px corners on inner blocks and 5px on badges; snap
+   them to the Tailwind steps (8px nested, 6px badges). */
+:is(.cot-cross-card, .cot-profile, .cot-edge-card, .cot-matrix-wrap, .cot-table-wrap, .toggle-chip, .control-select,
+  .wc-health-cell, .section-number, .sentiment-drivers) { border-radius: var(--radius-sm) !important; }
+:is(.cot-status, .decision-direction, .ledger, .wc-cross-actor-rank, .wc-regime-chip) { border-radius: 6px !important; }
 
 .status-pill {
   border: 1px solid var(--line) !important;
@@ -240,16 +287,19 @@ html body :not(#_):is(strong, span).neutral { color: var(--text) !important; }
 /* Segmented controls: muted track, raised active pill ------------------------- */
 
 :is(.instrument-tabs, .decision-nav nav, .decision-horizons, .range-buttons, .report-taxonomy-buttons) {
-  padding: 3px !important;
+  padding: 4px !important;
   border: 0 !important;
   border-radius: 999px !important;
   background: var(--surface-2) !important;
   box-shadow: none !important;
 }
+/* The sticky view row keeps scrolled content faintly visible behind a blur. */
 .decision-nav {
   border: 0 !important;
-  background: transparent !important;
+  background: color-mix(in oklch, var(--bg) 82%, transparent) !important;
   box-shadow: none !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  backdrop-filter: blur(16px) !important;
 }
 :is(.instrument-tab, .decision-nav nav button, .decision-horizons button, .range-buttons button, .report-taxonomy-buttons button) {
   border: 0 !important;
@@ -257,7 +307,6 @@ html body :not(#_):is(strong, span).neutral { color: var(--text) !important; }
   background: transparent !important;
   box-shadow: none !important;
   color: var(--muted) !important;
-  transition: background .16s var(--ease), color .16s var(--ease) !important;
 }
 :is(.instrument-tab, .decision-nav nav button, .decision-horizons button, .range-buttons button, .report-taxonomy-buttons button):hover { color: var(--text) !important; }
 :is(.instrument-tab.active, .decision-nav nav button.active, .decision-horizons button.active, .range-buttons button.active, .report-taxonomy-buttons button.active) {
@@ -273,49 +322,60 @@ html[data-theme="dark"] :is(.instrument-tab.active, .decision-nav nav button.act
 .instrument-tab-meta,
 .instrument-tab-meta b { color: var(--muted-2) !important; }
 
-/* Other buttons: hairline pill */
+/* Other buttons: hairline pill, 8px by 12px */
 :is(.icon-button, .decision-columns-toggle, .wc-chart-tool, .wc-health-button) {
   border: 1px solid var(--line) !important;
   border-radius: 999px !important;
   background: var(--surface) !important;
   box-shadow: none !important;
   color: var(--text) !important;
-  transform: none !important;
 }
+.decision-columns-toggle { padding: 8px 12px !important; }
 :is(.icon-button, .decision-columns-toggle, .wc-chart-tool, .wc-health-button):hover { background: var(--surface-2) !important; }
 .decision-columns-toggle[aria-pressed="true"] { background: var(--surface-3) !important; }
 
-/* Verdict: headline, sentence, then a KPI strip split by hairlines ------------- */
+/* States: every control eases color on the base curve and presses in on click. */
+:is(button, summary, a, [role="tab"], [role="button"]) {
+  transition: background-color var(--dur-color) var(--ease), color var(--dur-color) var(--ease),
+    border-color var(--dur-color) var(--ease), opacity var(--dur-color) var(--ease),
+    transform var(--dur-move) var(--ease) !important;
+}
+:is(button, [role="tab"], [role="button"]):not(:disabled):active { transform: scale(.98) !important; }
+:is(button, summary, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--text) !important;
+  outline-offset: 2px !important;
+}
 
-.decision-verdict { padding: 28px 28px 0 !important; overflow: hidden; }
+/* Verdict: headline, sentence, then four KPI cells ----------------------------- */
+
+.decision-verdict { padding: 24px !important; overflow: hidden; }
 .decision-verdict .decision-title-row p {
+  max-width: 680px !important;
   margin-top: 8px !important;
   color: var(--muted) !important;
   font-size: var(--t-sm) !important;
+  line-height: var(--lh-sm) !important;
 }
 .decision-verdict .decision-kicker { margin-bottom: 8px; }
 .decision-chips {
-  gap: 0 !important;
-  margin: 24px -28px 0 !important;
-  border-top: 1px solid var(--line);
+  gap: 8px !important;
+  margin: 24px 0 0 !important;
 }
 .decision-chips > * {
-  padding: 18px 28px 20px !important;
-  border: 0 !important;
-  border-left: 1px solid var(--line) !important;
-  border-radius: 0 !important;
+  padding: 16px !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius-sm) !important;
   background: transparent !important;
 }
-.decision-chips > :first-child { border-left: 0 !important; }
 .decision-chips > button { display: flex !important; flex-direction: column; align-items: flex-start; justify-content: flex-start; }
 .decision-chips > button:hover,
-.decision-chips > button:focus-visible { background: var(--surface-2) !important; }
+.decision-chips > button:focus-visible { background: var(--surface-2) !important; border-color: var(--line-strong) !important; }
 .decision-chips strong { margin-top: 8px !important; }
-.decision-chips small { margin-top: 6px !important; }
+.decision-chips small { margin-top: 4px !important; }
 
 /* Lists and tables: hairline rows, no tinted hovers --------------------------- */
 
-.decision-latest-cot { padding: 24px 28px !important; }
+.decision-latest-cot { padding: 24px !important; }
 .decision-cot-change-head {
   border-bottom: 1px solid var(--line) !important;
   background: transparent !important;
@@ -333,34 +393,68 @@ html[data-theme="dark"] :is(.instrument-tab.active, .decision-nav nav button.act
 .decision-cot-change-row :is(span, strong):not(:first-child) { text-align: right; }
 /* Phone rows label each cell with a ::before, which the base reset cannot reach. */
 .decision-cot-change-row > [data-label]::before {
-  font: 400 var(--t-xs)/1.4 var(--font-body) !important;
+  font: 400 var(--t-xs)/var(--lh-xs) var(--font-body) !important;
   letter-spacing: 0 !important;
   text-transform: none !important;
   color: var(--muted) !important;
 }
 
 .decision-scanner { padding: 24px !important; }
+.decision-scanner-list { gap: 4px !important; }
 .decision-scanner-list button {
-  border: 0 !important;
-  border-bottom: 1px solid var(--line-soft) !important;
-  border-radius: 10px !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--radius-sm) !important;
   background: transparent !important;
   box-shadow: none !important;
 }
-.decision-scanner-list button.active { background: var(--surface-2) !important; border-bottom-color: transparent !important; }
+.decision-scanner-list button.active { background: var(--surface-2) !important; border-color: var(--line) !important; }
 .decision-scanner-list button:hover { background: var(--accent-soft) !important; }
 
 .data-table th,
 .data-table td { border-color: var(--line-soft) !important; }
 
-/* Folds: plain titles, muted chevron ------------------------------------------- */
+/* Folds: plain titles, muted chevron, body rises into place -------------------- */
 
-.decision-fold > summary { padding: 18px 24px !important; border-radius: var(--radius-lg) !important; }
-.decision-fold > summary::before { border-color: var(--muted) !important; }
+.decision-fold > summary { padding: 16px 24px !important; border-radius: var(--radius-lg) !important; }
+.decision-fold > summary::before {
+  border-color: var(--muted) !important;
+  transition: transform var(--dur-move) var(--ease) !important;
+}
 .decision-fold > summary:hover { background: transparent !important; }
 .decision-fold > summary:hover > span { color: var(--muted); }
 .decision-fold-body { padding: 0 16px 16px !important; gap: 12px !important; }
+.decision-fold[open] > .decision-fold-body { animation: arc-rise var(--dur-move) var(--ease) both; }
 .market-fold { margin-top: 12px !important; }
+@keyframes arc-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Loading: skeleton bars instead of spinners ----------------------------------- */
+
+.loader {
+  width: 160px !important;
+  height: 8px !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  background: var(--surface-3) !important;
+  box-shadow: none !important;
+  animation: arc-pulse 1.4s var(--ease) infinite alternate !important;
+}
+#currentEdgeCommand > .decision-loading::before {
+  width: 96px !important;
+  height: 8px !important;
+  margin: 0 0 12px !important;
+  display: block !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  background: var(--surface-3) !important;
+  animation: arc-pulse 1.4s var(--ease) infinite alternate !important;
+}
+@keyframes arc-pulse {
+  from { opacity: .45; }
+  to { opacity: 1; }
+}
 
 /* Leftover decoration from earlier layers ------------------------------------- */
 
@@ -375,25 +469,32 @@ html[data-theme="dark"] :is(.instrument-tab.active, .decision-nav nav button.act
   color: var(--muted) !important;
 }
 .loading-overlay { background: color-mix(in oklch, var(--bg) 92%, transparent) !important; }
-.loader { border-color: var(--line) !important; border-top-color: var(--text) !important; box-shadow: none !important; }
-#currentEdgeCommand > .decision-loading::before { border-color: var(--text) !important; border-right-color: transparent !important; }
-footer { border-top: 1px solid var(--line) !important; border-image: none !important; }
-:focus-visible { outline-color: var(--text) !important; }
+footer { border-top: 1px solid var(--line) !important; }
 
 ::-webkit-scrollbar-thumb { background: var(--line-strong) !important; border-color: var(--bg) !important; }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted-2) !important; }
 
 @media (max-width: 1100px) {
-  .decision-chips > :nth-child(3) { border-left: 0 !important; }
-  .decision-chips > :nth-child(n+3) { border-top: 1px solid var(--line) !important; }
+  .decision-chips > [data-health-chip] { grid-column: 1 / -1; }
 }
 @media (max-width: 700px) {
-  html body .decision-title-row h2:not(#_) { font-size: 24px !important; }
-  .decision-verdict { padding: 20px 18px 0 !important; }
-  .decision-chips { margin: 20px -18px 0 !important; }
-  .decision-chips > * { padding: 14px 18px 16px !important; }
+  html body .decision-title-row h2:not(#_) { font-size: var(--t-lg) !important; line-height: var(--lh-lg); }
+  .topbar { margin: 8px 8px 0 !important; }
+  .decision-verdict { padding: 16px !important; }
+  .decision-chips { margin: 16px 0 0 !important; }
+  .decision-chips > * { padding: 12px !important; }
   .decision-latest-cot,
-  .decision-scanner { padding: 18px !important; }
-  .decision-fold > summary { padding: 16px 18px !important; }
+  .decision-scanner { padding: 16px !important; }
+  .decision-fold > summary { padding: 16px !important; }
   .decision-fold-body { padding: 0 8px 8px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(button, [role="tab"], [role="button"]):not(:disabled):active { transform: none !important; }
+  .decision-fold > summary::before { transition: none !important; }
+  .decision-fold[open] > .decision-fold-body { animation: arc-fade var(--dur-color) var(--ease) both; }
+  :is(.loader, #currentEdgeCommand > .decision-loading::before) { animation: none !important; }
+}
+@keyframes arc-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
