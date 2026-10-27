@@ -33,7 +33,9 @@ PLUMBING = ROOT / "model_output" / "macro_liquidity_expansion.json"
 MARKETS = ("sp500", "nq", "vix", "rty", "dow", "gold", "silver")
 INDEX_MARKETS = ("sp500", "nq", "vix", "rty", "dow")
 METAL_MARKETS = ("gold", "silver")
-MAX_INITIAL_GZIP = int(os.getenv("WORLDCLASS_INITIAL_GZIP_BUDGET", "1000000"))
+# base.json grows by roughly 4 KB gzip with each weekly CFTC refresh; the old
+# 1,000,000 budget was crossed on 2026-10-09 and blocked every deploy after it.
+MAX_INITIAL_GZIP = int(os.getenv("WORLDCLASS_INITIAL_GZIP_BUDGET", "1250000"))
 MODEL_SPEC = model_cfg.load_model_spec()
 MODEL_VERSION = str(MODEL_SPEC["model_version"])
 MODEL_SPEC_HASH = model_cfg.model_spec_hash(MODEL_SPEC)

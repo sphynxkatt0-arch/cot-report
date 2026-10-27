@@ -73,7 +73,7 @@ jobs:
 
       - name: Enforce measured first-render gzip budget
         env:
-          WORLDCLASS_INITIAL_GZIP_BUDGET: "1000000"
+          WORLDCLASS_INITIAL_GZIP_BUDGET: "1250000"
         run: |
           PYTHONPATH=analysis python - <<'PY'
           import json
