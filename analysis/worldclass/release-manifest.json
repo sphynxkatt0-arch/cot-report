@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "release_id": "20261030T012612Z-688df77a4ad6-ddb290f86bd3",
-  "generated_at_utc": "2026-10-30T01:26:12Z",
-  "source_commit": "688df77a4ad69b9c7de25709eea715d6d72949cc",
-  "release_content_sha256": "ddb290f86bd3d7a54acbd4243d4014b79970131c17a88aead52890b62c4d9fc2",
+  "release_id": "20261030T205411Z-ef9ce373576f-870900ee1d46",
+  "generated_at_utc": "2026-10-30T20:54:11Z",
+  "source_commit": "ef9ce373576fb538a9e179f2b3214a68732348c0",
+  "release_content_sha256": "870900ee1d4614fc7e7d8c11e5728d0b6df917e2daf8332827269fbb98fc5b7e",
   "publish_contract": {
     "strategy": "single-commit-gh-pages",
     "atomic_publish_unit": "validated publish tree",
@@ -32,7 +32,7 @@
     {
       "path": "index.html",
       "bytes": 14466,
-      "sha256": "c42b8aee82db38e02de8bca1557174f21312ddb508a925a7ae27a78cdbfb44a5"
+      "sha256": "559331f9fde9bbc131d006ec5b41f40d6a94392a196f5beea4a6f35a5c4f9186"
     },
     {
       "path": "model_output/macro_liquidity_expansion.json",
@@ -71,8 +71,8 @@
     },
     {
       "path": "worldclass/bootstrap.js",
-      "bytes": 25577,
-      "sha256": "464c161f5188560f1c44fd0f399fa3bd4cc93c406f9ecf4f1b7dfc919638ce8c"
+      "bytes": 25868,
+      "sha256": "42f9ac9b79e18d84f5420639fe47e47530dceeaf9ebfe10570fc07c963ad78a1"
     },
     {
       "path": "worldclass/cot-active-edges-v2.json",
@@ -367,7 +367,7 @@
     {
       "path": "worldclass_dashboard.html",
       "bytes": 14466,
-      "sha256": "c42b8aee82db38e02de8bca1557174f21312ddb508a925a7ae27a78cdbfb44a5"
+      "sha256": "a9cce68168b562b7efbe001cc6f57181c3f3e2d3b31b787cd0db3976788a39d0"
     }
   ]
 }

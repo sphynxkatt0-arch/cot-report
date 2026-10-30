@@ -413,9 +413,13 @@
 
   async function loadLiveCotApi() {
     const controller = new AbortController();
-    const timer = window.setTimeout(() => controller.abort(), 4000);
+    // Cold serverless starts plus CFTC history downloads can exceed four
+    // seconds. Keep the request alive through a normal upstream response.
+    const timer = window.setTimeout(() => controller.abort(), 30000);
     try {
-      const response = await originalFetch(`/api/cot?v=${Date.now()}`, { cache: "no-store", signal: controller.signal });
+      // The API owns freshness with a five-minute shared cache. A unique URL
+      // on every page load defeats it and forces another cold upstream fetch.
+      const response = await originalFetch("/api/cot", { cache: "no-store", signal: controller.signal });
       if (!response.ok) throw new Error(`/api/cot HTTP ${response.status}`);
       const payload = await response.json();
       if (!payload?.latestReportDate || !payload?.markets?.sp500 || !payload?.markets?.nq) throw new Error("/api/cot payload is incomplete");

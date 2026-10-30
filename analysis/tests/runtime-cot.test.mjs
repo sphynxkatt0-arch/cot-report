@@ -4,6 +4,50 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { reportHistory, releaseDate } from '../../api/cot.js';
 
+function liveLoader(originalFetch) {
+  const source = readFileSync(new URL('../worldclass/bootstrap.js', import.meta.url), 'utf8');
+  const body = source.slice(source.indexOf('  async function loadLiveCotApi()'), source.indexOf('  function extractEmbeddedConstant('));
+  const context = { AbortController, originalFetch, window: {
+    setTimeout: (...args) => setTimeout(...args), clearTimeout: timer => clearTimeout(timer),
+  } };
+  vm.runInNewContext(body, context);
+  return context.loadLiveCotApi;
+}
+
+test('a slow CFTC response still replaces the previous weekly report', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const payload = { latestReportDate: '2026-10-27', markets: { sp500: {}, nq: {} } };
+  let request;
+  const load = liveLoader((url, options) => {
+    request = { url, ...options };
+    return new Promise((resolve, reject) => {
+      options.signal.addEventListener('abort', () => reject(options.signal.reason), { once: true });
+      setTimeout(() => resolve({ ok: true, json: async () => payload }), 5500);
+    });
+  });
+  const pending = load();
+  t.mock.timers.tick(5500);
+  assert.equal(await pending, payload);
+  assert.equal(request.url, '/api/cot');
+  assert.equal(request.cache, 'no-store');
+  assert.equal(request.signal.aborted, false);
+});
+
+test('an unresponsive CFTC API remains bounded and allows static fallback', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const load = liveLoader((url, { signal }) => new Promise((resolve, reject) => {
+    signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+  }));
+  const rejected = assert.rejects(load(), { name: 'AbortError' });
+  t.mock.timers.tick(30000);
+  await rejected;
+});
+
+test('a failed or incomplete live response cannot replace validated static data', async () => {
+  await assert.rejects(liveLoader(async () => ({ ok: false, status: 502 }))(), /HTTP 502/);
+  await assert.rejects(liveLoader(async () => ({ ok: true, json: async () => ({ latestReportDate: '2026-10-27', markets: {} }) }))(), /incomplete/);
+});
+
 const sourceRow = (date, overrides = {}) => ({
   report_date_as_yyyy_mm_dd: date, open_interest_all: '297655', change_in_open_interest_all: '13704',
   noncomm_positions_long_all: '84033', noncomm_positions_short_all: '29922',
