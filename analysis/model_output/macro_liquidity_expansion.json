@@ -1,66 +1,66 @@
 {
   "schema_version": 1,
   "model_version": "macro-liquidity-control-room-v1.2",
-  "generated_at_utc": "2026-10-29T01:14:47.629281+00:00",
+  "generated_at_utc": "2026-10-30T00:17:02.784319+00:00",
   "role": "descriptive risk and plumbing context; does not create or reverse COT direction",
   "source_coverage_ratio": 0.692,
   "source_coverage_label": "Partial",
   "existing_macro_latest": {
-    "date": "2026-10-29",
-    "walcl": 6753.604,
-    "tga": 945.153,
-    "rrp": 0.176,
-    "bank_reserves": 2962.607,
+    "date": "2026-10-30",
+    "walcl": 6745.635,
+    "tga": 1015.632,
+    "rrp": 0.353,
+    "bank_reserves": 2893.77,
     "bank_treasury_agency": 4783.765,
     "bank_assets": 19810.337,
-    "reserves_to_bank_assets_pct": 14.955,
-    "slr_balance_sheet_load": 7746.372,
-    "net_liquidity": 5808.275,
-    "net_liquidity_4w_change": 49.64,
-    "net_liquidity_13w_change": 41.603,
-    "bank_reserves_4w_change": 14.517,
+    "reserves_to_bank_assets_pct": 14.607,
+    "slr_balance_sheet_load": 7677.535,
+    "net_liquidity": 5729.65,
+    "net_liquidity_4w_change": -27.834,
+    "net_liquidity_13w_change": -35.947,
+    "bank_reserves_4w_change": -54.32,
     "bank_treasury_agency_4w_change": 25.007,
-    "slr_balance_sheet_load_4w_change": 39.524,
-    "reserves_to_bank_assets_4w_change": -0.014,
-    "tga_4w_change": -38.893,
-    "rrp_4w_change": -0.174,
-    "sofr": 3.95,
+    "slr_balance_sheet_load_4w_change": -29.313,
+    "reserves_to_bank_assets_4w_change": -0.362,
+    "tga_4w_change": 31.586,
+    "rrp_4w_change": -1.148,
+    "sofr": 3.94,
     "effr": 3.88,
     "iorb": 3.9,
-    "sofr_iorb_spread": 0.05,
+    "sofr_iorb_spread": 0.04,
     "effr_iorb_spread": -0.02,
-    "sofr_iorb_spread_4w_change": 0.08,
+    "sofr_iorb_spread_4w_change": 0.06,
     "effr_iorb_spread_4w_change": 0.0,
-    "real_yield_10y": 2.67,
-    "real_yield_5y": 2.36,
-    "real_yield_4w_change": -0.21,
-    "real_yield_5y_4w_change": -0.29,
-    "nominal_yield_10y": 5.05,
-    "nominal_yield_2y": 4.67,
+    "real_yield_10y": 2.63,
+    "real_yield_5y": 2.31,
+    "real_yield_4w_change": -0.29,
+    "real_yield_5y_4w_change": -0.38,
+    "nominal_yield_10y": 4.98,
+    "nominal_yield_2y": 4.61,
     "nominal_yield_3m": 4.18,
-    "nominal_yield_30y": 5.37,
-    "nominal_yield_30y_4w_change": -0.24,
-    "yield_curve_10y_2y": 0.38,
-    "yield_curve_10y_3m": 0.87,
-    "yield_curve_30y_10y": 0.32,
-    "hy_oas": 3.18,
-    "ig_oas": 0.88,
-    "hy_oas_4w_change": -0.06,
-    "ig_oas_4w_change": 0.02,
+    "nominal_yield_30y": 5.32,
+    "nominal_yield_30y_4w_change": -0.31,
+    "yield_curve_10y_2y": 0.37,
+    "yield_curve_10y_3m": 0.8,
+    "yield_curve_30y_10y": 0.34,
+    "hy_oas": 3.14,
+    "ig_oas": 0.86,
+    "hy_oas_4w_change": 0.04,
+    "ig_oas_4w_change": 0.01,
     "dollar_index": 121.32,
-    "dollar_4w_change": -0.468,
-    "vix": 16.91,
-    "vix_4w_change": 0.52,
-    "sp500": 7743.98,
-    "nasdaq": 29813.156,
-    "sp500_13w_change_pct": 4.119,
+    "dollar_4w_change": -0.065,
+    "vix": 17.2,
+    "vix_4w_change": 1.89,
+    "sp500": 7720.39,
+    "nasdaq": 29402.508,
+    "sp500_13w_change_pct": 3.08,
     "sp500_forward_5d": null,
     "sp500_forward_10d": null,
-    "treasury_issuance_7d": 13.0,
-    "treasury_issuance_28d": 1798.0,
-    "treasury_issuance_next_7d": 26.0,
-    "liquidity_plumbing_score": 47.204,
-    "liquidity_score": 54.316,
+    "treasury_issuance_7d": 26.0,
+    "treasury_issuance_28d": 1824.0,
+    "treasury_issuance_next_7d": 0.0,
+    "liquidity_plumbing_score": 40.006,
+    "liquidity_score": 50.582,
     "regime_label": "Neutral",
     "sp500_forward_20d": null,
     "sp500_forward_60d": null,
@@ -88,55 +88,55 @@
     "tsp_equity_ift_m": 444.0,
     "retirement_flow_signal": 60.0,
     "credit_override": false,
-    "score_net_liquidity": 55.351,
-    "score_bank_reserves": 51.419,
-    "score_treasury_supply": 46.074,
-    "score_repo_spread": 16.042,
-    "score_slr_load": 46.038,
-    "score_real_yield": 83.341,
-    "score_credit": 55.964,
-    "score_dollar": 58.892,
-    "score_vix": 47.268,
-    "macro_regime_score": 0.17,
+    "score_net_liquidity": 43.31,
+    "score_bank_reserves": 38.835,
+    "score_treasury_supply": 47.829,
+    "score_repo_spread": 22.311,
+    "score_slr_load": 56.855,
+    "score_real_yield": 90.708,
+    "score_credit": 50.057,
+    "score_dollar": 54.713,
+    "score_vix": 41.866,
+    "macro_regime_score": 0.02,
     "macro_regime_score_label": "Neutral / transition",
-    "confidence_score": 23,
+    "confidence_score": 21,
     "confidence_label": "low"
   },
   "treasury_cash_context": {
-    "latest_operating_cash_bn": 1052.53,
-    "operating_cash_change_5d_bn": 78.87699999999995,
-    "operating_cash_change_20d_bn": 92.95799999999997,
-    "latest_flow_date": "2026-10-27",
-    "daily_private_cash_flow_bn": -63.65599999999995,
-    "private_cash_flow_5d_bn": -157.753,
-    "private_cash_flow_20d_bn": -185.93200000000016,
-    "deposits_5d_bn": 1499.2959999999998,
-    "withdrawals_5d_bn": 1341.543,
-    "tax_deposits_5d_bn": 91.47200000000001,
+    "latest_operating_cash_bn": 1015.632,
+    "operating_cash_change_5d_bn": 70.47899999999993,
+    "operating_cash_change_20d_bn": 79.03199999999993,
+    "latest_flow_date": "2026-10-28",
+    "daily_private_cash_flow_bn": 73.79299999999999,
+    "private_cash_flow_5d_bn": -140.96299999999997,
+    "private_cash_flow_20d_bn": -158.08600000000018,
+    "deposits_5d_bn": 1492.6029999999998,
+    "withdrawals_5d_bn": 1351.6399999999999,
+    "tax_deposits_5d_bn": 87.884,
     "top_cash_flow_categories_5d": [
       {
         "category": "Public Debt Cash Issues (Table IIIB)",
-        "private_cash_effect_bn": -645.78
+        "private_cash_effect_bn": -646.08
       },
       {
         "category": "Public Debt Cash Redemp. (Table IIIB)",
-        "private_cash_effect_bn": 543.24
+        "private_cash_effect_bn": 547.1
       },
       {
         "category": "Other",
-        "private_cash_effect_bn": -78.88
+        "private_cash_effect_bn": -70.48
       },
       {
         "category": "Taxes - Withheld Individual/FICA",
-        "private_cash_effect_bn": -57.35
+        "private_cash_effect_bn": -55.36
       },
       {
         "category": "SSA - Benefits Payments",
-        "private_cash_effect_bn": 32.74
+        "private_cash_effect_bn": 32.54
       },
       {
         "category": "DHS - Customs Duties, Taxes, and Fees",
-        "private_cash_effect_bn": -20.85
+        "private_cash_effect_bn": -20.79
       }
     ],
     "sign_convention": "positive = Treasury withdrawal / private-sector cash injection; negative = Treasury deposit / private-sector cash drain"
@@ -322,43 +322,43 @@
   "pillars": {
     "macro_regime": {
       "label": "Macro risk regime",
-      "score": 54.316,
+      "score": 50.582,
       "state": "Neutral"
     },
     "net_liquidity": {
       "label": "Net liquidity impulse",
-      "value": 49.64,
+      "value": -27.834,
       "unit": "USD bn / 4w",
-      "state": "Supportive"
+      "state": "Defensive"
     },
     "bank_reserves": {
       "label": "Reserve impulse",
-      "value": 14.517,
+      "value": -54.32,
       "unit": "USD bn / 4w",
-      "state": "Supportive"
+      "state": "Defensive"
     },
     "treasury_supply": {
       "label": "Treasury settlement pressure",
-      "value": 26.0,
+      "value": 0.0,
       "unit": "USD bn / 7d",
       "state": "Low"
     },
     "repo_admin_spread": {
       "label": "SOFR-IORB",
-      "value": 0.05,
+      "value": 0.04,
       "unit": "pp",
-      "state": "Caution"
+      "state": "Normal"
     },
     "funding_microstructure": {
       "label": "Funding microstructure",
-      "score": 38.6,
-      "state": "Defensive",
+      "score": 43.4,
+      "state": "Neutral",
       "coverage": 1.0,
-      "repo_rate_dispersion_bp": 5.0,
-      "largest_rate_move_bp": 8.0,
+      "repo_rate_dispersion_bp": 3.0,
+      "largest_rate_move_bp": 7.0,
       "reasons": [
-        "repo rate dispersion 5.0 bp",
-        "largest short-term rate move 8.0 bp"
+        "repo rate dispersion 3.0 bp",
+        "largest short-term rate move 7.0 bp"
       ]
     },
     "dealer_absorption": {
@@ -383,16 +383,16 @@
     },
     "fiscal_cash_flow": {
       "label": "Daily fiscal cash flow",
-      "score": 10.0,
+      "score": 10.9,
       "state": "Defensive",
       "coverage": 1.0,
-      "private_cash_flow_5d_bn": -157.753,
-      "private_cash_flow_20d_bn": -185.93200000000016,
-      "operating_cash_change_5d_bn": 78.87699999999995,
-      "tax_deposits_5d_bn": 91.47200000000001,
+      "private_cash_flow_5d_bn": -140.96299999999997,
+      "private_cash_flow_20d_bn": -158.08600000000018,
+      "operating_cash_change_5d_bn": 70.47899999999993,
+      "tax_deposits_5d_bn": 87.884,
       "reasons": [
-        "5d private cash effect -157.8 bn",
-        "5d operating-cash change +78.9 bn"
+        "5d private cash effect -141.0 bn",
+        "5d operating-cash change +70.5 bn"
       ]
     },
     "auction_absorption": {
@@ -420,11 +420,11 @@
       "status": "fresh",
       "mnemonic": "REPO-DVP_AR_OO-P",
       "resolution": "configured",
-      "latest_date": "2026-10-27",
-      "latest_value": 3.97,
-      "change_short": 0.08000000000000007,
-      "change_medium": 0.07000000000000028,
-      "zscore": 2.835820722172207,
+      "latest_date": "2026-10-28",
+      "latest_value": 3.95,
+      "change_short": 0.06000000000000005,
+      "change_medium": 0.06000000000000005,
+      "zscore": 2.5672372353648054,
       "age_days": 2,
       "error": null
     },
@@ -442,7 +442,7 @@
       "change_short": 0.03000000000000025,
       "change_medium": 0.3200000000000003,
       "zscore": -0.1358629277940659,
-      "age_days": 3,
+      "age_days": 4,
       "error": null
     },
     {
@@ -454,11 +454,11 @@
       "status": "fresh",
       "mnemonic": "REPO-TRI_AR_OO-P",
       "resolution": "configured",
-      "latest_date": "2026-10-26",
-      "latest_value": 3.92,
-      "change_short": 0.06000000000000005,
-      "change_medium": 0.020000000000000018,
-      "zscore": 2.5410503903731194,
+      "latest_date": "2026-10-27",
+      "latest_value": 3.94,
+      "change_short": 0.06999999999999984,
+      "change_medium": 0.040000000000000036,
+      "zscore": 2.6565909169748183,
       "age_days": 3,
       "error": null
     },
@@ -471,11 +471,11 @@
       "status": "fresh",
       "mnemonic": "REPO-DVP_TV_OO-P",
       "resolution": "configured; scaled raw OFR dollars by 1e+09",
-      "latest_date": "2026-10-27",
-      "latest_value": 3032.57347334564,
-      "change_short": 342.68929850409995,
-      "change_medium": 253.85408651552007,
-      "zscore": 1.5386760724680584,
+      "latest_date": "2026-10-28",
+      "latest_value": 2977.8582672130296,
+      "change_short": 243.82133716049975,
+      "change_medium": 152.75969609180947,
+      "zscore": 1.0936299136097103,
       "age_days": 2,
       "error": null
     },
@@ -510,7 +510,7 @@
       "change_short": -9373.0,
       "change_medium": -19539.0,
       "zscore": null,
-      "age_days": 1765,
+      "age_days": 1766,
       "error": null
     },
     {
@@ -527,7 +527,7 @@
       "change_short": -26058.0,
       "change_medium": -70257.0,
       "zscore": 0.007517234963826265,
-      "age_days": 15,
+      "age_days": 16,
       "error": null
     },
     {
@@ -544,7 +544,7 @@
       "change_short": 20149.287253780058,
       "change_medium": -13656.139525010018,
       "zscore": 1.8785315114834868,
-      "age_days": 29,
+      "age_days": 30,
       "error": null
     },
     {
@@ -561,7 +561,7 @@
       "change_short": -212675.42935321992,
       "change_medium": 202760.64625159977,
       "zscore": 1.5008430123143537,
-      "age_days": 29,
+      "age_days": 30,
       "error": null
     },
     {
@@ -578,7 +578,7 @@
       "change_short": 19896.83407966001,
       "change_medium": -200902.57043101988,
       "zscore": -0.2119743026704503,
-      "age_days": 29,
+      "age_days": 30,
       "error": null
     },
     {
@@ -590,11 +590,11 @@
       "status": "fresh",
       "mnemonic": null,
       "resolution": "official fiscaldata API; deterministic TGA closing-balance selection",
-      "latest_date": "2026-10-27",
-      "latest_value": 1052.53,
-      "change_short": 78.87699999999995,
-      "change_medium": 92.95799999999997,
-      "zscore": 2.201675105718845,
+      "latest_date": "2026-10-28",
+      "latest_value": 1015.632,
+      "change_short": 70.47899999999993,
+      "change_medium": 79.03199999999993,
+      "zscore": 1.4343751672952,
       "age_days": 2,
       "error": null
     },
@@ -607,11 +607,11 @@
       "status": "fresh",
       "mnemonic": null,
       "resolution": "official fiscaldata API",
-      "latest_date": "2026-10-27",
-      "latest_value": -63.65599999999995,
-      "change_short": -157.753,
-      "change_medium": -185.93200000000016,
-      "zscore": -0.8135797142678647,
+      "latest_date": "2026-10-28",
+      "latest_value": 73.79299999999999,
+      "change_short": -140.96299999999997,
+      "change_medium": -158.08600000000018,
+      "zscore": 1.0567948266967144,
       "age_days": 2,
       "error": null
     },
@@ -629,7 +629,7 @@
       "change_short": -0.04035714285714288,
       "change_medium": 3.1410871501113253,
       "zscore": null,
-      "age_days": 21,
+      "age_days": 22,
       "error": null
     }
   ],
