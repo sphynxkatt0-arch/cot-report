@@ -1,9 +1,9 @@
 {
   "schema_version": 2,
-  "state": "LIVE",
-  "generated_at_utc": "2026-10-30T01:26:10Z",
-  "latest_cot_report_date": "2026-10-20",
-  "expected_cot_report_date": "2026-10-20",
+  "state": "DELAYED",
+  "generated_at_utc": "2026-10-31T00:06:37Z",
+  "latest_cot_report_date": "2026-10-27",
+  "expected_cot_report_date": "2026-10-27",
   "model": {
     "model_version": "1.3.0",
     "model_spec_hash": "a78c87e61dadb513bac3f844c4c7cc3c134deb495d187e0ebe5128c1ae15251e"
@@ -11,79 +11,81 @@
   "market_states": {
     "sp500": {
       "state": "LIVE",
-      "latest_cot_report_date": "2026-10-20",
-      "expected_cot_report_date": "2026-10-20"
+      "latest_cot_report_date": "2026-10-27",
+      "expected_cot_report_date": "2026-10-27"
     },
     "nq": {
       "state": "LIVE",
-      "latest_cot_report_date": "2026-10-20",
-      "expected_cot_report_date": "2026-10-20"
+      "latest_cot_report_date": "2026-10-27",
+      "expected_cot_report_date": "2026-10-27"
     },
     "vix": {
       "state": "LIVE",
-      "latest_cot_report_date": "2026-10-20",
-      "expected_cot_report_date": "2026-10-20"
+      "latest_cot_report_date": "2026-10-27",
+      "expected_cot_report_date": "2026-10-27"
     },
     "rty": {
       "state": "LIVE",
-      "latest_cot_report_date": "2026-10-20",
-      "expected_cot_report_date": "2026-10-20"
+      "latest_cot_report_date": "2026-10-27",
+      "expected_cot_report_date": "2026-10-27"
     },
     "dow": {
       "state": "LIVE",
-      "latest_cot_report_date": "2026-10-20",
-      "expected_cot_report_date": "2026-10-20"
+      "latest_cot_report_date": "2026-10-27",
+      "expected_cot_report_date": "2026-10-27"
     },
     "gold": {
       "state": "LIVE",
-      "latest_cot_report_date": "2026-10-20",
-      "expected_cot_report_date": "2026-10-20"
+      "latest_cot_report_date": "2026-10-27",
+      "expected_cot_report_date": "2026-10-27"
     },
     "silver": {
-      "state": "LIVE",
+      "state": "DELAYED",
       "latest_cot_report_date": "2026-10-20",
-      "expected_cot_report_date": "2026-10-20"
+      "expected_cot_report_date": "2026-10-27"
     }
   },
   "markets": {
     "sp500": {
       "status": "LIVE",
-      "latest_report_date": "2026-10-20",
-      "expected_report_date": "2026-10-20"
+      "latest_report_date": "2026-10-27",
+      "expected_report_date": "2026-10-27"
     },
     "nq": {
       "status": "LIVE",
-      "latest_report_date": "2026-10-20",
-      "expected_report_date": "2026-10-20"
+      "latest_report_date": "2026-10-27",
+      "expected_report_date": "2026-10-27"
     },
     "vix": {
       "status": "LIVE",
-      "latest_report_date": "2026-10-20",
-      "expected_report_date": "2026-10-20"
+      "latest_report_date": "2026-10-27",
+      "expected_report_date": "2026-10-27"
     },
     "rty": {
       "status": "LIVE",
-      "latest_report_date": "2026-10-20",
-      "expected_report_date": "2026-10-20"
+      "latest_report_date": "2026-10-27",
+      "expected_report_date": "2026-10-27"
     },
     "dow": {
       "status": "LIVE",
-      "latest_report_date": "2026-10-20",
-      "expected_report_date": "2026-10-20"
+      "latest_report_date": "2026-10-27",
+      "expected_report_date": "2026-10-27"
     },
     "gold": {
       "status": "LIVE",
-      "latest_report_date": "2026-10-20",
-      "expected_report_date": "2026-10-20"
+      "latest_report_date": "2026-10-27",
+      "expected_report_date": "2026-10-27"
     },
     "silver": {
-      "status": "LIVE",
+      "status": "DELAYED",
       "latest_report_date": "2026-10-20",
-      "expected_report_date": "2026-10-20"
+      "expected_report_date": "2026-10-27"
     }
   },
-  "delayed_markets": [],
-  "message": "Validated current CFTC report 2026-10-20 across all required markets.",
+  "delayed_markets": [
+    "silver"
+  ],
+  "message": "Expected CFTC report for 2026-10-27 is missing for: silver; serving each market's last valid observation.",
   "markets_validated": [
     "sp500",
     "nq",
@@ -107,17 +109,16 @@
   "macro_plumbing": {
     "state": "LIVE",
     "model_version": "macro-liquidity-control-room-v1.2",
-    "generated_at_utc": "2026-10-30T01:24:57.350691+00:00",
-    "source_coverage_ratio": 0.692,
-    "source_coverage_label": "Partial",
+    "generated_at_utc": "2026-10-31T00:05:23.036205+00:00",
+    "source_coverage_ratio": 0.769,
+    "source_coverage_label": "Good",
     "available_external_pillars": [
       "funding_microstructure",
+      "dealer_absorption",
       "fiscal_cash_flow",
       "auction_absorption"
     ],
-    "unavailable_external_pillars": [
-      "dealer_absorption"
-    ],
+    "unavailable_external_pillars": [],
     "browser_official_recovery": true,
     "required_pillars": [
       "net_liquidity",
@@ -129,13 +130,13 @@
     ]
   },
   "performance_gzip_bytes": {
-    "worldclass_dashboard.html": 4460,
+    "worldclass_dashboard.html": 4459,
     "worldclass/styles.css": 5471,
     "worldclass/live-track-record-panel.css": 1791,
-    "worldclass/bootstrap.js": 7364,
+    "worldclass/bootstrap.js": 7525,
     "worldclass/live-track-record-panel.js": 3435,
     "worldclass/taxonomy-governance.js": 3096,
-    "worldclass/base.json": 796197,
+    "worldclass/base.json": 796451,
     "worldclass/metals.json": 93290,
     "worldclass/app.js": 13756,
     "worldclass/enhancements.css": 1094,
@@ -145,11 +146,11 @@
     "worldclass/enhancements.js": 3330,
     "worldclass/sentiment-panel.js": 2209,
     "worldclass/terminal-v3.js": 7486,
-    "worldclass/market-sentiment.json": 21201,
-    "worldclass/live-track-record.json": 52922,
-    "worldclass/release-status.json": 1048,
-    "initial_total": 1022871,
-    "deferred_after_load_total": 130768,
+    "worldclass/market-sentiment.json": 21595,
+    "worldclass/live-track-record.json": 52921,
+    "worldclass/release-status.json": 1052,
+    "initial_total": 1023682,
+    "deferred_after_load_total": 130550,
     "budget": 1250000
   }
 }
