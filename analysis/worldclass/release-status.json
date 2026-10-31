@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
-  "state": "DELAYED",
-  "generated_at_utc": "2026-10-31T00:06:37Z",
+  "state": "LIVE",
+  "generated_at_utc": "2026-10-31T01:05:27Z",
   "latest_cot_report_date": "2026-10-27",
   "expected_cot_report_date": "2026-10-27",
   "model": {
@@ -40,8 +40,8 @@
       "expected_cot_report_date": "2026-10-27"
     },
     "silver": {
-      "state": "DELAYED",
-      "latest_cot_report_date": "2026-10-20",
+      "state": "LIVE",
+      "latest_cot_report_date": "2026-10-27",
       "expected_cot_report_date": "2026-10-27"
     }
   },
@@ -77,15 +77,13 @@
       "expected_report_date": "2026-10-27"
     },
     "silver": {
-      "status": "DELAYED",
-      "latest_report_date": "2026-10-20",
+      "status": "LIVE",
+      "latest_report_date": "2026-10-27",
       "expected_report_date": "2026-10-27"
     }
   },
-  "delayed_markets": [
-    "silver"
-  ],
-  "message": "Expected CFTC report for 2026-10-27 is missing for: silver; serving each market's last valid observation.",
+  "delayed_markets": [],
+  "message": "Validated current CFTC report 2026-10-27 across all required markets.",
   "markets_validated": [
     "sp500",
     "nq",
@@ -109,7 +107,7 @@
   "macro_plumbing": {
     "state": "LIVE",
     "model_version": "macro-liquidity-control-room-v1.2",
-    "generated_at_utc": "2026-10-31T00:05:23.036205+00:00",
+    "generated_at_utc": "2026-10-31T01:04:16.910870+00:00",
     "source_coverage_ratio": 0.769,
     "source_coverage_label": "Good",
     "available_external_pillars": [
@@ -136,8 +134,8 @@
     "worldclass/bootstrap.js": 7525,
     "worldclass/live-track-record-panel.js": 3435,
     "worldclass/taxonomy-governance.js": 3096,
-    "worldclass/base.json": 796451,
-    "worldclass/metals.json": 93290,
+    "worldclass/base.json": 797840,
+    "worldclass/metals.json": 93312,
     "worldclass/app.js": 13756,
     "worldclass/enhancements.css": 1094,
     "worldclass/kpi-accent.css": 426,
@@ -146,11 +144,11 @@
     "worldclass/enhancements.js": 3330,
     "worldclass/sentiment-panel.js": 2209,
     "worldclass/terminal-v3.js": 7486,
-    "worldclass/market-sentiment.json": 21595,
-    "worldclass/live-track-record.json": 52921,
-    "worldclass/release-status.json": 1052,
-    "initial_total": 1023682,
-    "deferred_after_load_total": 130550,
+    "worldclass/market-sentiment.json": 21597,
+    "worldclass/live-track-record.json": 52922,
+    "worldclass/release-status.json": 1095,
+    "initial_total": 1025139,
+    "deferred_after_load_total": 130603,
     "budget": 1250000
   }
 }

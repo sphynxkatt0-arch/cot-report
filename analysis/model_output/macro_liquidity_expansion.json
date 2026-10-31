@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "model_version": "macro-liquidity-control-room-v1.2",
-  "generated_at_utc": "2026-10-31T00:05:23.036205+00:00",
+  "generated_at_utc": "2026-10-31T01:04:16.910870+00:00",
   "role": "descriptive risk and plumbing context; does not create or reverse COT direction",
   "source_coverage_ratio": 0.769,
   "source_coverage_label": "Good",
@@ -132,7 +132,7 @@
       },
       {
         "category": "SSA - Benefits Payments",
-        "private_cash_effect_bn": 32.37
+        "private_cash_effect_bn": 32.38
       },
       {
         "category": "DHS - Customs Duties, Taxes, and Fees",
