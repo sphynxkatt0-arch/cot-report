@@ -1,0 +1,19 @@
+{
+  "schema_version": 2,
+  "snapshot_id": "2026-08-11-release-corrected-v2",
+  "research_generation": "release-corrected-v2",
+  "information_contract_version": "cftc-public-availability-v2",
+  "certification_url": "https://cot-v2-final-certification.vercel.app/FINAL_CERTIFICATION.json",
+  "snapshot_base_url": "https://cot-v2-final-certification.vercel.app/snapshot",
+  "expected_gate_a_archive_sha256": "8025d66c8457789ceb0811bde3df4fc6878f74b4e62ec73d862b88dceb51a7e6",
+  "expected_b1_archive_sha256": "11be5034064b384a9e49582e69e053fc45cf0f2e99cddfa05d617f52a6f2d2ce",
+  "expected_b2_directional_sha256": "3abecd211ddbfd51acb858793232c73d71af0d6f5be88bf26daffdd00b92759a",
+  "expected_active_compact_sha256": "e205bd07ac6e35c8abc120264e013b73656e60ba6d8d5918b6ab1e1480e923d2",
+  "expected_snapshot_manifest_sha256": "16d61f2937d98ab7fb21d96a73fbae58695f34a59d3fee726a056a8dbc154a8e",
+  "active_compact_bytes": 77741,
+  "verification": "fetch_release_corrected_snapshot_v2.py verifies the exact Gate A/B1/B2/active/frozen-manifest hash chain and every required snapshot file SHA256 before production installation",
+  "old_snapshots_modified": false,
+  "promotion_eligible": false,
+  "production_weight_changes": false,
+  "automatic_promotion_allowed": false
+}

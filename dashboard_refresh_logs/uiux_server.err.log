@@ -1,0 +1,104 @@
+127.0.0.1 - - [05/Jun/2026 23:45:06] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jun/2026 23:45:08] code 404, message File not found
+127.0.0.1 - - [05/Jun/2026 23:45:08] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [05/Jun/2026 23:45:14] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jun/2026 23:45:21] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jun/2026 23:47:36] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jun/2026 23:47:38] code 404, message File not found
+127.0.0.1 - - [05/Jun/2026 23:47:38] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [05/Jun/2026 23:47:43] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jun/2026 23:47:51] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jun/2026 23:50:23] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jun/2026 23:50:25] code 404, message File not found
+127.0.0.1 - - [05/Jun/2026 23:50:25] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [05/Jun/2026 23:50:30] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jun/2026 23:50:37] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jun/2026 23:54:01] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jun/2026 23:54:08] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jun/2026 23:54:16] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jun/2026 23:54:56] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jun/2026 23:54:59] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jun/2026 23:55:02] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jun/2026 23:57:24] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jun/2026 00:03:30] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jun/2026 00:05:57] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jun/2026 00:06:33] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jun/2026 00:06:37] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jun/2026 00:06:41] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jun/2026 00:07:09] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jun/2026 00:07:12] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jun/2026 00:07:27] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jun/2026 00:07:50] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jun/2026 00:11:42] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [06/Jun/2026 00:11:42] "GET / HTTP/1.1" 200 -
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 11486)
+Traceback (most recent call last):
+  File "C:\Users\smili\AppData\Local\Programs\Python\Python313\Lib\socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\smili\AppData\Local\Programs\Python\Python313\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "A:\work\trading\cot report\analysis\serve_interactive_cot_dashboard.py", line 421, in __init__
+    super().__init__(*args, directory=str(ROOT), **kwargs)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\smili\AppData\Local\Programs\Python\Python313\Lib\http\server.py", line 672, in __init__
+    super().__init__(*args, **kwargs)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\smili\AppData\Local\Programs\Python\Python313\Lib\socketserver.py", line 766, in __init__
+    self.handle()
+    ~~~~~~~~~~~^^
+  File "C:\Users\smili\AppData\Local\Programs\Python\Python313\Lib\http\server.py", line 436, in handle
+    self.handle_one_request()
+    ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\smili\AppData\Local\Programs\Python\Python313\Lib\http\server.py", line 424, in handle_one_request
+    method()
+    ~~~~~~^^
+  File "A:\work\trading\cot report\analysis\serve_interactive_cot_dashboard.py", line 430, in do_GET
+    super().do_GET()
+    ~~~~~~~~~~~~~~^^
+  File "C:\Users\smili\AppData\Local\Programs\Python\Python313\Lib\http\server.py", line 679, in do_GET
+    self.copyfile(f, self.wfile)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\smili\AppData\Local\Programs\Python\Python313\Lib\http\server.py", line 881, in copyfile
+    shutil.copyfileobj(source, outputfile)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\smili\AppData\Local\Programs\Python\Python313\Lib\shutil.py", line 204, in copyfileobj
+    fdst_write(buf)
+    ~~~~~~~~~~^^^^^
+  File "C:\Users\smili\AppData\Local\Programs\Python\Python313\Lib\socketserver.py", line 845, in write
+    self._sock.sendall(b)
+    ~~~~~~~~~~~~~~~~~~^^^
+ConnectionResetError: [WinError 10054] En befintlig anslutning tvingades att st\xe4nga av fj\xe4rrv\xe4rddatorn
+----------------------------------------
+127.0.0.1 - - [06/Jun/2026 00:11:46] "GET / HTTP/1.1" 200 -
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 5966)
+Traceback (most recent call last):
+  File "C:\Users\smili\AppData\Local\Programs\Python\Python313\Lib\socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\smili\AppData\Local\Programs\Python\Python313\Lib\socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "A:\work\trading\cot report\analysis\serve_interactive_cot_dashboard.py", line 421, in __init__
+    super().__init__(*args, directory=str(ROOT), **kwargs)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\smili\AppData\Local\Programs\Python\Python313\Lib\http\server.py", line 672, in __init__
+    super().__init__(*args, **kwargs)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\smili\AppData\Local\Programs\Python\Python313\Lib\socketserver.py", line 766, in __init__
+    self.handle()
+    ~~~~~~~~~~~^^
+  File "C:\Users\smili\AppData\Local\Programs\Python\Python313\Lib\http\server.py", line 436, in handle
+    self.handle_one_request()
+    ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\smili\AppData\Local\Programs\Python\Python313\Lib\http\server.py", line 404, in handle_one_request
+    self.raw_requestline = self.rfile.readline(65537)
+                           ~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\smili\AppData\Local\Programs\Python\Python313\Lib\socket.py", line 719, in readinto
+    return self._sock.recv_into(b)
+           ~~~~~~~~~~~~~~~~~~~~^^^
+ConnectionResetError: [WinError 10054] En befintlig anslutning tvingades att st\xe4nga av fj\xe4rrv\xe4rddatorn
+----------------------------------------

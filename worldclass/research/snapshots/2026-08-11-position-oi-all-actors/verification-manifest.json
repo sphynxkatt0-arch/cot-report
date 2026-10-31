@@ -1,0 +1,48 @@
+{
+  "actor_horizon_cell_count": 885,
+  "actor_series_count": 59,
+  "files": {
+    "all-actor-horizon-audit.json": {
+      "bytes": 5028016,
+      "sha256": "6b258ad4cb7186c84b1cb47ae4a41d88887efe2ae536bd5c348b259a63a19219"
+    },
+    "all-actor-horizon-matrix.tsv": {
+      "bytes": 191997,
+      "sha256": "bef5b6840e3a370b127a78b48db9fd1034a50880f5a1f15f6d7f32902ec32dbc"
+    }
+  },
+  "forecast_contract": {
+    "discovery": "pre-2022",
+    "holdout": "2022+ untouched",
+    "multiplicity": "Benjamini-Hochberg on approximate Fisher-z p-values of non-overlapping Spearman; global and pre-specified predictor-family q-values",
+    "oos_model": "univariate or pre-specified two-feature OLS fit only on discovery and frozen in holdout",
+    "overlap_control": "greedy non-overlapping forward episodes",
+    "raw_level_caution": "raw position and raw OI levels are scale-sensitive/nonstationary; percentile and OI-normalized variants are retained as confirmation controls",
+    "tail_cutoffs": "discovery q10/q90 frozen before holdout"
+  },
+  "gh_pages_source_ref_sha": "1857310199f6607195cab43650b5502e9a5b3495",
+  "information_contract": {
+    "cot_snapshot": "Tuesday",
+    "lookahead_safe": true,
+    "percentiles": "expanding history only; current report may enter its own rank but no future report is visible",
+    "public_availability": "Friday = report date + 3 calendar days",
+    "release_anchor": "first market close on/after Friday release target"
+  },
+  "main_ref_sha": "6d8d98f001794f875929411a248a6228b837ddd0",
+  "market_oi_horizon_cell_count": 105,
+  "market_oi_series_count": 7,
+  "production_changes": false,
+  "purpose": "Immutable complete 59 actor-series x 15 horizon plus 7 market-OI x 15 horizon audit derived from the governed raw-position/OI study.",
+  "research_branch": "research/full-actor-cross-instrument-20260810",
+  "research_head_before_snapshot_commit": "3c77bfc0928e403f09a9c8ca323749e357fd275f",
+  "snapshot_id": "cot-position-oi-all-actors-all-horizons-2026-08-11",
+  "source_continuous_metric_count": 12915,
+  "source_strict_counts": {
+    "FAMILY_FDR10_OOS": 1,
+    "NO_OOS_GAIN": 9559,
+    "OVERLAP_CONFIRMED_NOT_FDR": 376,
+    "POSITIVE_OOS_GAIN_NOT_OVERLAP_CONFIRMED": 2979
+  },
+  "verification_rule": "This dated audit is immutable. New source data or research logic must use a new snapshot directory; do not rewrite this evidence.",
+  "workflow_run_id": "31442289521"
+}
