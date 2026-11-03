@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "state": "LIVE",
-  "generated_at_utc": "2026-10-31T01:05:27Z",
+  "generated_at_utc": "2026-11-03T02:41:49Z",
   "latest_cot_report_date": "2026-10-27",
   "expected_cot_report_date": "2026-10-27",
   "model": {
@@ -107,16 +107,17 @@
   "macro_plumbing": {
     "state": "LIVE",
     "model_version": "macro-liquidity-control-room-v1.2",
-    "generated_at_utc": "2026-10-31T01:04:16.910870+00:00",
-    "source_coverage_ratio": 0.769,
-    "source_coverage_label": "Good",
+    "generated_at_utc": "2026-11-03T02:40:36.324270+00:00",
+    "source_coverage_ratio": 0.615,
+    "source_coverage_label": "Partial",
     "available_external_pillars": [
       "funding_microstructure",
-      "dealer_absorption",
       "fiscal_cash_flow",
       "auction_absorption"
     ],
-    "unavailable_external_pillars": [],
+    "unavailable_external_pillars": [
+      "dealer_absorption"
+    ],
     "browser_official_recovery": true,
     "required_pillars": [
       "net_liquidity",
@@ -134,8 +135,8 @@
     "worldclass/bootstrap.js": 7525,
     "worldclass/live-track-record-panel.js": 3435,
     "worldclass/taxonomy-governance.js": 3096,
-    "worldclass/base.json": 797840,
-    "worldclass/metals.json": 93312,
+    "worldclass/base.json": 797400,
+    "worldclass/metals.json": 93313,
     "worldclass/app.js": 13756,
     "worldclass/enhancements.css": 1094,
     "worldclass/kpi-accent.css": 426,
@@ -144,11 +145,11 @@
     "worldclass/enhancements.js": 3330,
     "worldclass/sentiment-panel.js": 2209,
     "worldclass/terminal-v3.js": 7486,
-    "worldclass/market-sentiment.json": 21597,
-    "worldclass/live-track-record.json": 52922,
-    "worldclass/release-status.json": 1095,
-    "initial_total": 1025139,
-    "deferred_after_load_total": 130603,
+    "worldclass/market-sentiment.json": 22627,
+    "worldclass/live-track-record.json": 52921,
+    "worldclass/release-status.json": 1048,
+    "initial_total": 1025682,
+    "deferred_after_load_total": 130261,
     "budget": 1250000
   }
 }
