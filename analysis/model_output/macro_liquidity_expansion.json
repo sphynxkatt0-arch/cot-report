@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "model_version": "macro-liquidity-control-room-v1.2",
-  "generated_at_utc": "2026-11-06T01:08:27.923813+00:00",
+  "generated_at_utc": "2026-11-06T01:49:44.519094+00:00",
   "role": "descriptive risk and plumbing context; does not create or reverse COT direction",
   "source_coverage_ratio": 0.692,
   "source_coverage_label": "Partial",
@@ -120,7 +120,7 @@
       },
       {
         "category": "Public Debt Cash Redemp. (Table IIIB)",
-        "private_cash_effect_bn": 854.21
+        "private_cash_effect_bn": 854.22
       },
       {
         "category": "Taxes - Withheld Individual/FICA",
