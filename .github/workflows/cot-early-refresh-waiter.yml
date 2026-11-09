@@ -1,0 +1,47 @@
+# Starts the COT refresh on time from inside GitHub.
+#
+# GitHub's cron starts runs 2-5 hours late (every run since Sept 2026 was late,
+# and some days were dropped). So this workflow is scheduled hours early and its
+# job sleeps until 21:35 and 22:35 Stockholm, then dispatches Refresh and Deploy.
+# Two schedules give redundancy if GitHub drops one; the second run queues behind
+# the first and skips slots that were already dispatched.
+#
+# Cron times are chosen so that even an on-time start finishes within the job
+# timeout: 16:05 UTC -> 22:35 Stockholm in winter (21:35 UTC) is a 330 min wait.
+# The public repo means waiting minutes are free.
+name: COT Early Refresh Waiter
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Print the plan without waiting or dispatching'
+        type: boolean
+        default: true
+  schedule:
+    - cron: '5 16 * * 1-5'
+    - cron: '5 17 * * 1-5'
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: cot-early-refresh-waiter
+  cancel-in-progress: false
+
+jobs:
+  wait-and-dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+      - uses: actions/setup-node@v4
+        with: {node-version: '24'}
+      - name: Wait for 21:35 / 22:35 Stockholm and dispatch Refresh and Deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '1' || '0' }}
+        run: node .github/scripts/early-refresh-waiter.mjs
