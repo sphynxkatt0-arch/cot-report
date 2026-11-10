@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "state": "LIVE",
-  "generated_at_utc": "2026-11-10T20:38:33Z",
+  "generated_at_utc": "2026-11-10T21:38:39Z",
   "latest_cot_report_date": "2026-11-03",
   "expected_cot_report_date": "2026-11-03",
   "model": {
@@ -107,7 +107,7 @@
   "macro_plumbing": {
     "state": "LIVE",
     "model_version": "macro-liquidity-control-room-v1.2",
-    "generated_at_utc": "2026-11-10T20:37:52.246782+00:00",
+    "generated_at_utc": "2026-11-10T21:37:58.681853+00:00",
     "source_coverage_ratio": 0.692,
     "source_coverage_label": "Partial",
     "available_external_pillars": [
@@ -135,7 +135,7 @@
     "worldclass/bootstrap.js": 7525,
     "worldclass/live-track-record-panel.js": 3435,
     "worldclass/taxonomy-governance.js": 3096,
-    "worldclass/base.json": 797680,
+    "worldclass/base.json": 798206,
     "worldclass/metals.json": 93332,
     "worldclass/app.js": 13756,
     "worldclass/enhancements.css": 1094,
@@ -145,11 +145,11 @@
     "worldclass/enhancements.js": 3330,
     "worldclass/sentiment-panel.js": 2209,
     "worldclass/terminal-v3.js": 7486,
-    "worldclass/market-sentiment.json": 25547,
+    "worldclass/market-sentiment.json": 25553,
     "worldclass/live-track-record.json": 65389,
-    "worldclass/release-status.json": 1052,
-    "initial_total": 1041373,
-    "deferred_after_load_total": 130020,
+    "worldclass/release-status.json": 1053,
+    "initial_total": 1041906,
+    "deferred_after_load_total": 130048,
     "budget": 1250000
   }
 }
