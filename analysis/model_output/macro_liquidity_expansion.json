@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "model_version": "macro-liquidity-control-room-v1.2",
-  "generated_at_utc": "2026-11-11T01:33:00.708664+00:00",
+  "generated_at_utc": "2026-11-11T18:48:42.886024+00:00",
   "role": "descriptive risk and plumbing context; does not create or reverse COT direction",
   "source_coverage_ratio": 0.692,
   "source_coverage_label": "Partial",
@@ -49,18 +49,18 @@
     "ig_oas_4w_change": 0.07,
     "dollar_index": 121.88,
     "dollar_4w_change": -0.123,
-    "vix": 19.46,
-    "vix_4w_change": 2.59,
-    "sp500": 7520.93,
-    "nasdaq": 27740.795,
-    "sp500_13w_change_pct": -2.937,
+    "vix": 17.38,
+    "vix_4w_change": 0.51,
+    "sp500": 7647.14,
+    "nasdaq": 28593.12,
+    "sp500_13w_change_pct": -1.308,
     "sp500_forward_5d": null,
     "sp500_forward_10d": null,
     "treasury_issuance_7d": 0.0,
     "treasury_issuance_28d": 992.0,
     "treasury_issuance_next_7d": 0.0,
     "liquidity_plumbing_score": 42.02,
-    "liquidity_score": 48.904,
+    "liquidity_score": 49.365,
     "regime_label": "Neutral",
     "sp500_forward_20d": null,
     "sp500_forward_60d": null,
@@ -96,10 +96,10 @@
     "score_real_yield": 65.491,
     "score_credit": 45.497,
     "score_dollar": 55.495,
-    "score_vix": 40.339,
-    "macro_regime_score": -0.04,
+    "score_vix": 48.034,
+    "macro_regime_score": -0.03,
     "macro_regime_score_label": "Neutral / transition",
-    "confidence_score": 35,
+    "confidence_score": 36,
     "confidence_label": "low"
   },
   "treasury_cash_context": {
@@ -322,7 +322,7 @@
   "pillars": {
     "macro_regime": {
       "label": "Macro risk regime",
-      "score": 48.904,
+      "score": 49.365,
       "state": "Neutral"
     },
     "net_liquidity": {
