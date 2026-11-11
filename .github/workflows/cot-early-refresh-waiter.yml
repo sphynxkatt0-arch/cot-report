@@ -1,13 +1,12 @@
 # Starts the COT refresh on time from inside GitHub.
 #
-# GitHub's cron starts runs 2-5 hours late (every run since Sept 2026 was late,
+# GitHub's cron starts runs 2-6+ hours late (every run since Sept 2026 was late,
 # and some days were dropped). So this workflow is scheduled hours early and its
 # job sleeps until 21:35 and 22:35 Stockholm, then dispatches Refresh and Deploy.
-# Two schedules give redundancy if GitHub drops one; the second run queues behind
-# the first and skips slots that were already dispatched.
-#
-# Cron times are chosen so that even an on-time start finishes within the job
-# timeout: 16:05 UTC -> 22:35 Stockholm in winter (21:35 UTC) is a 330 min wait.
+# A job may run at most 6 hours, so a run that starts too early waits 330 min and
+# then relays to a fresh workflow_dispatch run of itself (those start within
+# seconds). Two schedules give redundancy if GitHub drops one; runs share a
+# concurrency group and skip slots that were already dispatched.
 # The public repo means waiting minutes are free.
 name: COT Early Refresh Waiter
 
@@ -19,8 +18,8 @@ on:
         type: boolean
         default: true
   schedule:
-    - cron: '5 16 * * 1-5'
-    - cron: '5 17 * * 1-5'
+    - cron: '5 12 * * 1-5'
+    - cron: '5 14 * * 1-5'
 
 permissions:
   contents: read

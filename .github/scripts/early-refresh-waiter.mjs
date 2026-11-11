@@ -1,8 +1,12 @@
 // Starts "Refresh and Deploy" at 21:35 and 22:35 Stockholm time on weekdays.
 //
-// GitHub's cron starts runs 2-5 hours late, so the "COT Early Refresh Waiter"
+// GitHub's cron starts runs 2-6+ hours late, so the "COT Early Refresh Waiter"
 // workflow is scheduled hours ahead. This script then sleeps until each slot and
-// dispatches the refresh. A slot is skipped when a refresh was already dispatched
+// dispatches the refresh. A job may only run 6 hours, so when a slot is further
+// away than MAX_RUN_MINUTES the run waits as long as it may and then relays: it
+// dispatches a fresh copy of the waiter workflow and exits. workflow_dispatch
+// runs start within seconds, unlike cron, so the chain keeps its timing however
+// late the cron run that started it was. A slot is skipped when a refresh was already dispatched
 // for it (another waiter run, or the Windows backup task), or when it is more
 // than GRACE_MINUTES in the past.
 //
@@ -15,7 +19,9 @@ const TZ = 'Europe/Stockholm';
 const SLOTS = (process.env.SLOTS || '21:35,22:35').split(',');
 const GRACE_MINUTES = 90;
 const DEDUP_MINUTES = 5;
-const MAX_WAIT_MINUTES = 335; // job timeout is 350 min
+const MAX_RUN_MINUTES = 330; // job timeout is 350 min
+const MAX_LEAD_HOURS = 12;   // do not start a chain further ahead of the next slot
+const SELF_WORKFLOW = 'cot-early-refresh-waiter.yml';
 const WORKFLOW = 'refresh-and-deploy.yml';
 
 const repo = process.env.GITHUB_REPOSITORY || 'sphynxkatt0-arch/cot-report';
@@ -96,6 +102,13 @@ const slotTimes = SLOTS.map((slot) => {
   return zonedToUtc(today.y, today.m, today.d, h, min);
 });
 
+let runStart = now();
+const nextOpen = slotTimes.find((ms) => ms >= now());
+if (nextOpen !== undefined && nextOpen - now() > MAX_LEAD_HOURS * 3_600_000) {
+  log(`Next slot ${iso(nextOpen)} is more than ${MAX_LEAD_HOURS} h away; leaving it to a later scheduled run`);
+  process.exit(0);
+}
+
 for (const [i, slot] of SLOTS.entries()) {
   const slotMs = slotTimes[i];
   const nextSlotMs = slotTimes[i + 1];
@@ -106,9 +119,17 @@ for (const [i, slot] of SLOTS.entries()) {
     log(`Slot ${label}: too late (deadline ${iso(deadline)}), skipping`);
     continue;
   }
-  if (slotMs - now() > MAX_WAIT_MINUTES * 60_000) {
-    log(`Slot ${label}: more than ${MAX_WAIT_MINUTES} min away, skipping (a later scheduled run covers it)`);
-    continue;
+  const runLimit = runStart + MAX_RUN_MINUTES * 60_000;
+  if (slotMs > runLimit) {
+    await sleepUntil(runLimit);
+    if (dryRun) {
+      log(`Slot ${label}: DRY RUN, would relay to a new ${SELF_WORKFLOW} run`);
+      runStart = now(); // simulate the relayed run
+    } else {
+      await api(`/actions/workflows/${SELF_WORKFLOW}/dispatches`, { method: 'POST', body: JSON.stringify({ ref: 'main', inputs: { dry_run: 'false' } }) });
+      log(`Slot ${label}: still ${Math.round((slotMs - now()) / 60_000)} min away; relayed to a new ${SELF_WORKFLOW} run`);
+      process.exit(0);
+    }
   }
   await sleepUntil(slotMs);
   const existing = await alreadyDispatched(slotMs, nextSlotMs);
