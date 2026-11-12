@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "model_version": "macro-liquidity-control-room-v1.2",
-  "generated_at_utc": "2026-11-12T02:03:55.294038+00:00",
+  "generated_at_utc": "2026-11-12T02:34:32.533773+00:00",
   "role": "descriptive risk and plumbing context; does not create or reverse COT direction",
   "source_coverage_ratio": 0.615,
   "source_coverage_label": "Partial",
@@ -128,7 +128,7 @@
       },
       {
         "category": "SSA - Benefits Payments",
-        "private_cash_effect_bn": 26.9
+        "private_cash_effect_bn": 26.89
       },
       {
         "category": "HHS - Grants to States for Medicaid",
