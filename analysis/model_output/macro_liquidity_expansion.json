@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "model_version": "macro-liquidity-control-room-v1.2",
-  "generated_at_utc": "2026-11-12T21:39:36.764665+00:00",
+  "generated_at_utc": "2026-11-13T01:29:20.122469+00:00",
   "role": "descriptive risk and plumbing context; does not create or reverse COT direction",
   "source_coverage_ratio": 0.692,
   "source_coverage_label": "Partial",
   "existing_macro_latest": {
-    "date": "2026-11-12",
+    "date": "2026-11-13",
     "walcl": 6758.867,
     "tga": 912.134,
     "rrp": 0.25,
@@ -16,25 +16,25 @@
     "reserves_to_bank_assets_pct": 14.954,
     "slr_balance_sheet_load": 7755.735,
     "net_liquidity": 5846.483,
-    "net_liquidity_4w_change": -22.132,
-    "net_liquidity_13w_change": 46.383,
+    "net_liquidity_4w_change": -23.233,
+    "net_liquidity_13w_change": 46.183,
     "bank_reserves_4w_change": -61.537,
     "bank_treasury_agency_4w_change": 12.036,
     "slr_balance_sheet_load_4w_change": -49.501,
     "reserves_to_bank_assets_4w_change": -0.307,
     "tga_4w_change": 26.311,
-    "rrp_4w_change": -0.951,
+    "rrp_4w_change": 0.15,
     "sofr": 3.89,
     "effr": 3.88,
     "iorb": 3.9,
     "sofr_iorb_spread": -0.01,
     "effr_iorb_spread": -0.02,
-    "sofr_iorb_spread_4w_change": 0.0,
+    "sofr_iorb_spread_4w_change": 0.01,
     "effr_iorb_spread_4w_change": 0.0,
     "real_yield_10y": 2.86,
     "real_yield_5y": 2.64,
-    "real_yield_4w_change": 0.08,
-    "real_yield_5y_4w_change": 0.06,
+    "real_yield_4w_change": 0.12,
+    "real_yield_5y_4w_change": 0.12,
     "nominal_yield_10y": 5.1,
     "nominal_yield_2y": 4.86,
     "nominal_yield_3m": 4.32,
@@ -45,22 +45,22 @@
     "yield_curve_30y_10y": 0.33,
     "hy_oas": 3.3,
     "ig_oas": 0.9,
-    "hy_oas_4w_change": 0.07,
-    "ig_oas_4w_change": 0.06,
+    "hy_oas_4w_change": -0.01,
+    "ig_oas_4w_change": 0.05,
     "dollar_index": 121.88,
-    "dollar_4w_change": 0.311,
+    "dollar_4w_change": 0.476,
     "vix": 18.7,
-    "vix_4w_change": 2.24,
+    "vix_4w_change": -1.29,
     "sp500": 7592.4,
     "nasdaq": 28289.188,
-    "sp500_13w_change_pct": -2.649,
+    "sp500_13w_change_pct": -2.484,
     "sp500_forward_5d": null,
     "sp500_forward_10d": null,
     "treasury_issuance_7d": 0.0,
     "treasury_issuance_28d": 601.0,
     "treasury_issuance_next_7d": 0.0,
-    "liquidity_plumbing_score": 45.372,
-    "liquidity_score": 49.448,
+    "liquidity_plumbing_score": 45.065,
+    "liquidity_score": 50.088,
     "regime_label": "Neutral",
     "sp500_forward_20d": null,
     "sp500_forward_60d": null,
@@ -88,16 +88,16 @@
     "tsp_equity_ift_m": -1657.0,
     "retirement_flow_signal": -3404.0,
     "credit_override": false,
-    "score_net_liquidity": 45.192,
-    "score_bank_reserves": 38.852,
+    "score_net_liquidity": 45.08,
+    "score_bank_reserves": 38.95,
     "score_treasury_supply": 70.658,
-    "score_repo_spread": 47.244,
-    "score_slr_load": 59.097,
-    "score_real_yield": 53.243,
-    "score_credit": 47.013,
-    "score_dollar": 50.897,
-    "score_vix": 41.61,
-    "macro_regime_score": -0.02,
+    "score_repo_spread": 45.69,
+    "score_slr_load": 59.002,
+    "score_real_yield": 49.207,
+    "score_credit": 52.107,
+    "score_dollar": 49.134,
+    "score_vix": 54.613,
+    "macro_regime_score": 0.0,
     "macro_regime_score_label": "Neutral / transition",
     "confidence_score": 20,
     "confidence_label": "low"
@@ -322,12 +322,12 @@
   "pillars": {
     "macro_regime": {
       "label": "Macro risk regime",
-      "score": 49.448,
+      "score": 50.088,
       "state": "Neutral"
     },
     "net_liquidity": {
       "label": "Net liquidity impulse",
-      "value": -22.132,
+      "value": -23.233,
       "unit": "USD bn / 4w",
       "state": "Defensive"
     },
@@ -425,7 +425,7 @@
       "change_short": -0.06999999999999984,
       "change_medium": 0.010000000000000231,
       "zscore": 1.754786176189689,
-      "age_days": 2,
+      "age_days": 3,
       "error": null
     },
     {
@@ -442,7 +442,7 @@
       "change_short": 0.0,
       "change_medium": 0.25,
       "zscore": -0.22831254629276923,
-      "age_days": 3,
+      "age_days": 4,
       "error": null
     },
     {
@@ -459,7 +459,7 @@
       "change_short": -0.06000000000000005,
       "change_medium": 0.010000000000000231,
       "zscore": 1.5866077455829113,
-      "age_days": 3,
+      "age_days": 4,
       "error": null
     },
     {
@@ -476,7 +476,7 @@
       "change_short": -189.12936897960026,
       "change_medium": 194.70926963129978,
       "zscore": 0.8885199696861373,
-      "age_days": 2,
+      "age_days": 3,
       "error": null
     },
     {
@@ -510,7 +510,7 @@
       "change_short": -9373.0,
       "change_medium": null,
       "zscore": null,
-      "age_days": 1779,
+      "age_days": 1780,
       "error": null
     },
     {
@@ -527,7 +527,7 @@
       "change_short": 10540.0,
       "change_medium": -18938.0,
       "zscore": 0.40438083574798506,
-      "age_days": 15,
+      "age_days": 16,
       "error": null
     },
     {
@@ -544,7 +544,7 @@
       "change_short": 20149.287253780058,
       "change_medium": -13656.139525010018,
       "zscore": 1.863942756444428,
-      "age_days": 43,
+      "age_days": 44,
       "error": null
     },
     {
@@ -561,7 +561,7 @@
       "change_short": -212675.42935321992,
       "change_medium": 202760.64625159977,
       "zscore": 1.4927007811450184,
-      "age_days": 43,
+      "age_days": 44,
       "error": null
     },
     {
@@ -578,7 +578,7 @@
       "change_short": 19896.83407966001,
       "change_medium": -200902.57043101988,
       "zscore": -0.25586745850571607,
-      "age_days": 43,
+      "age_days": 44,
       "error": null
     },
     {
@@ -594,8 +594,8 @@
       "latest_value": 912.134,
       "change_short": -26.073999999999955,
       "change_medium": -8.080000000000041,
-      "zscore": -0.40063282444431064,
-      "age_days": 2,
+      "zscore": -0.409556767148983,
+      "age_days": 3,
       "error": null
     },
     {
@@ -611,8 +611,8 @@
       "latest_value": 20.998000000000047,
       "change_short": 52.15800000000003,
       "change_medium": 16.1610000000001,
-      "zscore": 0.275786898684642,
-      "age_days": 2,
+      "zscore": 0.3009946477250368,
+      "age_days": 3,
       "error": null
     },
     {
@@ -629,7 +629,7 @@
       "change_short": 0.11624999999999996,
       "change_medium": -3.0492421385999458,
       "zscore": null,
-      "age_days": 35,
+      "age_days": 36,
       "error": null
     }
   ],
