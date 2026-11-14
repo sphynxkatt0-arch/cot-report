@@ -1,0 +1,5 @@
+market,report,date,previous_date,open_interest,open_interest_change,open_interest_change_pct,price,price_return_1w_pct,source_path
+S&P 500,TFF,2026-06-16,2026-06-09,2624882.0,382878.0,17.077489603051554,7511.35,1.68818070437886,A:\work\trading\cot report\analysis\cot_exact_output\sp500_exact_consolidated_data_2016_2026.csv
+NASDAQ-100,TFF,2026-06-16,2026-06-09,375254.0,40464.0,12.08638250843812,29968.131,3.03815090512129,A:\work\trading\cot report\analysis\cot_exact_output\nq_exact_consolidated_data_2016_2026.csv
+S&P 500,Legacy,2026-06-16,2026-06-09,2624882.0,382878.0,17.077489603051554,7511.35,1.68818070437886,A:\work\trading\cot report\analysis\cot_legacy_output\sp500_legacy_data_2016_2026.csv
+NASDAQ-100,Legacy,2026-06-16,2026-06-09,375254.0,40464.0,12.08638250843812,29968.131,3.03815090512129,A:\work\trading\cot report\analysis\cot_legacy_output\nq_legacy_data_2016_2026.csv

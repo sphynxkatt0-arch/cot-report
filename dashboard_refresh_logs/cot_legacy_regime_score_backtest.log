@@ -1,0 +1,31 @@
+Scored 2360 walk-forward COT observations.
+S&P 500: latest 2026-08-04 signal 2026-08-07 score -1.50 (Mixed); observations 428
+NASDAQ-100: latest 2026-08-04 signal 2026-08-07 score +4.00 (Risk-On); observations 450
+VIX Futures: latest 2026-08-04 signal 2026-08-07 score +0.00 (Mixed); observations 450
+Russell 2000: latest 2026-08-04 signal 2026-08-07 score +0.00 (Mixed); observations 132
+Dow Jones: latest 2026-08-04 signal 2026-08-07 score +0.00 (Mixed); observations 450
+Gold: latest 2026-08-04 signal 2026-08-07 score +0.00 (Mixed); observations 450
+
+Regime bucket summary, 4w horizon:
+market  bucket  observations  avg_return_pct  hit_rate_pct  diff_vs_unconditional_pct  welch_t_stat_vs_rest
+ sp500   Mixed           292        1.033685     69.178082                  -0.075439             -0.459030
+ sp500 Caution            33        0.037873     63.636364                  -1.071251             -1.216371
+ sp500 Risk-On            99        1.688716     69.696970                   0.579592              1.338297
+    nq   Mixed           290        1.623256     64.482759                   0.038326              0.192999
+    nq Caution            84        1.110264     61.904762                  -0.474666             -0.872546
+    nq Risk-On            72        1.984341     69.444444                   0.399410              0.703846
+   vix   Mixed           446        6.327143     50.448430                   0.000000                   NaN
+   rty   Mixed           128        1.540916     64.062500                   0.000000                   NaN
+   dow   Mixed           446        0.772753     64.798206                   0.000000                   NaN
+  gold   Mixed           446        1.144129     58.071749                   0.000000                   NaN
+
+Score/return correlation summary, 4w horizon:
+market  observations  score_return_corr  score_return_hac_p_value  risk_on_minus_caution_avg_return_pct  risk_on_minus_caution_hac_p_value  drift_adjusted_accuracy_pct evidence_grade
+ sp500           424           0.101015                  0.170693                              1.650843                           0.202236                    53.051643        Unclear
+    nq           446           0.027809                  0.622494                              0.874077                           0.430529                    55.978261        Unclear
+   vix           446                NaN                       NaN                                   NaN                                NaN                          NaN   Insufficient
+   rty           128                NaN                       NaN                                   NaN                                NaN                          NaN   Insufficient
+   dow           446                NaN                       NaN                                   NaN                                NaN                          NaN   Insufficient
+  gold           446                NaN                       NaN                                   NaN                                NaN                          NaN   Insufficient
+
+Saved outputs to A:\work\trading\cot report\analysis\cot_legacy_regime_backtest_output
