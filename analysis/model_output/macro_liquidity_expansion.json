@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "model_version": "macro-liquidity-control-room-v1.2",
-  "generated_at_utc": "2026-11-18T20:40:01.657375+00:00",
+  "generated_at_utc": "2026-11-18T21:39:52.842378+00:00",
   "role": "descriptive risk and plumbing context; does not create or reverse COT direction",
   "source_coverage_ratio": 0.692,
   "source_coverage_label": "Partial",
@@ -31,36 +31,36 @@
     "effr_iorb_spread": -0.02,
     "sofr_iorb_spread_4w_change": 0.04,
     "effr_iorb_spread_4w_change": 0.0,
-    "real_yield_10y": 2.89,
-    "real_yield_5y": 2.64,
-    "real_yield_4w_change": 0.13,
-    "real_yield_5y_4w_change": 0.09,
-    "nominal_yield_10y": 5.1,
+    "real_yield_10y": 2.88,
+    "real_yield_5y": 2.66,
+    "real_yield_4w_change": 0.12,
+    "real_yield_5y_4w_change": 0.11,
+    "nominal_yield_10y": 5.07,
     "nominal_yield_2y": 4.8,
-    "nominal_yield_3m": 4.33,
-    "nominal_yield_30y": 5.46,
-    "nominal_yield_30y_4w_change": 0.04,
-    "yield_curve_10y_2y": 0.3,
-    "yield_curve_10y_3m": 0.77,
-    "yield_curve_30y_10y": 0.36,
+    "nominal_yield_3m": 4.34,
+    "nominal_yield_30y": 5.41,
+    "nominal_yield_30y_4w_change": -0.01,
+    "yield_curve_10y_2y": 0.27,
+    "yield_curve_10y_3m": 0.73,
+    "yield_curve_30y_10y": 0.34,
     "hy_oas": 3.43,
     "ig_oas": 0.92,
     "hy_oas_4w_change": 0.16,
     "ig_oas_4w_change": 0.04,
     "dollar_index": 122.65,
     "dollar_4w_change": 1.308,
-    "vix": 24.68,
-    "vix_4w_change": 8.0,
-    "sp500": 7322.91,
-    "nasdaq": 27080.076,
-    "sp500_13w_change_pct": -4.996,
+    "vix": 24.56,
+    "vix_4w_change": 7.88,
+    "sp500": 7323.63,
+    "nasdaq": 27116.258,
+    "sp500_13w_change_pct": -4.986,
     "sp500_forward_5d": null,
     "sp500_forward_10d": null,
     "treasury_issuance_7d": 0.0,
     "treasury_issuance_28d": 311.0,
     "treasury_issuance_next_7d": 0.0,
     "liquidity_plumbing_score": 49.568,
-    "liquidity_score": 48.579,
+    "liquidity_score": 48.606,
     "regime_label": "Neutral",
     "sp500_forward_20d": null,
     "sp500_forward_60d": null,
@@ -96,47 +96,47 @@
     "score_real_yield": 49.864,
     "score_credit": 41.643,
     "score_dollar": 40.404,
-    "score_vix": 18.93,
+    "score_vix": 19.38,
     "macro_regime_score": -0.06,
     "macro_regime_score_label": "Neutral / transition",
     "confidence_score": 39,
     "confidence_label": "low"
   },
   "treasury_cash_context": {
-    "latest_operating_cash_bn": 895.774,
-    "operating_cash_change_5d_bn": -14.538999999999987,
-    "operating_cash_change_20d_bn": -52.71799999999996,
-    "latest_flow_date": "2026-11-16",
-    "daily_private_cash_flow_bn": 57.690000000000055,
-    "private_cash_flow_5d_bn": 29.087000000000145,
-    "private_cash_flow_20d_bn": 105.44500000000018,
-    "deposits_5d_bn": 1808.766,
-    "withdrawals_5d_bn": 1837.853,
-    "tax_deposits_5d_bn": 110.58800000000001,
+    "latest_operating_cash_bn": 921.222,
+    "operating_cash_change_5d_bn": -1.4110000000000582,
+    "operating_cash_change_20d_bn": -43.82299999999998,
+    "latest_flow_date": "2026-11-17",
+    "daily_private_cash_flow_bn": -50.89700000000005,
+    "private_cash_flow_5d_bn": 2.826000000000107,
+    "private_cash_flow_20d_bn": 87.65600000000013,
+    "deposits_5d_bn": 2406.893,
+    "withdrawals_5d_bn": 2409.719,
+    "tax_deposits_5d_bn": 90.236,
     "top_cash_flow_categories_5d": [
       {
         "category": "Public Debt Cash Issues (Table IIIB)",
-        "private_cash_effect_bn": -776.71
+        "private_cash_effect_bn": -1099.03
       },
       {
         "category": "Public Debt Cash Redemp. (Table IIIB)",
-        "private_cash_effect_bn": 698.43
-      },
-      {
-        "category": "Taxes - Withheld Individual/FICA",
-        "private_cash_effect_bn": -95.95
+        "private_cash_effect_bn": 988.43
       },
       {
         "category": "Interest on Treasury Securities",
         "private_cash_effect_bn": 87.37
       },
       {
+        "category": "Taxes - Withheld Individual/FICA",
+        "private_cash_effect_bn": -75.44
+      },
+      {
         "category": "SSA - Benefits Payments",
-        "private_cash_effect_bn": 33.67
+        "private_cash_effect_bn": 33.64
       },
       {
         "category": "HHS - Grants to States for Medicaid",
-        "private_cash_effect_bn": 17.27
+        "private_cash_effect_bn": 17.48
       }
     ],
     "sign_convention": "positive = Treasury withdrawal / private-sector cash injection; negative = Treasury deposit / private-sector cash drain"
@@ -322,7 +322,7 @@
   "pillars": {
     "macro_regime": {
       "label": "Macro risk regime",
-      "score": 48.579,
+      "score": 48.606,
       "state": "Neutral"
     },
     "net_liquidity": {
@@ -383,17 +383,16 @@
     },
     "fiscal_cash_flow": {
       "label": "Daily fiscal cash flow",
-      "score": 60.2,
-      "state": "Supportive",
+      "score": 51.0,
+      "state": "Neutral",
       "coverage": 1.0,
-      "private_cash_flow_5d_bn": 29.087000000000145,
-      "private_cash_flow_20d_bn": 105.44500000000018,
-      "operating_cash_change_5d_bn": -14.538999999999987,
-      "tax_deposits_5d_bn": 110.58800000000001,
+      "private_cash_flow_5d_bn": 2.826000000000107,
+      "private_cash_flow_20d_bn": 87.65600000000013,
+      "operating_cash_change_5d_bn": -1.4110000000000582,
+      "tax_deposits_5d_bn": 90.236,
       "reasons": [
-        "5d private cash effect +29.1 bn",
-        "5d operating-cash change -14.5 bn",
-        "5d tax deposits 110.6 bn"
+        "5d private cash effect +2.8 bn",
+        "5d operating-cash change -1.4 bn"
       ]
     },
     "auction_absorption": {
@@ -591,12 +590,12 @@
       "status": "fresh",
       "mnemonic": null,
       "resolution": "official fiscaldata API; deterministic TGA closing-balance selection",
-      "latest_date": "2026-11-16",
-      "latest_value": 895.774,
-      "change_short": -14.538999999999987,
-      "change_medium": -52.71799999999996,
-      "zscore": -0.7503535770854846,
-      "age_days": 2,
+      "latest_date": "2026-11-17",
+      "latest_value": 921.222,
+      "change_short": -1.4110000000000582,
+      "change_medium": -43.82299999999998,
+      "zscore": -0.2646333680230322,
+      "age_days": 1,
       "error": null
     },
     {
@@ -608,12 +607,12 @@
       "status": "fresh",
       "mnemonic": null,
       "resolution": "official fiscaldata API",
-      "latest_date": "2026-11-16",
-      "latest_value": 57.690000000000055,
-      "change_short": 29.087000000000145,
-      "change_medium": 105.44500000000018,
-      "zscore": 0.8241578582346668,
-      "age_days": 2,
+      "latest_date": "2026-11-17",
+      "latest_value": -50.89700000000005,
+      "change_short": 2.826000000000107,
+      "change_medium": 87.65600000000013,
+      "zscore": -0.6982946865532869,
+      "age_days": 1,
       "error": null
     },
     {
