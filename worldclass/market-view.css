@@ -1,0 +1,76 @@
+/* Market view: one verdict card, one actor table, and collapsible secondary sections.
+   Loaded after observatory-ux.css; every rule is scoped to the decision shell or the
+   Market workspace folds. */
+
+/* Verdict card */
+.decision-overview>.decision-latest-cot{grid-column:1/2;margin-top:0}
+.decision-verdict .decision-title-row{grid-template-columns:minmax(0,1fr)}
+.decision-verdict .decision-title-row p{max-width:72ch;font-size:15px;line-height:1.55;color:var(--text,#f3f7fb)}
+.decision-chips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:16px}
+.decision-chips>*{display:block;min-width:0;margin:0;padding:11px 12px;border:1px solid var(--line,rgba(148,163,184,.18));border-radius:9px;background:var(--surface-2,rgba(15,29,46,.5));color:inherit;font:inherit;text-align:left}
+.decision-chips>button{cursor:pointer;transition:border-color .14s ease,background .14s ease}
+.decision-chips>button:hover,.decision-chips>button:focus-visible{border-color:var(--cyan,#35baf2);background:var(--accent-soft,rgba(53,186,242,.1))}
+.decision-chips span{display:block;font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted,#9fb0c3)}
+.decision-chips strong{display:block;margin-top:6px;font-size:16px;line-height:1.2}
+.decision-chips small{display:block;margin-top:5px;font-size:11px;line-height:1.4;color:var(--muted,#9fb0c3)}
+.decision-chips .caution{color:var(--amber,#f4b64e)!important}
+
+/* Single actor table with an "All columns" toggle */
+.decision-latest-cot .decision-block-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.decision-columns-toggle{flex:0 0 auto;padding:7px 12px;border:1px solid var(--line,rgba(148,163,184,.22));border-radius:7px;background:transparent;color:var(--muted,#9fb0c3);font:inherit;font-size:11px;font-weight:800;cursor:pointer}
+.decision-columns-toggle[aria-pressed="true"]{border-color:var(--cyan,#35baf2);background:var(--accent-soft,rgba(53,186,242,.12));color:var(--cyan,#35baf2)}
+.decision-actor-table{overflow-x:auto}
+.decision-actor-table :is(.decision-cot-change-head,.decision-cot-change-row)>.decision-col-extra{display:none!important}
+.decision-actor-table.show-all :is(.decision-cot-change-head,.decision-cot-change-row)>.decision-col-extra{display:block!important}
+.decision-actor-table .decision-col-extra{text-align:right}
+@media (min-width:701px){
+  .decision-actor-table.show-all :is(.decision-cot-change-head,.decision-cot-change-row){grid-template-columns:minmax(160px,1.4fr) repeat(10,minmax(68px,.7fr));min-width:960px}
+}
+
+/* Collapsible sections */
+.decision-fold{min-width:0;border:1px solid var(--line,rgba(148,163,184,.18));border-radius:12px;background:var(--surface,#0d1828)}
+.market-fold{margin-top:10px}
+.decision-fold>summary{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;padding:14px 18px;border-radius:12px;cursor:pointer;list-style:none;font-family:var(--obs-display,inherit);font-size:16px;font-weight:600;letter-spacing:-.015em;color:var(--text,#f3f7fb)}
+.decision-fold>summary::-webkit-details-marker{display:none}
+.decision-fold>summary::before{content:"";align-self:center;width:7px;height:7px;border-right:2px solid var(--cyan,#35baf2);border-bottom:2px solid var(--cyan,#35baf2);transform:rotate(-45deg);transition:transform .15s ease}
+.decision-fold[open]>summary::before{transform:rotate(45deg)}
+.decision-fold>summary small{font-family:Inter,ui-sans-serif,-apple-system,"Segoe UI",sans-serif;font-size:12px;font-weight:500;letter-spacing:0;color:var(--muted,#9fb0c3)}
+/* Shown while the COT model loads, so the page never opens on folds alone */
+#currentEdgeCommand>.decision-loading{padding:28px 24px;border-radius:14px;font-size:14px}
+#currentEdgeCommand>.decision-loading::before{content:"";display:inline-block;width:12px;height:12px;margin-right:10px;vertical-align:-1px;border:2px solid var(--cyan,#35baf2);border-right-color:transparent;border-radius:50%;animation:market-spin .8s linear infinite}
+@keyframes market-spin{to{transform:rotate(360deg)}}
+.decision-fold>summary:hover{background:var(--accent-soft,rgba(53,186,242,.06))}
+.decision-fold>summary:focus-visible{outline:2px solid var(--cyan,#35baf2);outline-offset:2px}
+.decision-fold-body{display:grid;gap:10px;min-width:0;padding:0 12px 12px}
+.decision-fold-body>.section-heading{display:none}
+.decision-fold-body>*{margin-top:0!important}
+html[data-theme="light"] .decision-fold{background:#fff}
+/* Edge fold: strongest edge beside the two model cards, invalidation underneath */
+#edgeFold .decision-fold-body{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+#edgeFold .decision-invalidation{grid-column:1/-1}
+#edgeFold #modelEstimates{grid-template-columns:repeat(2,minmax(0,1fr))}
+#edgeFold .decision-model-family{width:auto;max-width:100%;flex-wrap:wrap}
+
+@media (max-width:1100px){
+  .decision-chips{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .decision-overview>.decision-scanner{order:3}
+  #edgeFold .decision-fold-body{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:700px){
+  .decision-verdict .decision-title-row p{font-size:14px}
+  .decision-chips{gap:6px}
+  .decision-chips>*{padding:9px 10px}
+  .decision-chips strong{font-size:14px}
+  .decision-latest-cot .decision-block-head{flex-direction:column}
+  .decision-actor-table .decision-cot-change-row>[data-label]::before{content:attr(data-label)}
+  .decision-actor-table .decision-col-extra{text-align:left}
+  #edgeFold #modelEstimates{grid-template-columns:minmax(0,1fr)}
+  #edgeFold .decision-model-family{width:100%}
+  .decision-fold>summary{padding:13px 14px;font-size:15px}
+  .decision-fold>summary small{flex-basis:100%;padding-left:19px}
+  .decision-fold-body{padding:0 6px 8px}
+}
+@media (prefers-reduced-motion:reduce){
+  .decision-fold>summary::before{transition:none}
+  #currentEdgeCommand>.decision-loading::before{animation:none}
+}

@@ -1,0 +1,67 @@
+{
+  "files": {
+    "full_json_gzip": {
+      "bytes": 887034,
+      "sha256": "fda532d2dbe08f747179a25c65c8fa419d9822f6952ade08a8452090831fd7d9"
+    },
+    "full_json_uncompressed": {
+      "bytes": 9859786,
+      "canonical_sha256": "0fad9af1dae2ffec48b5093d31acbdfbf9ca1c9b4d0e963e90c382f2c2297893",
+      "sha256": "1f1033ad00e88e2547d6051c6dc6b0367cad013c7ccd8215f0c5712c7cf00150"
+    },
+    "summary_json": {
+      "bytes": 327615,
+      "canonical_sha256": "0f3aa8889549a888320a567baeb32c86c9e03920b4416bf1656e738ed13a75f0",
+      "sha256": "99cdf0ee186313957bc680d2d41a2819732a6e27aba369c5227a3c1d0a762113"
+    }
+  },
+  "forecast_contract": {
+    "discovery": "pre-2022",
+    "holdout": "2022+ untouched",
+    "oos_baseline": "constant discovery-period mean return for the same series/horizon",
+    "oos_model": "univariate OLS intercept/slope fit on discovery only; coefficients frozen in holdout",
+    "overlap_control": "greedy non-overlapping forward episodes; exact weekdays use the 1W end index",
+    "tail_cutoffs": "discovery-period predictor q10/q90 frozen before holdout"
+  },
+  "gh_pages_source_ref_sha": "b69b4727559ffc5b98f12b8a41b723858e4b9820",
+  "horizons": [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "1w",
+    "2w",
+    "3w",
+    "4w",
+    "6w",
+    "8w",
+    "13w",
+    "26w",
+    "39w",
+    "52w"
+  ],
+  "information_contract": {
+    "cot_snapshot": "Tuesday",
+    "lookahead_safe": true,
+    "percentiles": "expanding-history only at each report",
+    "public_availability": "Friday = report date + 3 calendar days",
+    "release_anchor": "first market close on/after Friday release target"
+  },
+  "main_ref_sha": "6d8d98f001794f875929411a248a6228b837ddd0",
+  "metric_count": 2655,
+  "oos_predictive_count": 161,
+  "positive_oos_r2_weak_count": 679,
+  "predictors": {
+    "delta_1w_net_oi_pp": "signed weekly change in actor net position as percentage-points of open interest",
+    "position_percentile": "expanding historical percentile of the actor's net/OI position level",
+    "signed_change_percentile": "expanding historical magnitude percentile with the sign of the weekly change"
+  },
+  "production_changes": false,
+  "purpose": "Frozen OOS predictive-power and correlation verification baseline.",
+  "research_branch": "research/full-actor-cross-instrument-20260810",
+  "research_head_before_snapshot_commit": "c73d87400a9617af7b60b30b60e9c34b67f0d68a",
+  "series_count": 59,
+  "snapshot_id": "cot-actor-predictive-power-2026-08-10",
+  "workflow_run_id": "31351606959"
+}

@@ -1,0 +1,136 @@
+{
+  "dataset_actor_roles": {
+    "disaggregated": {
+      "managed_money": "PRIMARY_DIRECTIONAL",
+      "non_reportable": "SECONDARY_DIRECTIONAL",
+      "other_reportable": "SECONDARY_DIRECTIONAL",
+      "producer_merchant": "HEDGER_CONTEXT",
+      "swap_dealer": "INTERMEDIARY_CONTEXT"
+    },
+    "legacy": {
+      "commercial": "OPPOSITE_SIDE_CONTEXT",
+      "noncommercial": "PRIMARY_DIRECTIONAL",
+      "nonreportable": "SECONDARY_DIRECTIONAL",
+      "total_reportable": "AGGREGATE_CONTEXT"
+    },
+    "tff": {
+      "asset_mgr": "PRIMARY_DIRECTIONAL",
+      "dealer": "INTERMEDIARY_CONTEXT",
+      "lev_money": "PRIMARY_DIRECTIONAL",
+      "non_reportable": "SECONDARY_DIRECTIONAL",
+      "other_reportable": "SECONDARY_DIRECTIONAL"
+    }
+  },
+  "discovered_dataset_market_pairs": [
+    "tff:sp500",
+    "tff:nq",
+    "tff:vix",
+    "tff:rty",
+    "tff:dow",
+    "legacy:sp500",
+    "legacy:nq",
+    "legacy:vix",
+    "legacy:rty",
+    "legacy:dow",
+    "legacy:gold",
+    "disaggregated:gold",
+    "disaggregated:silver"
+  ],
+  "files": {
+    "full_json_gzip": {
+      "bytes": 6843703,
+      "sha256_raw_file": "644d2abdab32b90c19e8e5d8f87299f78f26651163e0d7fde490acc3d2508d23"
+    },
+    "full_json_uncompressed": {
+      "bytes": 77305774,
+      "sha256_canonical_excluding_generated_at_utc": "b9c2f45b96427995fd78727a3f6f2db3995af31c6ac1c83556dbb28a1c83acb7",
+      "sha256_raw_file": "e7b3b73f6e8b950a707e757634e96bb3da823e8872f255a5aeb257e3d05ba301",
+      "stored_as": "cot-actor-event-research.json.gz"
+    },
+    "summary_json": {
+      "bytes": 1290660,
+      "sha256_canonical_excluding_generated_at_utc": "db53fc9e7d542b4d09a2d54792ce2e4bb5d8e1523cce059337e091b493fb2b36",
+      "sha256_raw_file": "3fb752595a681c3ca45c2921cdae72a8731c7a422542ad9350e0dbf1d2c53d76",
+      "stored_as": "cot-actor-event-summary.json"
+    }
+  },
+  "gh_pages_source_ref_sha": "b69b4727559ffc5b98f12b8a41b723858e4b9820",
+  "governance": {
+    "combination_policy": "cross-market/cross-actor combinations require both component actor changes >= P75 magnitude; results remain research-only",
+    "combination_threshold": 75,
+    "discovery_segment": "pre-2022",
+    "holdout_segment": "2022+",
+    "horizons": {
+      "13w": 65,
+      "1w": 5,
+      "26w": 130,
+      "2w": 10,
+      "39w": 195,
+      "3w": 15,
+      "4w": 20,
+      "52w": 260,
+      "6w": 30,
+      "8w": 40,
+      "friday": "exact weekday cumulative from release anchor",
+      "monday": "exact weekday cumulative from release anchor",
+      "thursday": "exact weekday cumulative from release anchor",
+      "tuesday": "exact weekday cumulative from release anchor",
+      "wednesday": "exact weekday cumulative from release anchor"
+    },
+    "multiple_testing_registry": {
+      "breadth_actor_keys": 9,
+      "cross_actor_same_market_pair_keys": 106,
+      "cross_taxonomy_pair_keys": 100,
+      "individual_actor_direction_threshold_candidates": 826,
+      "lead_market_signal_target_keys": 380,
+      "same_actor_cross_instrument_pair_keys": 115
+    },
+    "production_changes": false,
+    "threshold_grid": [
+      60,
+      65,
+      70,
+      75,
+      80,
+      85,
+      90
+    ],
+    "threshold_selection": "lowest pre-2022 threshold with a three-cutoff same-sign 1W neighborhood; never best-return optimization"
+  },
+  "information_contract": {
+    "cot_snapshot": "Tuesday",
+    "exact_weekday_rule": "exact next-week Monday-Friday; a missing exact weekday breaks the cumulative weekday path and is never relabeled",
+    "lookahead_safe": true,
+    "percentiles": "expanding-history only at each report",
+    "public_availability": "Friday = report date + 3 calendar days",
+    "release_anchor": "first market close on/after Friday release target"
+  },
+  "main_ref_sha": "6d8d98f001794f875929411a248a6228b837ddd0",
+  "markets": [
+    "sp500",
+    "nq",
+    "vix",
+    "rty",
+    "dow",
+    "gold",
+    "silver"
+  ],
+  "production_changes": false,
+  "purpose": "Frozen historical verification baseline for the completed cross-actor/cross-instrument COT backtest.",
+  "research_branch": "research/full-actor-cross-instrument-20260810",
+  "research_head_before_snapshot_commit": "8f10c00e7fc018e4f4cef5116f83245d4c8cfadb",
+  "snapshot_id": "cot-actor-event-research-2026-08-10",
+  "verification_counts": {
+    "cross_actor_same_instrument_keys": 106,
+    "cross_taxonomy_keys": 100,
+    "dataset_market_pairs": 13,
+    "formal_primary_candidates": 10,
+    "individual_actor_series": 59,
+    "lead_market_keys": 380,
+    "mechanical_oos_supported": 36,
+    "same_actor_cross_instrument_keys": 115
+  },
+  "verification_rule": "Raw SHA-256 values prove stored-file integrity. When source-state SHAs and research code are identical, compare canonical JSON hashes that exclude only generated_at_utc. When source data advances, compare historical rows through the frozen 2026-08-04 COT snapshot boundary and preserve the old snapshot unchanged for audit.",
+  "workflow_run_attempt": "1",
+  "workflow_run_id": "31350698170"
+}

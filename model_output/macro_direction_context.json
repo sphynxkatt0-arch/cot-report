@@ -1,0 +1,80 @@
+{
+  "macro_regime_score": 42.56,
+  "macro_observed_score": 41.91,
+  "liquidity_plumbing_score": 43.41,
+  "market_transmission_score": 51.67,
+  "supply_pressure_score": 0.2,
+  "availability_ratio": 0.92,
+  "availability_confidence": 0.92,
+  "available_weight": 92.0,
+  "total_weight": 100.0,
+  "reliable_for_action": true,
+  "regime_label": "Defensive",
+  "hard_override": false,
+  "hard_override_suppressed_by_freshness": false,
+  "severe_alert_count": 0,
+  "severe_alerts": [],
+  "stale_factors": [
+    "score_dollar: factor_latest.dollar_index stale 7.9d>5d"
+  ],
+  "missing_factors": [],
+  "macro_context": {
+    "effective_score": 42.56,
+    "observed_score": 41.91,
+    "availability_confidence": 0.92,
+    "regime": "Defensive",
+    "canonical_weights_pct": {
+      "plumbing": 48.0,
+      "transmission": 42.0,
+      "supply": 10.0
+    },
+    "components": {
+      "plumbing": 43.41,
+      "transmission": 51.67,
+      "supply": 0.2
+    },
+    "reliable_for_action": true,
+    "evidence_status": "calendar_aligned_not_vintage_safe"
+  },
+  "macro_risk_budget": {
+    "state": "defensive",
+    "context_score": 42.56,
+    "availability_confidence": 0.92,
+    "production_macro_multiplier": 1.0,
+    "production_directional_weight": 0.0,
+    "hard_override": false,
+    "advisory_only": true,
+    "evidence_status": "calendar_aligned_not_vintage_safe",
+    "policy": "Macro does not resize or reverse COT direction; independent hard overrides remain active."
+  },
+  "macro_directional_edges": [
+    {
+      "label": "Liquidity plumbing",
+      "component": "plumbing",
+      "score": 43.41,
+      "context": "defensive",
+      "canonical_weight_pct": 48.0,
+      "production_directional_weight": 0.0,
+      "evidence_status": "context_only_not_vintage_safe"
+    },
+    {
+      "label": "Market transmission",
+      "component": "transmission",
+      "score": 51.67,
+      "context": "neutral",
+      "canonical_weight_pct": 42.0,
+      "production_directional_weight": 0.0,
+      "evidence_status": "context_only_not_vintage_safe"
+    },
+    {
+      "label": "Treasury supply",
+      "component": "supply",
+      "score": 0.2,
+      "context": "defensive",
+      "canonical_weight_pct": 10.0,
+      "production_directional_weight": 0.0,
+      "evidence_status": "context_only_not_vintage_safe"
+    }
+  ],
+  "source": "interactive_cot_dashboard.MACRO_MONITOR+METADATA"
+}
