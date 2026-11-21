@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "model_version": "macro-liquidity-control-room-v1.2",
-  "generated_at_utc": "2026-11-20T21:37:33.926551+00:00",
+  "generated_at_utc": "2026-11-21T01:44:45.712459+00:00",
   "role": "descriptive risk and plumbing context; does not create or reverse COT direction",
   "source_coverage_ratio": 0.769,
   "source_coverage_label": "Good",
@@ -11,24 +11,24 @@
     "tga": 892.31,
     "rrp": 0.401,
     "bank_reserves": 2979.656,
-    "bank_treasury_agency": 4852.899,
-    "bank_assets": 19825.171,
-    "reserves_to_bank_assets_pct": 15.03,
-    "slr_balance_sheet_load": 7832.555,
+    "bank_treasury_agency": 4793.285,
+    "bank_assets": 19559.478,
+    "reserves_to_bank_assets_pct": 15.234,
+    "slr_balance_sheet_load": 7772.941,
     "net_liquidity": 5848.741,
     "net_liquidity_4w_change": 40.49,
     "net_liquidity_13w_change": 39.648,
     "bank_reserves_4w_change": 17.049,
-    "bank_treasury_agency_4w_change": 61.752,
-    "slr_balance_sheet_load_4w_change": 78.801,
-    "reserves_to_bank_assets_4w_change": 0.048,
+    "bank_treasury_agency_4w_change": 0.0,
+    "slr_balance_sheet_load_4w_change": 17.049,
+    "reserves_to_bank_assets_4w_change": 0.087,
     "tga_4w_change": -52.843,
     "rrp_4w_change": 0.201,
     "sofr": 3.91,
     "effr": 3.88,
-    "iorb": 3.9,
-    "sofr_iorb_spread": 0.01,
-    "effr_iorb_spread": -0.02,
+    "iorb": 3.65,
+    "sofr_iorb_spread": 0.26,
+    "effr_iorb_spread": 0.23,
     "sofr_iorb_spread_4w_change": -0.01,
     "effr_iorb_spread_4w_change": 0.0,
     "real_yield_10y": 2.77,
@@ -59,8 +59,8 @@
     "treasury_issuance_7d": 0.0,
     "treasury_issuance_28d": 26.0,
     "treasury_issuance_next_7d": 0.0,
-    "liquidity_plumbing_score": 51.763,
-    "liquidity_score": 48.443,
+    "liquidity_plumbing_score": 48.171,
+    "liquidity_score": 46.384,
     "regime_label": "Neutral",
     "sp500_forward_20d": null,
     "sp500_forward_60d": null,
@@ -68,38 +68,38 @@
     "nasdaq_forward_10d": null,
     "nasdaq_forward_20d": null,
     "nasdaq_forward_60d": null,
-    "tsp_total_assets": 1147.3,
-    "tsp_g_fund_assets": 238.8,
-    "tsp_f_fund_assets": 22.1,
-    "tsp_c_fund_assets": 391.2,
-    "tsp_s_fund_assets": 105.3,
-    "tsp_i_fund_assets": 79.1,
-    "tsp_l_fund_assets": 310.0,
-    "tsp_g_fund_share": 20.8,
-    "tsp_equity_share": 50.2,
-    "tsp_g_fund_1m_change": 0.3,
-    "tsp_equity_1m_change": -0.3,
-    "tsp_g_fund_ift_m": 1747.0,
-    "tsp_f_fund_ift_m": 227.0,
-    "tsp_c_fund_ift_m": -949.0,
-    "tsp_s_fund_ift_m": -623.0,
-    "tsp_i_fund_ift_m": -85.0,
-    "tsp_l_fund_ift_m": -321.0,
-    "tsp_equity_ift_m": -1657.0,
-    "retirement_flow_signal": -3404.0,
+    "tsp_total_assets": 1155.0,
+    "tsp_g_fund_assets": 236.9,
+    "tsp_f_fund_assets": 22.3,
+    "tsp_c_fund_assets": 393.0,
+    "tsp_s_fund_assets": 110.4,
+    "tsp_i_fund_assets": 80.1,
+    "tsp_l_fund_assets": 311.3,
+    "tsp_g_fund_share": 20.5,
+    "tsp_equity_share": 50.5,
+    "tsp_g_fund_1m_change": -0.4,
+    "tsp_equity_1m_change": 0.2,
+    "tsp_g_fund_ift_m": -3243.0,
+    "tsp_f_fund_ift_m": -157.0,
+    "tsp_c_fund_ift_m": -555.0,
+    "tsp_s_fund_ift_m": 2140.0,
+    "tsp_i_fund_ift_m": 1859.0,
+    "tsp_l_fund_ift_m": -64.0,
+    "tsp_equity_ift_m": 3444.0,
+    "retirement_flow_signal": 6687.0,
     "credit_override": false,
-    "score_net_liquidity": 55.763,
-    "score_bank_reserves": 53.964,
+    "score_net_liquidity": 54.402,
+    "score_bank_reserves": 52.994,
     "score_treasury_supply": 76.277,
-    "score_repo_spread": 42.87,
-    "score_slr_load": 38.04,
-    "score_real_yield": 48.16,
-    "score_credit": 43.055,
-    "score_dollar": 39.99,
+    "score_repo_spread": 21.449,
+    "score_slr_load": 49.052,
+    "score_real_yield": 46.55,
+    "score_credit": 42.65,
+    "score_dollar": 39.334,
     "score_vix": 0.0,
-    "macro_regime_score": -0.06,
+    "macro_regime_score": -0.14,
     "macro_regime_score_label": "Neutral / transition",
-    "confidence_score": 34,
+    "confidence_score": 20,
     "confidence_label": "low"
   },
   "treasury_cash_context": {
@@ -142,13 +142,13 @@
     "sign_convention": "positive = Treasury withdrawal / private-sector cash injection; negative = Treasury deposit / private-sector cash drain"
   },
   "treasury_auction_context": {
-    "score": 56.8,
-    "state": "Neutral",
-    "coverage": 3,
+    "score": 63.4,
+    "state": "Supportive",
+    "coverage": 2,
     "latest_auction_date": "2026-10-08",
-    "average_bid_to_cover_delta": 0.11624999999999996,
-    "average_dealer_share_delta_pp": -3.0492421385999458,
-    "average_indirect_share_delta_pp": 6.318804387722447,
+    "average_bid_to_cover_delta": 0.18062500000000004,
+    "average_dealer_share_delta_pp": -3.7899915779452016,
+    "average_indirect_share_delta_pp": 10.248530064310167,
     "recent_coupon_auctions": [
       {
         "auction_date": "2026-10-08",
@@ -313,16 +313,16 @@
       }
     ],
     "reasons": [
-      "same-tenor bid-to-cover delta +0.12",
-      "dealer share delta -3.0 pp",
-      "indirect share delta +6.3 pp"
+      "same-tenor bid-to-cover delta +0.18",
+      "dealer share delta -3.8 pp",
+      "indirect share delta +10.2 pp"
     ],
     "definition": "same-tenor relative demand; lower bid-to-cover, higher dealer share, and lower indirect share reduce the score"
   },
   "pillars": {
     "macro_regime": {
       "label": "Macro risk regime",
-      "score": 48.443,
+      "score": 46.384,
       "state": "Neutral"
     },
     "net_liquidity": {
@@ -345,9 +345,9 @@
     },
     "repo_admin_spread": {
       "label": "SOFR-IORB",
-      "value": 0.01,
+      "value": 0.26,
       "unit": "pp",
-      "state": "Normal"
+      "state": "Stress"
     },
     "funding_microstructure": {
       "label": "Funding microstructure",
@@ -397,17 +397,17 @@
     },
     "auction_absorption": {
       "label": "Treasury auction absorption",
-      "score": 56.8,
-      "state": "Neutral",
-      "coverage": 3,
+      "score": 63.4,
+      "state": "Supportive",
+      "coverage": 2,
       "reasons": [
-        "same-tenor bid-to-cover delta +0.12",
-        "dealer share delta -3.0 pp",
-        "indirect share delta +6.3 pp"
+        "same-tenor bid-to-cover delta +0.18",
+        "dealer share delta -3.8 pp",
+        "indirect share delta +10.2 pp"
       ],
-      "average_bid_to_cover_delta": 0.11624999999999996,
-      "average_dealer_share_delta_pp": -3.0492421385999458,
-      "average_indirect_share_delta_pp": 6.318804387722447
+      "average_bid_to_cover_delta": 0.18062500000000004,
+      "average_dealer_share_delta_pp": -3.7899915779452016,
+      "average_indirect_share_delta_pp": 10.248530064310167
     }
   },
   "sources": [
@@ -425,7 +425,7 @@
       "change_short": 0.0,
       "change_medium": 0.029999999999999805,
       "zscore": 1.655024326077265,
-      "age_days": 1,
+      "age_days": 2,
       "error": null
     },
     {
@@ -442,7 +442,7 @@
       "change_short": -0.050000000000000266,
       "change_medium": 0.2599999999999998,
       "zscore": -0.16222516425469374,
-      "age_days": 1,
+      "age_days": 2,
       "error": null
     },
     {
@@ -459,7 +459,7 @@
       "change_short": 0.010000000000000231,
       "change_medium": 0.020000000000000018,
       "zscore": 1.5879634684271342,
-      "age_days": 2,
+      "age_days": 3,
       "error": null
     },
     {
@@ -476,7 +476,7 @@
       "change_short": -32.559500342810225,
       "change_medium": 227.3011418650599,
       "zscore": 0.8211915725194955,
-      "age_days": 1,
+      "age_days": 2,
       "error": null
     },
     {
@@ -510,7 +510,7 @@
       "change_short": -9373.0,
       "change_medium": null,
       "zscore": null,
-      "age_days": 1787,
+      "age_days": 1788,
       "error": null
     },
     {
@@ -527,7 +527,7 @@
       "change_short": -29809.0,
       "change_medium": -30369.0,
       "zscore": -0.8154426405853248,
-      "age_days": 9,
+      "age_days": 10,
       "error": null
     },
     {
@@ -544,7 +544,7 @@
       "change_short": 42322.51239018026,
       "change_medium": 21857.50130590028,
       "zscore": 1.9722112506479987,
-      "age_days": 20,
+      "age_days": 21,
       "error": null
     },
     {
@@ -561,7 +561,7 @@
       "change_short": 136483.06783623993,
       "change_medium": 167900.86570337974,
       "zscore": 1.6246766975302678,
-      "age_days": 20,
+      "age_days": 21,
       "error": null
     },
     {
@@ -578,7 +578,7 @@
       "change_short": -27081.83755259984,
       "change_medium": -110367.76401679986,
       "zscore": -0.3080574078181618,
-      "age_days": 20,
+      "age_days": 21,
       "error": null
     },
     {
@@ -594,8 +594,8 @@
       "latest_value": 891.223,
       "change_short": -41.903999999999996,
       "change_medium": -53.930000000000064,
-      "zscore": -0.9604720443082683,
-      "age_days": 1,
+      "zscore": -1.0691279224168262,
+      "age_days": 2,
       "error": null
     },
     {
@@ -611,8 +611,8 @@
       "latest_value": 2.1769999999999072,
       "change_short": 83.82199999999993,
       "change_medium": 107.87000000000008,
-      "zscore": 0.07494934411957922,
-      "age_days": 1,
+      "zscore": 0.07260091154163137,
+      "age_days": 2,
       "error": null
     },
     {
@@ -625,11 +625,11 @@
       "mnemonic": null,
       "resolution": "official fiscaldata API",
       "latest_date": "2026-10-08",
-      "latest_value": 56.8,
-      "change_short": 0.11624999999999996,
-      "change_medium": -3.0492421385999458,
+      "latest_value": 63.4,
+      "change_short": 0.18062500000000004,
+      "change_medium": -3.7899915779452016,
       "zscore": null,
-      "age_days": 43,
+      "age_days": 44,
       "error": null
     }
   ],
