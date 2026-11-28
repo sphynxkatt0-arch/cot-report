@@ -1,0 +1,32 @@
+{
+  "nq": [
+    {"source": "cot", "key": "other_reportable", "side": "low", "threshold": 10, "weight": 2.5, "reason": "Other Reportable reset", "role": "entry_signal"},
+    {"source": "cot", "key": "other_reportable", "side": "high", "threshold": 90, "weight": -1.5, "reason": "Other Reportable crowding", "role": "risk_filter"},
+    {"source": "cot", "key": "lev_money", "side": "low", "threshold": 10, "weight": 1.5, "reason": "Leveraged Money underexposed", "role": "entry_signal"},
+    {"source": "cot", "key": "non_reportable", "side": "low", "threshold": 10, "weight": 0.5, "reason": "Non-reportable contrarian (retail short)", "role": "entry_signal"},
+    {"source": "cot", "key": "non_reportable", "side": "high", "threshold": 85, "weight": -0.75, "reason": "Non-reportable contrarian (retail long)", "role": "risk_filter"},
+    {"source": "cot", "key": "asset_mgr", "side": "high", "threshold": 90, "weight": 0.5, "reason": "Asset Manager trend sponsorship", "role": "risk_filter"},
+    {"source": "factor", "key": "fred_vix", "side": "high", "threshold": 90, "weight": 1.5, "reason": "FRED VIX panic reset", "role": "entry_signal"},
+    {"source": "factor", "key": "fred_vix", "side": "low", "threshold": 10, "weight": -0.5, "reason": "FRED VIX complacency", "role": "risk_filter"},
+    {"source": "factor", "key": "cnn_fear_greed", "side": "low", "threshold": 10, "weight": 1.0, "reason": "CNN Fear & Greed fear reset", "role": "entry_signal"},
+    {"source": "factor", "key": "cnn_fear_greed", "side": "high", "threshold": 90, "weight": -0.5, "reason": "CNN Fear & Greed greed caution", "role": "risk_filter"},
+    {"source": "factor", "key": "cnn_vix", "side": "low", "threshold": 10, "weight": 0.5, "reason": "CNN VIX low-volatility trend", "role": "entry_signal"},
+    {"source": "factor", "key": "cnn_vix", "side": "high", "threshold": 90, "weight": -0.5, "reason": "CNN VIX stress caution", "role": "risk_filter"}
+  ],
+  "sp500": [
+    {"source": "cot", "key": "asset_mgr", "side": "high", "threshold": 90, "weight": -2.0, "reason": "Asset Manager crowding", "role": "risk_filter"},
+    {"source": "cot", "key": "lev_money", "side": "high", "threshold": 90, "weight": -2.0, "reason": "Leveraged Money crowding", "role": "risk_filter"},
+    {"source": "cot", "key": "non_reportable", "side": "high", "threshold": 90, "weight": -1.0, "reason": "Non-reportable contrarian (retail long)", "role": "risk_filter"},
+    {"source": "cot", "key": "non_reportable", "side": "low", "threshold": 10, "weight": 0.75, "reason": "Non-reportable contrarian (retail short)", "role": "entry_signal"},
+    {"source": "cot", "key": "other_reportable", "side": "high", "threshold": 90, "weight": -1.0, "reason": "Other Reportable crowding", "role": "risk_filter"},
+    {"source": "cot", "key": "other_reportable", "side": "low", "threshold": 10, "weight": 0.75, "reason": "Other Reportable contrarian reset", "role": "entry_signal"},
+    {"source": "cot", "key": "lev_money", "side": "low", "threshold": 10, "weight": 0.5, "reason": "Leveraged Money underexposed", "role": "risk_filter"},
+    {"source": "cot", "key": "asset_mgr", "side": "low", "threshold": 10, "weight": 1.0, "reason": "Asset Manager reset", "role": "entry_signal"},
+    {"source": "factor", "key": "fred_vix", "side": "high", "threshold": 90, "weight": 1.5, "reason": "FRED VIX panic reset", "role": "entry_signal"},
+    {"source": "factor", "key": "fred_vix", "side": "low", "threshold": 10, "weight": -0.5, "reason": "FRED VIX complacency", "role": "risk_filter"},
+    {"source": "factor", "key": "cnn_fear_greed", "side": "low", "threshold": 10, "weight": 1.0, "reason": "CNN Fear & Greed fear reset", "role": "entry_signal"},
+    {"source": "factor", "key": "cnn_fear_greed", "side": "high", "threshold": 90, "weight": -0.75, "reason": "CNN Fear & Greed greed caution", "role": "risk_filter"},
+    {"source": "factor", "key": "cnn_vix", "side": "low", "threshold": 10, "weight": 0.5, "reason": "CNN VIX low-volatility trend", "role": "entry_signal"},
+    {"source": "factor", "key": "cnn_vix", "side": "high", "threshold": 90, "weight": -0.5, "reason": "CNN VIX stress caution", "role": "risk_filter"}
+  ]
+}

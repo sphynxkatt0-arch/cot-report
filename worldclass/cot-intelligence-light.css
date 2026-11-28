@@ -1,0 +1,215 @@
+/* Light-mode treatment for the COT Intelligence module.
+   The base module is intentionally dark-first; these overrides make the
+   dashboard feel native in day mode instead of looking like a dim overlay. */
+html[data-theme="light"] .cot-intel {
+  color-scheme: light;
+  color: var(--text);
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(14,165,233,.055), transparent 28rem),
+    linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.98));
+  border-color: rgba(100,116,139,.20);
+  box-shadow: 0 18px 48px rgba(15,23,42,.08), 0 1px 2px rgba(15,23,42,.04);
+}
+
+html[data-theme="light"] .cot-intel-head,
+html[data-theme="light"] .cot-intel-tabs {
+  border-color: rgba(100,116,139,.14);
+}
+
+html[data-theme="light"] .cot-intel-tabs {
+  background: rgba(248,250,252,.72);
+}
+
+html[data-theme="light"] .cot-intel-tabs button {
+  color: #526174;
+  opacity: .78;
+}
+
+html[data-theme="light"] .cot-intel-tabs button:hover {
+  color: #172033;
+  background: rgba(226,232,240,.58);
+  opacity: 1;
+}
+
+html[data-theme="light"] .cot-intel-tabs button.active {
+  color: #172033;
+  background: #e8eef5;
+  box-shadow: inset 0 0 0 1px rgba(100,116,139,.08), 0 1px 2px rgba(15,23,42,.04);
+}
+
+html[data-theme="light"] .cot-intel-body {
+  background: transparent;
+}
+
+html[data-theme="light"] .cot-intel-strip span {
+  background: #eef3f8;
+  color: #536174;
+  box-shadow: inset 0 0 0 1px rgba(100,116,139,.08);
+}
+
+html[data-theme="light"] .cot-intel-market {
+  background: rgba(248,250,252,.9);
+  border-color: rgba(100,116,139,.18);
+}
+
+html[data-theme="light"] .cot-edge-card,
+html[data-theme="light"] .cot-profile,
+html[data-theme="light"] .cot-cross-card,
+html[data-theme="light"] .cot-promotion,
+html[data-theme="light"] .cot-two-state > div {
+  background: rgba(255,255,255,.90);
+  border-color: rgba(100,116,139,.16);
+  box-shadow: 0 1px 2px rgba(15,23,42,.035);
+}
+
+html[data-theme="light"] .cot-edge-metrics > div,
+html[data-theme="light"] .cot-actor-summary > div,
+html[data-theme="light"] .cot-live-grid > div,
+html[data-theme="light"] .cot-band-grid > div,
+html[data-theme="light"] .cot-interactions > div,
+html[data-theme="light"] .cot-cross-markets > div {
+  background: #f1f5f9;
+}
+
+html[data-theme="light"] .cot-table-wrap,
+html[data-theme="light"] .cot-matrix-wrap {
+  border-color: rgba(100,116,139,.16);
+  background: rgba(255,255,255,.74);
+}
+
+html[data-theme="light"] .cot-table th,
+html[data-theme="light"] .cot-table td,
+html[data-theme="light"] .cot-matrix th,
+html[data-theme="light"] .cot-matrix td {
+  border-color: rgba(100,116,139,.12);
+}
+
+html[data-theme="light"] .cot-table thead th,
+html[data-theme="light"] .cot-matrix thead th,
+html[data-theme="light"] .cot-table th:first-child,
+html[data-theme="light"] .cot-table td:first-child,
+html[data-theme="light"] .cot-matrix th:first-child {
+  background: rgba(248,250,252,.985);
+}
+
+html[data-theme="light"] .cot-table tr[data-actor-series]:hover,
+html[data-theme="light"] .cot-table tbody tr:hover {
+  background: rgba(14,165,233,.045);
+}
+
+html[data-theme="light"] .cot-role {
+  background: #eef2f7;
+}
+
+html[data-theme="light"] .cot-role.primary_directional {
+  background: rgba(22,163,74,.10);
+  color: #166534;
+}
+
+html[data-theme="light"] .cot-role.secondary_directional {
+  background: rgba(37,99,235,.09);
+  color: #1d4ed8;
+}
+
+html[data-theme="light"] .cot-status.strong {
+  background: rgba(22,163,74,.11);
+  color: #166534;
+}
+
+html[data-theme="light"] .cot-status.supported {
+  background: rgba(37,99,235,.10);
+  color: #1d4ed8;
+}
+
+html[data-theme="light"] .cot-status.mixed,
+html[data-theme="light"] .cot-trigger {
+  background: rgba(217,119,6,.11);
+  color: #92400e;
+}
+
+html[data-theme="light"] .cot-status.weak,
+html[data-theme="light"] .cot-status.none {
+  background: #eef2f7;
+  color: #64748b;
+  opacity: 1;
+}
+
+html[data-theme="light"] .cot-warning {
+  background: rgba(255,251,235,.88);
+  border-color: rgba(217,119,6,.22);
+  color: #854d0e;
+}
+
+html[data-theme="light"] .cot-matrix td.strong { background: rgba(22,163,74,.07); }
+html[data-theme="light"] .cot-matrix td.supported { background: rgba(37,99,235,.06); }
+html[data-theme="light"] .cot-matrix td.mixed { background: rgba(217,119,6,.055); }
+html[data-theme="light"] .cot-matrix td.insufficient {
+  background: repeating-linear-gradient(135deg,#f8fafc,#f8fafc 5px,#eef2f7 5px,#eef2f7 10px);
+}
+
+html[data-theme="light"] .horizon-title select,
+html[data-theme="light"] .cot-actor-picker button {
+  background: #f8fafc;
+  color: #334155;
+  border-color: rgba(100,116,139,.18);
+}
+
+html[data-theme="light"] .cot-actor-picker button:hover {
+  background: #f1f5f9;
+}
+
+html[data-theme="light"] .cot-actor-picker button.active {
+  background: #e8eef5;
+  color: #172033;
+  border-color: rgba(71,85,105,.24);
+}
+
+html[data-theme="light"] .cot-cross-markets > div.selected {
+  outline-color: rgba(37,99,235,.34);
+  background: rgba(37,99,235,.065);
+}
+
+html[data-theme="light"] .cot-live-summary {
+  background: #f1f5f9;
+  color: #334155;
+  box-shadow: inset 0 0 0 1px rgba(100,116,139,.09);
+}
+
+html[data-theme="light"] .cot-intel-loading,
+html[data-theme="light"] .cot-empty,
+html[data-theme="light"] .cot-error {
+  background: rgba(248,250,252,.72);
+  border-color: rgba(100,116,139,.20);
+}
+
+html[data-theme="light"] .cot-now-card {
+  background: rgba(255,255,255,.96);
+  border-color: rgba(100,116,139,.16);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(15,23,42,.035);
+}
+
+/* Mobile NOW is the first visible surface on phones. Force an opaque light
+   card/surface stack so a dark base layer can never visually bleed through. */
+@media(max-width:640px){
+  html[data-theme="light"] .cot-intel {
+    background: #ffffff;
+  }
+  html[data-theme="light"] .cot-intel-tabs {
+    background: #f8fafc;
+  }
+  html[data-theme="light"] .cot-intel-body {
+    background: #ffffff;
+  }
+  html[data-theme="light"] .cot-now-cards {
+    background: transparent;
+  }
+}
+
+/* Keep the light treatment crisp: no dark translucent layer should survive a
+   theme switch, including content that was rendered before the toggle. */
+html[data-theme="light"] .cot-intel,
+html[data-theme="light"] .cot-intel * {
+  text-shadow: none;
+}

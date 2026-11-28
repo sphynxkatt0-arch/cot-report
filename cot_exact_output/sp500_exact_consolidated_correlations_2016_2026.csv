@@ -1,0 +1,331 @@
+category,relationship,position_metric,pearson_r,observations,return_metric
+asset_mgr,weekly change in asset manager net/OI pct vs weekly price return,asset_mgr_net_oi_pct_change,0.33010360779671755,545,
+asset_mgr,weekly change in asset manager net/OI pct vs next monday close return,asset_mgr_net_oi_pct_change,0.057087352132333825,545,next_week_monday_return
+asset_mgr,weekly change in asset manager net/OI pct vs next monday single-day return,asset_mgr_net_oi_pct_change,0.057087352132333825,545,next_week_monday_daily_return
+asset_mgr,weekly change in asset manager net/OI pct vs next tuesday close return,asset_mgr_net_oi_pct_change,0.010267996696726607,545,next_week_tuesday_return
+asset_mgr,weekly change in asset manager net/OI pct vs next tuesday single-day return,asset_mgr_net_oi_pct_change,-0.11176229753820655,545,next_week_tuesday_daily_return
+asset_mgr,weekly change in asset manager net/OI pct vs next wednesday close return,asset_mgr_net_oi_pct_change,0.0316911909084904,545,next_week_wednesday_return
+asset_mgr,weekly change in asset manager net/OI pct vs next wednesday single-day return,asset_mgr_net_oi_pct_change,0.04613618781056881,545,next_week_wednesday_daily_return
+asset_mgr,weekly change in asset manager net/OI pct vs next thursday close return,asset_mgr_net_oi_pct_change,0.04468891961702461,545,next_week_thursday_return
+asset_mgr,weekly change in asset manager net/OI pct vs next thursday single-day return,asset_mgr_net_oi_pct_change,0.0415941636993071,545,next_week_thursday_daily_return
+asset_mgr,weekly change in asset manager net/OI pct vs next friday close return,asset_mgr_net_oi_pct_change,0.04923865089534656,545,next_week_friday_return
+asset_mgr,weekly change in asset manager net/OI pct vs next friday single-day return,asset_mgr_net_oi_pct_change,0.011582154992627469,545,next_week_friday_daily_return
+asset_mgr,weekly change in asset manager net contracts vs weekly price return,asset_mgr_net_change,0.34324434573360396,545,
+asset_mgr,weekly change in asset manager net contracts vs next monday close return,asset_mgr_net_change,0.03109023501969228,545,next_week_monday_return
+asset_mgr,weekly change in asset manager net contracts vs next monday single-day return,asset_mgr_net_change,0.03109023501969228,545,next_week_monday_daily_return
+asset_mgr,weekly change in asset manager net contracts vs next tuesday close return,asset_mgr_net_change,-0.0027032526156615215,545,next_week_tuesday_return
+asset_mgr,weekly change in asset manager net contracts vs next tuesday single-day return,asset_mgr_net_change,-0.07896063020755248,545,next_week_tuesday_daily_return
+asset_mgr,weekly change in asset manager net contracts vs next wednesday close return,asset_mgr_net_change,0.0141578210435316,545,next_week_wednesday_return
+asset_mgr,weekly change in asset manager net contracts vs next wednesday single-day return,asset_mgr_net_change,0.032828579618896056,545,next_week_wednesday_daily_return
+asset_mgr,weekly change in asset manager net contracts vs next thursday close return,asset_mgr_net_change,0.007710526318939325,545,next_week_thursday_return
+asset_mgr,weekly change in asset manager net contracts vs next thursday single-day return,asset_mgr_net_change,-0.00938893708554495,545,next_week_thursday_daily_return
+asset_mgr,weekly change in asset manager net contracts vs next friday close return,asset_mgr_net_change,0.011693239964789498,545,next_week_friday_return
+asset_mgr,weekly change in asset manager net contracts vs next friday single-day return,asset_mgr_net_change,0.005746275657174601,545,next_week_friday_daily_return
+asset_mgr,asset manager net/OI pct vs next monday close return,asset_mgr_net_oi_pct,0.010294772435139299,546,next_week_monday_return
+asset_mgr,asset manager net contracts vs next monday close return,asset_mgr_net,0.02435308100981624,546,next_week_monday_return
+asset_mgr,asset manager short/OI pct vs next monday close return,asset_mgr_short_oi_pct,0.02716988665024467,546,next_week_monday_return
+asset_mgr,asset manager net/OI pct vs next monday single-day return,asset_mgr_net_oi_pct,0.010294772435139299,546,next_week_monday_daily_return
+asset_mgr,asset manager net contracts vs next monday single-day return,asset_mgr_net,0.02435308100981624,546,next_week_monday_daily_return
+asset_mgr,asset manager short/OI pct vs next monday single-day return,asset_mgr_short_oi_pct,0.02716988665024467,546,next_week_monday_daily_return
+asset_mgr,asset manager net/OI pct vs next tuesday close return,asset_mgr_net_oi_pct,-0.021245078019138126,546,next_week_tuesday_return
+asset_mgr,asset manager net contracts vs next tuesday close return,asset_mgr_net,0.007084635970985203,546,next_week_tuesday_return
+asset_mgr,asset manager short/OI pct vs next tuesday close return,asset_mgr_short_oi_pct,0.041665210505958575,546,next_week_tuesday_return
+asset_mgr,asset manager net/OI pct vs next tuesday single-day return,asset_mgr_net_oi_pct,-0.07555459702900315,546,next_week_tuesday_daily_return
+asset_mgr,asset manager net contracts vs next tuesday single-day return,asset_mgr_net,-0.04355691524343141,546,next_week_tuesday_daily_return
+asset_mgr,asset manager short/OI pct vs next tuesday single-day return,asset_mgr_short_oi_pct,0.031434793972432346,546,next_week_tuesday_daily_return
+asset_mgr,asset manager net/OI pct vs next wednesday close return,asset_mgr_net_oi_pct,-0.0054254016927109796,546,next_week_wednesday_return
+asset_mgr,asset manager net contracts vs next wednesday close return,asset_mgr_net,0.015909549489404016,546,next_week_wednesday_return
+asset_mgr,asset manager short/OI pct vs next wednesday close return,asset_mgr_short_oi_pct,0.035545789012301356,546,next_week_wednesday_return
+asset_mgr,asset manager net/OI pct vs next wednesday single-day return,asset_mgr_net_oi_pct,0.03201417393213619,546,next_week_wednesday_daily_return
+asset_mgr,asset manager net contracts vs next wednesday single-day return,asset_mgr_net,0.022466311013394177,546,next_week_wednesday_daily_return
+asset_mgr,asset manager short/OI pct vs next wednesday single-day return,asset_mgr_short_oi_pct,-0.008628192899396177,546,next_week_wednesday_daily_return
+asset_mgr,asset manager net/OI pct vs next thursday close return,asset_mgr_net_oi_pct,-0.02761056948217579,546,next_week_thursday_return
+asset_mgr,asset manager net contracts vs next thursday close return,asset_mgr_net,0.004069013525059479,546,next_week_thursday_return
+asset_mgr,asset manager short/OI pct vs next thursday close return,asset_mgr_short_oi_pct,0.05473077963964907,546,next_week_thursday_return
+asset_mgr,asset manager net/OI pct vs next thursday single-day return,asset_mgr_net_oi_pct,-0.05304542009221409,546,next_week_thursday_daily_return
+asset_mgr,asset manager net contracts vs next thursday single-day return,asset_mgr_net,-0.02364994733725051,546,next_week_thursday_daily_return
+asset_mgr,asset manager short/OI pct vs next thursday single-day return,asset_mgr_short_oi_pct,0.054557928697233304,546,next_week_thursday_daily_return
+asset_mgr,asset manager net/OI pct vs next friday close return,asset_mgr_net_oi_pct,-0.028671806695827723,546,next_week_friday_return
+asset_mgr,asset manager net contracts vs next friday close return,asset_mgr_net,-0.005298904503039783,546,next_week_friday_return
+asset_mgr,asset manager short/OI pct vs next friday close return,asset_mgr_short_oi_pct,0.06410063354860002,546,next_week_friday_return
+asset_mgr,asset manager net/OI pct vs next friday single-day return,asset_mgr_net_oi_pct,-0.008949622883713143,546,next_week_friday_daily_return
+asset_mgr,asset manager net contracts vs next friday single-day return,asset_mgr_net,-0.023028434754491976,546,next_week_friday_daily_return
+asset_mgr,asset manager short/OI pct vs next friday single-day return,asset_mgr_short_oi_pct,0.034637963748952734,546,next_week_friday_daily_return
+asset_mgr,asset manager net/OI pct vs forward 1w price return,asset_mgr_net_oi_pct,-0.012744065781598781,545,forward_return_1w
+asset_mgr,asset manager net contracts vs forward 1w price return,asset_mgr_net,0.012961610899499708,545,forward_return_1w
+asset_mgr,asset manager net/OI pct vs forward 2w price return,asset_mgr_net_oi_pct,-0.01942949997200298,544,forward_return_2w
+asset_mgr,asset manager net contracts vs forward 2w price return,asset_mgr_net,0.019443800880719304,544,forward_return_2w
+asset_mgr,asset manager net/OI pct vs forward 3w price return,asset_mgr_net_oi_pct,-0.029949410425140457,543,forward_return_3w
+asset_mgr,asset manager net contracts vs forward 3w price return,asset_mgr_net,0.0254696805696477,543,forward_return_3w
+asset_mgr,asset manager net/OI pct vs forward 4w price return,asset_mgr_net_oi_pct,-0.04879343864947564,542,forward_return_4w
+asset_mgr,asset manager net contracts vs forward 4w price return,asset_mgr_net,0.030405156249526204,542,forward_return_4w
+asset_mgr,asset manager net/OI pct vs forward 13w price return,asset_mgr_net_oi_pct,-0.03935244507781974,533,forward_return_13w
+asset_mgr,asset manager net contracts vs forward 13w price return,asset_mgr_net,0.07681139084818304,533,forward_return_13w
+asset_mgr,asset manager net/OI pct vs forward 26w price return,asset_mgr_net_oi_pct,0.014849833362006985,520,forward_return_26w
+asset_mgr,asset manager net contracts vs forward 26w price return,asset_mgr_net,0.15763399460743954,520,forward_return_26w
+asset_mgr,asset manager net/OI pct vs forward 52w price return,asset_mgr_net_oi_pct,-0.06266051084726108,494,forward_return_52w
+asset_mgr,asset manager net contracts vs forward 52w price return,asset_mgr_net,0.18382951026146763,494,forward_return_52w
+dealer,weekly change in dealer/intermediary net/OI pct vs weekly price return,dealer_net_oi_pct_change,0.12715675104796503,545,
+dealer,weekly change in dealer/intermediary net/OI pct vs next monday close return,dealer_net_oi_pct_change,-0.0201842708147145,545,next_week_monday_return
+dealer,weekly change in dealer/intermediary net/OI pct vs next monday single-day return,dealer_net_oi_pct_change,-0.0201842708147145,545,next_week_monday_daily_return
+dealer,weekly change in dealer/intermediary net/OI pct vs next tuesday close return,dealer_net_oi_pct_change,-0.0066882281655684965,545,next_week_tuesday_return
+dealer,weekly change in dealer/intermediary net/OI pct vs next tuesday single-day return,dealer_net_oi_pct_change,0.03539568709180604,545,next_week_tuesday_daily_return
+dealer,weekly change in dealer/intermediary net/OI pct vs next wednesday close return,dealer_net_oi_pct_change,-0.01669788554365318,545,next_week_wednesday_return
+dealer,weekly change in dealer/intermediary net/OI pct vs next wednesday single-day return,dealer_net_oi_pct_change,-0.022451528966525625,545,next_week_wednesday_daily_return
+dealer,weekly change in dealer/intermediary net/OI pct vs next thursday close return,dealer_net_oi_pct_change,-0.018440562478664897,545,next_week_thursday_return
+dealer,weekly change in dealer/intermediary net/OI pct vs next thursday single-day return,dealer_net_oi_pct_change,-0.01307850666361439,545,next_week_thursday_daily_return
+dealer,weekly change in dealer/intermediary net/OI pct vs next friday close return,dealer_net_oi_pct_change,-0.005019085513112916,545,next_week_friday_return
+dealer,weekly change in dealer/intermediary net/OI pct vs next friday single-day return,dealer_net_oi_pct_change,0.035002363174479356,545,next_week_friday_daily_return
+dealer,weekly change in dealer/intermediary net contracts vs weekly price return,dealer_net_change,0.15875198710104052,545,
+dealer,weekly change in dealer/intermediary net contracts vs next monday close return,dealer_net_change,0.01813784717949249,545,next_week_monday_return
+dealer,weekly change in dealer/intermediary net contracts vs next monday single-day return,dealer_net_change,0.01813784717949249,545,next_week_monday_daily_return
+dealer,weekly change in dealer/intermediary net contracts vs next tuesday close return,dealer_net_change,0.007660197721950556,545,next_week_tuesday_return
+dealer,weekly change in dealer/intermediary net contracts vs next tuesday single-day return,dealer_net_change,-0.02164493118393873,545,next_week_tuesday_daily_return
+dealer,weekly change in dealer/intermediary net contracts vs next wednesday close return,dealer_net_change,-0.014777760943547352,545,next_week_wednesday_return
+dealer,weekly change in dealer/intermediary net contracts vs next wednesday single-day return,dealer_net_change,-0.044907070087314004,545,next_week_wednesday_daily_return
+dealer,weekly change in dealer/intermediary net contracts vs next thursday close return,dealer_net_change,-0.013031950473515649,545,next_week_thursday_return
+dealer,weekly change in dealer/intermediary net contracts vs next thursday single-day return,dealer_net_change,-0.0017146303853718425,545,next_week_thursday_daily_return
+dealer,weekly change in dealer/intermediary net contracts vs next friday close return,dealer_net_change,-0.015955986616090736,545,next_week_friday_return
+dealer,weekly change in dealer/intermediary net contracts vs next friday single-day return,dealer_net_change,-0.009640138904187273,545,next_week_friday_daily_return
+dealer,dealer/intermediary net/OI pct vs next monday close return,dealer_net_oi_pct,0.023782038019251068,546,next_week_monday_return
+dealer,dealer/intermediary net contracts vs next monday close return,dealer_net,-0.006141868628146483,546,next_week_monday_return
+dealer,dealer/intermediary short/OI pct vs next monday close return,dealer_short_oi_pct,0.0015570388892627968,546,next_week_monday_return
+dealer,dealer/intermediary net/OI pct vs next monday single-day return,dealer_net_oi_pct,0.023782038019251068,546,next_week_monday_daily_return
+dealer,dealer/intermediary net contracts vs next monday single-day return,dealer_net,-0.006141868628146483,546,next_week_monday_daily_return
+dealer,dealer/intermediary short/OI pct vs next monday single-day return,dealer_short_oi_pct,0.0015570388892627968,546,next_week_monday_daily_return
+dealer,dealer/intermediary net/OI pct vs next tuesday close return,dealer_net_oi_pct,0.020171223959876142,546,next_week_tuesday_return
+dealer,dealer/intermediary net contracts vs next tuesday close return,dealer_net,-0.000286512711857244,546,next_week_tuesday_return
+dealer,dealer/intermediary short/OI pct vs next tuesday close return,dealer_short_oi_pct,-0.006491259074632101,546,next_week_tuesday_return
+dealer,dealer/intermediary net/OI pct vs next tuesday single-day return,dealer_net_oi_pct,-0.005693933191618268,546,next_week_tuesday_daily_return
+dealer,dealer/intermediary net contracts vs next tuesday single-day return,dealer_net,0.016976718674048066,546,next_week_tuesday_daily_return
+dealer,dealer/intermediary short/OI pct vs next tuesday single-day return,dealer_short_oi_pct,-0.022343969431478962,546,next_week_tuesday_daily_return
+dealer,dealer/intermediary net/OI pct vs next wednesday close return,dealer_net_oi_pct,0.00557190900351317,546,next_week_wednesday_return
+dealer,dealer/intermediary net contracts vs next wednesday close return,dealer_net,-0.01654733313340722,546,next_week_wednesday_return
+dealer,dealer/intermediary short/OI pct vs next wednesday close return,dealer_short_oi_pct,0.01080551735342592,546,next_week_wednesday_return
+dealer,dealer/intermediary net/OI pct vs next wednesday single-day return,dealer_net_oi_pct,-0.030167999365248624,546,next_week_wednesday_daily_return
+dealer,dealer/intermediary net contracts vs next wednesday single-day return,dealer_net,-0.03816199555021737,546,next_week_wednesday_daily_return
+dealer,dealer/intermediary short/OI pct vs next wednesday single-day return,dealer_short_oi_pct,0.03871725830880633,546,next_week_wednesday_daily_return
+dealer,dealer/intermediary net/OI pct vs next thursday close return,dealer_net_oi_pct,0.032646474316927014,546,next_week_thursday_return
+dealer,dealer/intermediary net contracts vs next thursday close return,dealer_net,0.003806574650985525,546,next_week_thursday_return
+dealer,dealer/intermediary short/OI pct vs next thursday close return,dealer_short_oi_pct,-0.016021275808225502,546,next_week_thursday_return
+dealer,dealer/intermediary net/OI pct vs next thursday single-day return,dealer_net_oi_pct,0.06547167311401288,546,next_week_thursday_daily_return
+dealer,dealer/intermediary net contracts vs next thursday single-day return,dealer_net,0.04319737346246555,546,next_week_thursday_daily_return
+dealer,dealer/intermediary short/OI pct vs next thursday single-day return,dealer_short_oi_pct,-0.0598826145789265,546,next_week_thursday_daily_return
+dealer,dealer/intermediary net/OI pct vs next friday close return,dealer_net_oi_pct,0.038368113798328586,546,next_week_friday_return
+dealer,dealer/intermediary net contracts vs next friday close return,dealer_net,0.016169504960672917,546,next_week_friday_return
+dealer,dealer/intermediary short/OI pct vs next friday close return,dealer_short_oi_pct,-0.020903045402353233,546,next_week_friday_return
+dealer,dealer/intermediary net/OI pct vs next friday single-day return,dealer_net_oi_pct,0.020069787141833315,546,next_week_friday_daily_return
+dealer,dealer/intermediary net contracts vs next friday single-day return,dealer_net,0.03182285949820894,546,next_week_friday_daily_return
+dealer,dealer/intermediary short/OI pct vs next friday single-day return,dealer_short_oi_pct,-0.015395071260444261,546,next_week_friday_daily_return
+dealer,dealer/intermediary net/OI pct vs forward 1w price return,dealer_net_oi_pct,0.016570316074315226,545,forward_return_1w
+dealer,dealer/intermediary net contracts vs forward 1w price return,dealer_net,-0.005532532897238143,545,forward_return_1w
+dealer,dealer/intermediary net/OI pct vs forward 2w price return,dealer_net_oi_pct,0.02357390128634868,544,forward_return_2w
+dealer,dealer/intermediary net contracts vs forward 2w price return,dealer_net,-0.008957275111964983,544,forward_return_2w
+dealer,dealer/intermediary net/OI pct vs forward 3w price return,dealer_net_oi_pct,0.026427786879937864,543,forward_return_3w
+dealer,dealer/intermediary net contracts vs forward 3w price return,dealer_net,-0.011415368917199596,543,forward_return_3w
+dealer,dealer/intermediary net/OI pct vs forward 4w price return,dealer_net_oi_pct,0.0421542870927739,542,forward_return_4w
+dealer,dealer/intermediary net contracts vs forward 4w price return,dealer_net,-0.011852630692822443,542,forward_return_4w
+dealer,dealer/intermediary net/OI pct vs forward 13w price return,dealer_net_oi_pct,0.04549266379893507,533,forward_return_13w
+dealer,dealer/intermediary net contracts vs forward 13w price return,dealer_net,-0.058163505689213656,533,forward_return_13w
+dealer,dealer/intermediary net/OI pct vs forward 26w price return,dealer_net_oi_pct,0.01737234572600069,520,forward_return_26w
+dealer,dealer/intermediary net contracts vs forward 26w price return,dealer_net,-0.12547566345548228,520,forward_return_26w
+dealer,dealer/intermediary net/OI pct vs forward 52w price return,dealer_net_oi_pct,0.18011550733668866,494,forward_return_52w
+dealer,dealer/intermediary net contracts vs forward 52w price return,dealer_net,-0.09260891878395112,494,forward_return_52w
+lev_money,weekly change in leveraged funds net/OI pct vs weekly price return,lev_money_net_oi_pct_change,-0.5084060602185934,545,
+lev_money,weekly change in leveraged funds net/OI pct vs next monday close return,lev_money_net_oi_pct_change,0.007004066648652973,545,next_week_monday_return
+lev_money,weekly change in leveraged funds net/OI pct vs next monday single-day return,lev_money_net_oi_pct_change,0.007004066648652973,545,next_week_monday_daily_return
+lev_money,weekly change in leveraged funds net/OI pct vs next tuesday close return,lev_money_net_oi_pct_change,0.02856299722273788,545,next_week_tuesday_return
+lev_money,weekly change in leveraged funds net/OI pct vs next tuesday single-day return,lev_money_net_oi_pct_change,0.047862770778742986,545,next_week_tuesday_daily_return
+lev_money,weekly change in leveraged funds net/OI pct vs next wednesday close return,lev_money_net_oi_pct_change,0.0015160673098695064,545,next_week_wednesday_return
+lev_money,weekly change in leveraged funds net/OI pct vs next wednesday single-day return,lev_money_net_oi_pct_change,-0.052650397994218,545,next_week_wednesday_daily_return
+lev_money,weekly change in leveraged funds net/OI pct vs next thursday close return,lev_money_net_oi_pct_change,-0.019980466679523582,545,next_week_thursday_return
+lev_money,weekly change in leveraged funds net/OI pct vs next thursday single-day return,lev_money_net_oi_pct_change,-0.048726475733182825,545,next_week_thursday_daily_return
+lev_money,weekly change in leveraged funds net/OI pct vs next friday close return,lev_money_net_oi_pct_change,-0.05492330339166863,545,next_week_friday_return
+lev_money,weekly change in leveraged funds net/OI pct vs next friday single-day return,lev_money_net_oi_pct_change,-0.0884236367458151,545,next_week_friday_daily_return
+lev_money,weekly change in leveraged funds net contracts vs weekly price return,lev_money_net_change,-0.34649455340582686,545,
+lev_money,weekly change in leveraged funds net contracts vs next monday close return,lev_money_net_change,-0.018051355483992722,545,next_week_monday_return
+lev_money,weekly change in leveraged funds net contracts vs next monday single-day return,lev_money_net_change,-0.018051355483992722,545,next_week_monday_daily_return
+lev_money,weekly change in leveraged funds net contracts vs next tuesday close return,lev_money_net_change,0.012382988462156007,545,next_week_tuesday_return
+lev_money,weekly change in leveraged funds net contracts vs next tuesday single-day return,lev_money_net_change,0.06734078436258804,545,next_week_tuesday_daily_return
+lev_money,weekly change in leveraged funds net contracts vs next wednesday close return,lev_money_net_change,0.003263898445972681,545,next_week_wednesday_return
+lev_money,weekly change in leveraged funds net contracts vs next wednesday single-day return,lev_money_net_change,-0.018535069795386286,545,next_week_wednesday_daily_return
+lev_money,weekly change in leveraged funds net contracts vs next thursday close return,lev_money_net_change,0.004852087794453652,545,next_week_thursday_return
+lev_money,weekly change in leveraged funds net contracts vs next thursday single-day return,lev_money_net_change,0.003807111130211657,545,next_week_thursday_daily_return
+lev_money,weekly change in leveraged funds net contracts vs next friday close return,lev_money_net_change,-0.013537398410688241,545,next_week_friday_return
+lev_money,weekly change in leveraged funds net contracts vs next friday single-day return,lev_money_net_change,-0.043471448420667885,545,next_week_friday_daily_return
+lev_money,leveraged funds net/OI pct vs next monday close return,lev_money_net_oi_pct,-0.03688180575546412,546,next_week_monday_return
+lev_money,leveraged funds net contracts vs next monday close return,lev_money_net,-0.035169847443856456,546,next_week_monday_return
+lev_money,leveraged funds short/OI pct vs next monday close return,lev_money_short_oi_pct,0.03518446522174337,546,next_week_monday_return
+lev_money,leveraged funds net/OI pct vs next monday single-day return,lev_money_net_oi_pct,-0.03688180575546412,546,next_week_monday_daily_return
+lev_money,leveraged funds net contracts vs next monday single-day return,lev_money_net,-0.035169847443856456,546,next_week_monday_daily_return
+lev_money,leveraged funds short/OI pct vs next monday single-day return,lev_money_short_oi_pct,0.03518446522174337,546,next_week_monday_daily_return
+lev_money,leveraged funds net/OI pct vs next tuesday close return,lev_money_net_oi_pct,0.021355043776668466,546,next_week_tuesday_return
+lev_money,leveraged funds net contracts vs next tuesday close return,lev_money_net,-0.0036625063580427012,546,next_week_tuesday_return
+lev_money,leveraged funds short/OI pct vs next tuesday close return,lev_money_short_oi_pct,-0.019150899743524703,546,next_week_tuesday_return
+lev_money,leveraged funds net/OI pct vs next tuesday single-day return,lev_money_net_oi_pct,0.13252810601565237,546,next_week_tuesday_daily_return
+lev_money,leveraged funds net contracts vs next tuesday single-day return,lev_money_net,0.07444943794465218,546,next_week_tuesday_daily_return
+lev_money,leveraged funds short/OI pct vs next tuesday single-day return,lev_money_short_oi_pct,-0.12582713656932124,546,next_week_tuesday_daily_return
+lev_money,leveraged funds net/OI pct vs next wednesday close return,lev_money_net_oi_pct,0.010790456507990126,546,next_week_wednesday_return
+lev_money,leveraged funds net contracts vs next wednesday close return,lev_money_net,-0.006387700309235905,546,next_week_wednesday_return
+lev_money,leveraged funds short/OI pct vs next wednesday close return,lev_money_short_oi_pct,-0.007709734411664137,546,next_week_wednesday_return
+lev_money,leveraged funds net/OI pct vs next wednesday single-day return,lev_money_net_oi_pct,-0.02106346945361391,546,next_week_wednesday_daily_return
+lev_money,leveraged funds net contracts vs next wednesday single-day return,lev_money_net,-0.008489787542561748,546,next_week_wednesday_daily_return
+lev_money,leveraged funds short/OI pct vs next wednesday single-day return,lev_money_short_oi_pct,0.023327843657267696,546,next_week_wednesday_daily_return
+lev_money,leveraged funds net/OI pct vs next thursday close return,lev_money_net_oi_pct,0.006598936560622598,546,next_week_thursday_return
+lev_money,leveraged funds net contracts vs next thursday close return,lev_money_net,-0.004104147629605296,546,next_week_thursday_return
+lev_money,leveraged funds short/OI pct vs next thursday close return,lev_money_short_oi_pct,-0.009277267896488446,546,next_week_thursday_return
+lev_money,leveraged funds net/OI pct vs next thursday single-day return,lev_money_net_oi_pct,-0.007154777902600291,546,next_week_thursday_daily_return
+lev_money,leveraged funds net contracts vs next thursday single-day return,lev_money_net,0.003957279224339803,546,next_week_thursday_daily_return
+lev_money,leveraged funds short/OI pct vs next thursday single-day return,lev_money_short_oi_pct,-0.005219183554907825,546,next_week_thursday_daily_return
+lev_money,leveraged funds net/OI pct vs next friday close return,lev_money_net_oi_pct,0.0099188090357865,546,next_week_friday_return
+lev_money,leveraged funds net contracts vs next friday close return,lev_money_net,0.0042687006183017495,546,next_week_friday_return
+lev_money,leveraged funds short/OI pct vs next friday close return,lev_money_short_oi_pct,-0.01041006840095168,546,next_week_friday_return
+lev_money,leveraged funds net/OI pct vs next friday single-day return,lev_money_net_oi_pct,0.012062414112789315,546,next_week_friday_daily_return
+lev_money,leveraged funds net contracts vs next friday single-day return,lev_money_net,0.020692306911357254,546,next_week_friday_daily_return
+lev_money,leveraged funds short/OI pct vs next friday single-day return,lev_money_short_oi_pct,-0.006004128657485225,546,next_week_friday_daily_return
+lev_money,leveraged funds net/OI pct vs forward 1w price return,lev_money_net_oi_pct,0.01337372964951827,545,forward_return_1w
+lev_money,leveraged funds net contracts vs forward 1w price return,lev_money_net,-0.00872133802822138,545,forward_return_1w
+lev_money,leveraged funds net/OI pct vs forward 2w price return,lev_money_net_oi_pct,0.012343165740704997,544,forward_return_2w
+lev_money,leveraged funds net contracts vs forward 2w price return,lev_money_net,-0.01503930139321075,544,forward_return_2w
+lev_money,leveraged funds net/OI pct vs forward 3w price return,lev_money_net_oi_pct,0.027963869827699016,543,forward_return_3w
+lev_money,leveraged funds net contracts vs forward 3w price return,lev_money_net,-0.02005381081057551,543,forward_return_3w
+lev_money,leveraged funds net/OI pct vs forward 4w price return,lev_money_net_oi_pct,0.035472558458138286,542,forward_return_4w
+lev_money,leveraged funds net contracts vs forward 4w price return,lev_money_net,-0.027516889429299297,542,forward_return_4w
+lev_money,leveraged funds net/OI pct vs forward 13w price return,lev_money_net_oi_pct,-0.03368851605324109,533,forward_return_13w
+lev_money,leveraged funds net contracts vs forward 13w price return,lev_money_net,-0.08098135778654343,533,forward_return_13w
+lev_money,leveraged funds net/OI pct vs forward 26w price return,lev_money_net_oi_pct,-0.16292030044839248,520,forward_return_26w
+lev_money,leveraged funds net contracts vs forward 26w price return,lev_money_net,-0.17793907890788918,520,forward_return_26w
+lev_money,leveraged funds net/OI pct vs forward 52w price return,lev_money_net_oi_pct,-0.33545904003347954,494,forward_return_52w
+lev_money,leveraged funds net contracts vs forward 52w price return,lev_money_net,-0.2809309619539172,494,forward_return_52w
+non_reportable,weekly change in non-reportable net/OI pct vs weekly price return,non_reportable_net_oi_pct_change,0.025062391638884296,545,
+non_reportable,weekly change in non-reportable net/OI pct vs next monday close return,non_reportable_net_oi_pct_change,-0.02830711958024105,545,next_week_monday_return
+non_reportable,weekly change in non-reportable net/OI pct vs next monday single-day return,non_reportable_net_oi_pct_change,-0.02830711958024105,545,next_week_monday_daily_return
+non_reportable,weekly change in non-reportable net/OI pct vs next tuesday close return,non_reportable_net_oi_pct_change,-0.04914589310467701,545,next_week_tuesday_return
+non_reportable,weekly change in non-reportable net/OI pct vs next tuesday single-day return,non_reportable_net_oi_pct_change,-0.04311567841729008,545,next_week_tuesday_daily_return
+non_reportable,weekly change in non-reportable net/OI pct vs next wednesday close return,non_reportable_net_oi_pct_change,-0.03116753299285053,545,next_week_wednesday_return
+non_reportable,weekly change in non-reportable net/OI pct vs next wednesday single-day return,non_reportable_net_oi_pct_change,0.029693576287065322,545,next_week_wednesday_daily_return
+non_reportable,weekly change in non-reportable net/OI pct vs next thursday close return,non_reportable_net_oi_pct_change,-0.011280290362601213,545,next_week_thursday_return
+non_reportable,weekly change in non-reportable net/OI pct vs next thursday single-day return,non_reportable_net_oi_pct_change,0.039914278101065515,545,next_week_thursday_daily_return
+non_reportable,weekly change in non-reportable net/OI pct vs next friday close return,non_reportable_net_oi_pct_change,-0.010251031692116308,545,next_week_friday_return
+non_reportable,weekly change in non-reportable net/OI pct vs next friday single-day return,non_reportable_net_oi_pct_change,0.00023475710667806798,545,next_week_friday_daily_return
+non_reportable,weekly change in non-reportable net contracts vs weekly price return,non_reportable_net_change,0.0888044353230708,545,
+non_reportable,weekly change in non-reportable net contracts vs next monday close return,non_reportable_net_change,-0.04026332580869965,545,next_week_monday_return
+non_reportable,weekly change in non-reportable net contracts vs next monday single-day return,non_reportable_net_change,-0.04026332580869965,545,next_week_monday_daily_return
+non_reportable,weekly change in non-reportable net contracts vs next tuesday close return,non_reportable_net_change,-0.06842209788579287,545,next_week_tuesday_return
+non_reportable,weekly change in non-reportable net contracts vs next tuesday single-day return,non_reportable_net_change,-0.0564397328702831,545,next_week_tuesday_daily_return
+non_reportable,weekly change in non-reportable net contracts vs next wednesday close return,non_reportable_net_change,-0.05876516941400638,545,next_week_wednesday_return
+non_reportable,weekly change in non-reportable net contracts vs next wednesday single-day return,non_reportable_net_change,0.007018494604119703,545,next_week_wednesday_daily_return
+non_reportable,weekly change in non-reportable net contracts vs next thursday close return,non_reportable_net_change,-0.03991002600787202,545,next_week_thursday_return
+non_reportable,weekly change in non-reportable net contracts vs next thursday single-day return,non_reportable_net_change,0.029202773769384547,545,next_week_thursday_daily_return
+non_reportable,weekly change in non-reportable net contracts vs next friday close return,non_reportable_net_change,-0.021693144890217876,545,next_week_friday_return
+non_reportable,weekly change in non-reportable net contracts vs next friday single-day return,non_reportable_net_change,0.038773781482257505,545,next_week_friday_daily_return
+non_reportable,non-reportable net/OI pct vs next monday close return,non_reportable_net_oi_pct,-0.03874716861085469,546,next_week_monday_return
+non_reportable,non-reportable net contracts vs next monday close return,non_reportable_net,-0.022484764309435037,546,next_week_monday_return
+non_reportable,non-reportable short/OI pct vs next monday close return,non_reportable_short_oi_pct,-0.006108079758403148,546,next_week_monday_return
+non_reportable,non-reportable net/OI pct vs next monday single-day return,non_reportable_net_oi_pct,-0.03874716861085469,546,next_week_monday_daily_return
+non_reportable,non-reportable net contracts vs next monday single-day return,non_reportable_net,-0.022484764309435037,546,next_week_monday_daily_return
+non_reportable,non-reportable short/OI pct vs next monday single-day return,non_reportable_short_oi_pct,-0.006108079758403148,546,next_week_monday_daily_return
+non_reportable,non-reportable net/OI pct vs next tuesday close return,non_reportable_net_oi_pct,-0.04834544315871592,546,next_week_tuesday_return
+non_reportable,non-reportable net contracts vs next tuesday close return,non_reportable_net,-0.0383690418442662,546,next_week_tuesday_return
+non_reportable,non-reportable short/OI pct vs next tuesday close return,non_reportable_short_oi_pct,0.03637573397827588,546,next_week_tuesday_return
+non_reportable,non-reportable net/OI pct vs next tuesday single-day return,non_reportable_net_oi_pct,-0.021435798280050503,546,next_week_tuesday_daily_return
+non_reportable,non-reportable net contracts vs next tuesday single-day return,non_reportable_net,-0.03599154880908292,546,next_week_tuesday_daily_return
+non_reportable,non-reportable short/OI pct vs next tuesday single-day return,non_reportable_short_oi_pct,0.10104388641515785,546,next_week_tuesday_daily_return
+non_reportable,non-reportable net/OI pct vs next wednesday close return,non_reportable_net_oi_pct,-0.04132377381171609,546,next_week_wednesday_return
+non_reportable,non-reportable net contracts vs next wednesday close return,non_reportable_net,-0.02684827766937422,546,next_week_wednesday_return
+non_reportable,non-reportable short/OI pct vs next wednesday close return,non_reportable_short_oi_pct,0.028285457954177116,546,next_week_wednesday_return
+non_reportable,non-reportable net/OI pct vs next wednesday single-day return,non_reportable_net_oi_pct,0.008566873782423368,546,next_week_wednesday_daily_return
+non_reportable,non-reportable net contracts vs next wednesday single-day return,non_reportable_net,0.020310364349294546,546,next_week_wednesday_daily_return
+non_reportable,non-reportable short/OI pct vs next wednesday single-day return,non_reportable_short_oi_pct,-0.015883616667878284,546,next_week_wednesday_daily_return
+non_reportable,non-reportable net/OI pct vs next thursday close return,non_reportable_net_oi_pct,-0.05954932492481761,546,next_week_thursday_return
+non_reportable,non-reportable net contracts vs next thursday close return,non_reportable_net,-0.04510092144654866,546,next_week_thursday_return
+non_reportable,non-reportable short/OI pct vs next thursday close return,non_reportable_short_oi_pct,0.03288863517635796,546,next_week_thursday_return
+non_reportable,non-reportable net/OI pct vs next thursday single-day return,non_reportable_net_oi_pct,-0.05347046474127741,546,next_week_thursday_daily_return
+non_reportable,non-reportable net contracts vs next thursday single-day return,non_reportable_net,-0.049234168077015084,546,next_week_thursday_daily_return
+non_reportable,non-reportable short/OI pct vs next thursday single-day return,non_reportable_short_oi_pct,0.01898715970513741,546,next_week_thursday_daily_return
+non_reportable,non-reportable net/OI pct vs next friday close return,non_reportable_net_oi_pct,-0.06309497863511032,546,next_week_friday_return
+non_reportable,non-reportable net contracts vs next friday close return,non_reportable_net,-0.05431584147448344,546,next_week_friday_return
+non_reportable,non-reportable short/OI pct vs next friday close return,non_reportable_short_oi_pct,0.04070062952067952,546,next_week_friday_return
+non_reportable,non-reportable net/OI pct vs next friday single-day return,non_reportable_net_oi_pct,-0.020462706519792956,546,next_week_friday_daily_return
+non_reportable,non-reportable net contracts vs next friday single-day return,non_reportable_net,-0.03241064676634437,546,next_week_friday_daily_return
+non_reportable,non-reportable short/OI pct vs next friday single-day return,non_reportable_short_oi_pct,0.028951281583154582,546,next_week_friday_daily_return
+non_reportable,non-reportable net/OI pct vs forward 1w price return,non_reportable_net_oi_pct,-0.04781033052667723,545,forward_return_1w
+non_reportable,non-reportable net contracts vs forward 1w price return,non_reportable_net,-0.034217179017337215,545,forward_return_1w
+non_reportable,non-reportable net/OI pct vs forward 2w price return,non_reportable_net_oi_pct,-0.05602875861267347,544,forward_return_2w
+non_reportable,non-reportable net contracts vs forward 2w price return,non_reportable_net,-0.03895932149749273,544,forward_return_2w
+non_reportable,non-reportable net/OI pct vs forward 3w price return,non_reportable_net_oi_pct,-0.06880531718468627,543,forward_return_3w
+non_reportable,non-reportable net contracts vs forward 3w price return,non_reportable_net,-0.04629993549518971,543,forward_return_3w
+non_reportable,non-reportable net/OI pct vs forward 4w price return,non_reportable_net_oi_pct,-0.0841827902968686,542,forward_return_4w
+non_reportable,non-reportable net contracts vs forward 4w price return,non_reportable_net,-0.05421418385796242,542,forward_return_4w
+non_reportable,non-reportable net/OI pct vs forward 13w price return,non_reportable_net_oi_pct,-0.09850514294838313,533,forward_return_13w
+non_reportable,non-reportable net contracts vs forward 13w price return,non_reportable_net,-0.03242318619176325,533,forward_return_13w
+non_reportable,non-reportable net/OI pct vs forward 26w price return,non_reportable_net_oi_pct,-0.06314152291994198,520,forward_return_26w
+non_reportable,non-reportable net contracts vs forward 26w price return,non_reportable_net,0.04374340016497887,520,forward_return_26w
+non_reportable,non-reportable net/OI pct vs forward 52w price return,non_reportable_net_oi_pct,-0.15170425754882258,494,forward_return_52w
+non_reportable,non-reportable net contracts vs forward 52w price return,non_reportable_net,0.014911035773424801,494,forward_return_52w
+other_reportable,weekly change in other reportables net/OI pct vs weekly price return,other_reportable_net_oi_pct_change,-0.2802715571476603,545,
+other_reportable,weekly change in other reportables net/OI pct vs next monday close return,other_reportable_net_oi_pct_change,-0.11972738388228861,545,next_week_monday_return
+other_reportable,weekly change in other reportables net/OI pct vs next monday single-day return,other_reportable_net_oi_pct_change,-0.11972738388228861,545,next_week_monday_daily_return
+other_reportable,weekly change in other reportables net/OI pct vs next tuesday close return,other_reportable_net_oi_pct_change,-0.0430846459248766,545,next_week_tuesday_return
+other_reportable,weekly change in other reportables net/OI pct vs next tuesday single-day return,other_reportable_net_oi_pct_change,0.1776536432416781,545,next_week_tuesday_daily_return
+other_reportable,weekly change in other reportables net/OI pct vs next wednesday close return,other_reportable_net_oi_pct_change,-0.03567766919955577,545,next_week_wednesday_return
+other_reportable,weekly change in other reportables net/OI pct vs next wednesday single-day return,other_reportable_net_oi_pct_change,0.01226227800799165,545,next_week_wednesday_daily_return
+other_reportable,weekly change in other reportables net/OI pct vs next thursday close return,other_reportable_net_oi_pct_change,-0.037964155412477114,545,next_week_thursday_return
+other_reportable,weekly change in other reportables net/OI pct vs next thursday single-day return,other_reportable_net_oi_pct_change,-0.01472240989751337,545,next_week_thursday_daily_return
+other_reportable,weekly change in other reportables net/OI pct vs next friday close return,other_reportable_net_oi_pct_change,-0.012720269971432753,545,next_week_friday_return
+other_reportable,weekly change in other reportables net/OI pct vs next friday single-day return,other_reportable_net_oi_pct_change,0.06244798116712098,545,next_week_friday_daily_return
+other_reportable,weekly change in other reportables net contracts vs weekly price return,other_reportable_net_change,-0.22520353432302942,545,
+other_reportable,weekly change in other reportables net contracts vs next monday close return,other_reportable_net_change,-0.030072024701549543,545,next_week_monday_return
+other_reportable,weekly change in other reportables net contracts vs next monday single-day return,other_reportable_net_change,-0.030072024701549543,545,next_week_monday_daily_return
+other_reportable,weekly change in other reportables net contracts vs next tuesday close return,other_reportable_net_change,-0.0001800839991533189,545,next_week_tuesday_return
+other_reportable,weekly change in other reportables net contracts vs next tuesday single-day return,other_reportable_net_change,0.06822094781268342,545,next_week_tuesday_daily_return
+other_reportable,weekly change in other reportables net contracts vs next wednesday close return,other_reportable_net_change,0.02021007786017626,545,next_week_wednesday_return
+other_reportable,weekly change in other reportables net contracts vs next wednesday single-day return,other_reportable_net_change,0.0486447204240929,545,next_week_wednesday_daily_return
+other_reportable,weekly change in other reportables net contracts vs next thursday close return,other_reportable_net_change,0.016807072569608745,545,next_week_thursday_return
+other_reportable,weekly change in other reportables net contracts vs next thursday single-day return,other_reportable_net_change,-0.0017304243290848526,545,next_week_thursday_daily_return
+other_reportable,weekly change in other reportables net contracts vs next friday close return,other_reportable_net_change,0.04190091393095256,545,next_week_friday_return
+other_reportable,weekly change in other reportables net contracts vs next friday single-day return,other_reportable_net_change,0.07213657283671579,545,next_week_friday_daily_return
+other_reportable,other reportables net/OI pct vs next monday close return,other_reportable_net_oi_pct,-0.02859071488128348,546,next_week_monday_return
+other_reportable,other reportables net contracts vs next monday close return,other_reportable_net,-0.01926609128911116,546,next_week_monday_return
+other_reportable,other reportables short/OI pct vs next monday close return,other_reportable_short_oi_pct,0.014224223798421169,546,next_week_monday_return
+other_reportable,other reportables net/OI pct vs next monday single-day return,other_reportable_net_oi_pct,-0.02859071488128348,546,next_week_monday_daily_return
+other_reportable,other reportables net contracts vs next monday single-day return,other_reportable_net,-0.01926609128911116,546,next_week_monday_daily_return
+other_reportable,other reportables short/OI pct vs next monday single-day return,other_reportable_short_oi_pct,0.014224223798421169,546,next_week_monday_daily_return
+other_reportable,other reportables net/OI pct vs next tuesday close return,other_reportable_net_oi_pct,-0.00912248210759091,546,next_week_tuesday_return
+other_reportable,other reportables net contracts vs next tuesday close return,other_reportable_net,-0.0056191709949502625,546,next_week_tuesday_return
+other_reportable,other reportables short/OI pct vs next tuesday close return,other_reportable_short_oi_pct,0.004374181164345388,546,next_week_tuesday_return
+other_reportable,other reportables net/OI pct vs next tuesday single-day return,other_reportable_net_oi_pct,0.04710620067952606,546,next_week_tuesday_daily_return
+other_reportable,other reportables net contracts vs next tuesday single-day return,other_reportable_net,0.03263574978606302,546,next_week_tuesday_daily_return
+other_reportable,other reportables short/OI pct vs next tuesday single-day return,other_reportable_short_oi_pct,-0.024986897239273997,546,next_week_tuesday_daily_return
+other_reportable,other reportables net/OI pct vs next wednesday close return,other_reportable_net_oi_pct,0.004949645320161515,546,next_week_wednesday_return
+other_reportable,other reportables net contracts vs next wednesday close return,other_reportable_net,0.02803769015199457,546,next_week_wednesday_return
+other_reportable,other reportables short/OI pct vs next wednesday close return,other_reportable_short_oi_pct,0.0018307207242493307,546,next_week_wednesday_return
+other_reportable,other reportables net/OI pct vs next wednesday single-day return,other_reportable_net_oi_pct,0.033478524660059836,546,next_week_wednesday_daily_return
+other_reportable,other reportables net contracts vs next wednesday single-day return,other_reportable_net,0.07836521862383065,546,next_week_wednesday_daily_return
+other_reportable,other reportables short/OI pct vs next wednesday single-day return,other_reportable_short_oi_pct,-0.006468872933773037,546,next_week_wednesday_daily_return
+other_reportable,other reportables net/OI pct vs next thursday close return,other_reportable_net_oi_pct,-0.0009810045248468786,546,next_week_thursday_return
+other_reportable,other reportables net contracts vs next thursday close return,other_reportable_net,0.0007174966934785019,546,next_week_thursday_return
+other_reportable,other reportables short/OI pct vs next thursday close return,other_reportable_short_oi_pct,0.005034193406772251,546,next_week_thursday_return
+other_reportable,other reportables net/OI pct vs next thursday single-day return,other_reportable_net_oi_pct,-0.015421391046764354,546,next_week_thursday_daily_return
+other_reportable,other reportables net contracts vs next thursday single-day return,other_reportable_net,-0.05652002917647325,546,next_week_thursday_daily_return
+other_reportable,other reportables short/OI pct vs next thursday single-day return,other_reportable_short_oi_pct,0.011184419987501056,546,next_week_thursday_daily_return
+other_reportable,other reportables net/OI pct vs next friday close return,other_reportable_net_oi_pct,-0.020469233649040682,546,next_week_friday_return
+other_reportable,other reportables net contracts vs next friday close return,other_reportable_net,-0.023765291062947346,546,next_week_friday_return
+other_reportable,other reportables short/OI pct vs next friday close return,other_reportable_short_oi_pct,0.02085573301788561,546,next_week_friday_return
+other_reportable,other reportables net/OI pct vs next friday single-day return,other_reportable_net_oi_pct,-0.04813708632318969,546,next_week_friday_daily_return
+other_reportable,other reportables net contracts vs next friday single-day return,other_reportable_net,-0.060174316511624214,546,next_week_friday_daily_return
+other_reportable,other reportables short/OI pct vs next friday single-day return,other_reportable_short_oi_pct,0.03974761935084894,546,next_week_friday_daily_return
+other_reportable,other reportables net/OI pct vs forward 1w price return,other_reportable_net_oi_pct,-0.010258831609013358,545,forward_return_1w
+other_reportable,other reportables net contracts vs forward 1w price return,other_reportable_net,-0.006563518178265986,545,forward_return_1w
+other_reportable,other reportables net/OI pct vs forward 2w price return,other_reportable_net_oi_pct,-0.006881615227738401,544,forward_return_2w
+other_reportable,other reportables net contracts vs forward 2w price return,other_reportable_net,-0.011429693329060483,544,forward_return_2w
+other_reportable,other reportables net/OI pct vs forward 3w price return,other_reportable_net_oi_pct,-0.002356184877693827,543,forward_return_3w
+other_reportable,other reportables net contracts vs forward 3w price return,other_reportable_net,-0.020904372465546654,543,forward_return_3w
+other_reportable,other reportables net/OI pct vs forward 4w price return,other_reportable_net_oi_pct,-0.0011010251112549467,542,forward_return_4w
+other_reportable,other reportables net contracts vs forward 4w price return,other_reportable_net,-0.025698831913946348,542,forward_return_4w
+other_reportable,other reportables net/OI pct vs forward 13w price return,other_reportable_net_oi_pct,0.0784574351204973,533,forward_return_13w
+other_reportable,other reportables net contracts vs forward 13w price return,other_reportable_net,0.0587835342606201,533,forward_return_13w
+other_reportable,other reportables net/OI pct vs forward 26w price return,other_reportable_net_oi_pct,0.19583316066704792,520,forward_return_26w
+other_reportable,other reportables net contracts vs forward 26w price return,other_reportable_net,0.0884372348888674,520,forward_return_26w
+other_reportable,other reportables net/OI pct vs forward 52w price return,other_reportable_net_oi_pct,0.19851107213944102,494,forward_return_52w
+other_reportable,other reportables net contracts vs forward 52w price return,other_reportable_net,0.017420663183085303,494,forward_return_52w

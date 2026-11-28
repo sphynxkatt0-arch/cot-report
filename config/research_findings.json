@@ -1,0 +1,265 @@
+{
+  "nq": {
+    "same_week": {
+      "asset_mgr": 0.285,
+      "lev_money": -0.257,
+      "other_reportable": 0.112,
+      "non_reportable": -0.271
+    },
+    "forward": {
+      "asset_mgr": {
+        "1w": -0.024,
+        "4w": -0.018,
+        "13w": -0.021,
+        "26w": 0.066,
+        "52w": 0.172
+      },
+      "lev_money": {
+        "1w": -0.009,
+        "4w": 0.006,
+        "13w": 0.027,
+        "26w": 0.032,
+        "52w": 0.035
+      },
+      "other_reportable": {
+        "1w": -0.039,
+        "4w": -0.066,
+        "13w": -0.13,
+        "26w": -0.141,
+        "52w": -0.082
+      },
+      "non_reportable": {
+        "1w": -0.026,
+        "4w": -0.004,
+        "13w": 0.057,
+        "26w": 0.101,
+        "52w": 0.037
+      }
+    },
+    "extremes": {
+      "best": [
+        {
+          "signal": "Other Reportable bottom 10% net/OI",
+          "category": "other_reportable",
+          "side": "bottom",
+          "13w": 8.03,
+          "26w": 16.05,
+          "52w": 31.09
+        },
+        {
+          "signal": "Leveraged Money top 10% net/OI",
+          "category": "lev_money",
+          "side": "top",
+          "13w": 5.75,
+          "26w": 12.39,
+          "52w": 25.35
+        },
+        {
+          "signal": "Asset Manager top 10% net/OI",
+          "category": "asset_mgr",
+          "side": "top",
+          "13w": 5.34,
+          "26w": 11.44,
+          "52w": 21.02
+        },
+        {
+          "signal": "Asset Manager bottom 10% net/OI",
+          "category": "asset_mgr",
+          "side": "bottom",
+          "13w": 5.3,
+          "26w": 9.84,
+          "52w": 15.87
+        }
+      ],
+      "worst": [
+        {
+          "signal": "Leveraged Money bottom 10% net/OI",
+          "category": "lev_money",
+          "side": "bottom",
+          "13w": 2.0,
+          "26w": 7.38,
+          "52w": 18.04
+        },
+        {
+          "signal": "Non-reportable bottom 10% net/OI",
+          "category": "non_reportable",
+          "side": "bottom",
+          "13w": 2.48,
+          "26w": 6.45,
+          "52w": 21.33
+        },
+        {
+          "signal": "Non-reportable top 10% net/OI",
+          "category": "non_reportable",
+          "side": "top",
+          "13w": 3.7,
+          "26w": 11.86,
+          "52w": 23.01
+        }
+      ]
+    },
+    "current": {
+      "asset_mgr": {
+        "net_oi_pct": 26.85,
+        "percentile": 87.1
+      },
+      "lev_money": {
+        "net_oi_pct": -3.97,
+        "percentile": 67.3
+      },
+      "other_reportable": {
+        "net_oi_pct": -2.72,
+        "percentile": 33.6
+      },
+      "non_reportable": {
+        "net_oi_pct": 7.44,
+        "percentile": 99.3
+      }
+    },
+    "takeaways": [
+      "Other Reportable bottom 10% is the strongest bullish reset signal in the NQ sample.",
+      "High Asset Manager exposure works more like trend sponsorship than a short signal.",
+      "Low Leveraged Money can be squeeze fuel if price action remains strong.",
+      "Other Reportable high is the main medium-term caution flag."
+    ],
+    "bottom_line": "For NQ, do not treat high Asset Manager exposure as bearish by itself. Watch Other Reportable extremes and Leveraged Money underexposure.",
+    "_meta": {
+      "generated_at_utc": "2026-11-28T03:31:03Z",
+      "sample_start": "2016-01-05",
+      "sample_end": "2026-11-17",
+      "rows": 568,
+      "source": "auto-generated from current TFF exact consolidated records"
+    }
+  },
+  "sp500": {
+    "same_week": {
+      "asset_mgr": 0.33,
+      "lev_money": -0.508,
+      "other_reportable": -0.28,
+      "non_reportable": 0.025
+    },
+    "forward": {
+      "asset_mgr": {
+        "1w": -0.013,
+        "4w": -0.049,
+        "13w": -0.039,
+        "26w": 0.015,
+        "52w": -0.063
+      },
+      "lev_money": {
+        "1w": 0.013,
+        "4w": 0.035,
+        "13w": -0.034,
+        "26w": -0.163,
+        "52w": -0.335
+      },
+      "other_reportable": {
+        "1w": -0.01,
+        "4w": -0.001,
+        "13w": 0.078,
+        "26w": 0.196,
+        "52w": 0.199
+      },
+      "non_reportable": {
+        "1w": -0.048,
+        "4w": -0.084,
+        "13w": -0.099,
+        "26w": -0.063,
+        "52w": -0.152
+      }
+    },
+    "extremes": {
+      "best": [
+        {
+          "signal": "Non-reportable bottom 10% net/OI",
+          "category": "non_reportable",
+          "side": "bottom",
+          "13w": 5.74,
+          "26w": 10.93,
+          "52w": 26.22
+        },
+        {
+          "signal": "Other Reportable top 10% net/OI",
+          "category": "other_reportable",
+          "side": "top",
+          "13w": 5.16,
+          "26w": 10.14,
+          "52w": 19.89
+        },
+        {
+          "signal": "Asset Manager bottom 10% net/OI",
+          "category": "asset_mgr",
+          "side": "bottom",
+          "13w": 4.39,
+          "26w": 7.54,
+          "52w": 17.43
+        },
+        {
+          "signal": "Other Reportable bottom 10% net/OI",
+          "category": "other_reportable",
+          "side": "bottom",
+          "13w": 4.16,
+          "26w": 4.01,
+          "52w": 11.56
+        }
+      ],
+      "worst": [
+        {
+          "signal": "Non-reportable top 10% net/OI",
+          "category": "non_reportable",
+          "side": "top",
+          "13w": -0.05,
+          "26w": 7.01,
+          "52w": 14.27
+        },
+        {
+          "signal": "Leveraged Money top 10% net/OI",
+          "category": "lev_money",
+          "side": "top",
+          "13w": 2.21,
+          "26w": 1.66,
+          "52w": 4.73
+        },
+        {
+          "signal": "Asset Manager top 10% net/OI",
+          "category": "asset_mgr",
+          "side": "top",
+          "13w": 2.9,
+          "26w": 4.44,
+          "52w": 14.7
+        }
+      ]
+    },
+    "current": {
+      "asset_mgr": {
+        "net_oi_pct": 42.14,
+        "percentile": 79.3
+      },
+      "lev_money": {
+        "net_oi_pct": -10.58,
+        "percentile": 44.5
+      },
+      "other_reportable": {
+        "net_oi_pct": -0.01,
+        "percentile": 79.7
+      },
+      "non_reportable": {
+        "net_oi_pct": 5.6,
+        "percentile": 92.7
+      }
+    },
+    "takeaways": [
+      "Asset Manager top 10% is a crowding warning for 13-26 week reward/risk.",
+      "Leveraged Money top 10% is the strongest long-term warning in the S&P sample.",
+      "Non-reportable top 10% has weaker forward returns; bottom 10% is the strongest bullish reset."
+    ],
+    "bottom_line": "For S&P 500, Asset Manager crowding is more meaningful. Current reward/risk weakens when price action starts diverging from crowded positioning.",
+    "_meta": {
+      "generated_at_utc": "2026-11-28T03:31:03Z",
+      "sample_start": "2016-06-07",
+      "sample_end": "2026-11-17",
+      "rows": 546,
+      "source": "auto-generated from current TFF exact consolidated records"
+    }
+  }
+}

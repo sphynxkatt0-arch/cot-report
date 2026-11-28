@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "model_version": "1.3.0",
+  "score_models": {
+    "tff": {
+      "category_weights": {
+        "dealer": 0.0,
+        "asset_mgr": 1.25,
+        "lev_money": 0.75,
+        "other_reportable": 0.0,
+        "non_reportable": 0.0
+      }
+    },
+    "legacy": {
+      "category_weights": {
+        "noncommercial": 1.0,
+        "commercial": 0.0,
+        "total_reportable": 0.0,
+        "nonreportable": 0.0
+      }
+    },
+    "disaggregated": {
+      "category_weights": {
+        "producer_merchant": 0.0,
+        "swap_dealer": 0.0,
+        "managed_money": 1.0,
+        "other_reportable": 0.0,
+        "non_reportable": 0.0
+      }
+    }
+  },
+  "actor_taxonomy": {
+    "tff": {
+      "required_categories": [
+        "dealer",
+        "asset_mgr",
+        "lev_money",
+        "other_reportable",
+        "non_reportable"
+      ],
+      "labels": {
+        "dealer": "Dealer / Intermediary",
+        "asset_mgr": "Asset Manager / Institutional",
+        "lev_money": "Leveraged Funds",
+        "other_reportable": "Other Reportables",
+        "non_reportable": "Nonreportable"
+      }
+    },
+    "legacy": {
+      "required_categories": [
+        "noncommercial",
+        "commercial",
+        "total_reportable",
+        "nonreportable"
+      ],
+      "labels": {
+        "noncommercial": "Non-Commercial",
+        "commercial": "Commercial",
+        "total_reportable": "Total Reportable",
+        "nonreportable": "Nonreportable"
+      }
+    },
+    "disaggregated": {
+      "required_categories": [
+        "producer_merchant",
+        "swap_dealer",
+        "managed_money",
+        "other_reportable",
+        "non_reportable"
+      ],
+      "labels": {
+        "producer_merchant": "Producer / Merchant / Processor / User",
+        "swap_dealer": "Swap Dealers",
+        "managed_money": "Managed Money",
+        "other_reportable": "Other Reportables",
+        "non_reportable": "Nonreportable"
+      }
+    }
+  },
+  "thresholds": {
+    "bullish": 60.0,
+    "bearish": 40.0,
+    "extreme_upper_percentile": 90.0,
+    "extreme_lower_percentile": 10.0
+  },
+  "lookback": {
+    "minimum_weeks": 52
+  },
+  "analogs": {
+    "count": 40,
+    "display_count": 8,
+    "momentum_weight": 0.3,
+    "extreme_count_weight": 2.0,
+    "macro_score_weight": 0.65,
+    "transmission_mismatch_penalty": 8.0,
+    "minimum_regime_sample": 8
+  },
+  "horizons": {
+    "1w": 5,
+    "2w": 10,
+    "4w": 20,
+    "13w": 65,
+    "26w": 130
+  }
+}

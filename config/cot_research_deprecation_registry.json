@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "policy_id": "cot-research-deprecation-v2",
+  "authoritative_research_generation": "release-corrected-v2",
+  "superseded_for_predictive_use": [
+    {
+      "artifact_or_family": "cot_overlay_exact.py forward_return_*",
+      "reason": "Tuesday COT snapshot aligned to Tuesday price before public availability",
+      "allowed_use": "raw/normalized CFTC ingestion and descriptive positioning only"
+    },
+    {
+      "artifact_or_family": "cot_legacy_correlations.py forward_return_*",
+      "reason": "Tuesday COT snapshot aligned to pre-publication price",
+      "allowed_use": "legacy raw CFTC taxonomy ingestion and descriptive positioning only"
+    },
+    {
+      "artifact_or_family": "verify_findings.py",
+      "reason": "reproduces superseded Tuesday-aligned return and full-sample bucket methodology",
+      "allowed_use": "historical audit only"
+    },
+    {
+      "artifact_or_family": "cot_weekly_position_effects.py",
+      "reason": "full-sample percentile thresholds and superseded release anchor",
+      "allowed_use": "historical audit only"
+    },
+    {
+      "artifact_or_family": "cot_cross_market_predictivity.py",
+      "reason": "HAC inference applied to superseded Tuesday-aligned forward returns",
+      "allowed_use": "historical audit only"
+    },
+    {
+      "artifact_or_family": "snapshots/2026-08-10",
+      "reason": "threshold research predates canonical historical release calendar and dependence/FDR v2 gate",
+      "allowed_use": "immutable audit baseline only"
+    },
+    {
+      "artifact_or_family": "snapshots/2026-08-10-predictive-power",
+      "reason": "predictive research predates canonical historical release calendar",
+      "allowed_use": "immutable audit baseline only"
+    },
+    {
+      "artifact_or_family": "snapshots/2026-08-11-position-oi",
+      "reason": "raw/OI research predates complete release-corrected calendar",
+      "allowed_use": "immutable audit baseline only"
+    },
+    {
+      "artifact_or_family": "snapshots/2026-08-11-position-oi-all-actors",
+      "reason": "all-actor audit predates complete release-corrected calendar",
+      "allowed_use": "immutable audit baseline only"
+    }
+  ],
+  "runtime_policy": {
+    "canonical_registry_must_be_generation": "release-corrected-v2",
+    "automatic_retrospective_promotion_allowed": false,
+    "legacy_predictive_scripts_allowed_in_production_refresh": false,
+    "legacy_snapshots_may_be_modified": false
+  }
+}
