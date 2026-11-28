@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "model_version": "macro-liquidity-control-room-v1.2",
-  "generated_at_utc": "2026-11-28T02:57:56.540939+00:00",
+  "generated_at_utc": "2026-11-28T03:33:03.886906+00:00",
   "role": "descriptive risk and plumbing context; does not create or reverse COT direction",
   "source_coverage_ratio": 0.692,
   "source_coverage_label": "Partial",
@@ -128,7 +128,7 @@
       },
       {
         "category": "SSA - Benefits Payments",
-        "private_cash_effect_bn": 32.22
+        "private_cash_effect_bn": 32.23
       },
       {
         "category": "Other",
