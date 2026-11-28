@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "model_version": "macro-liquidity-control-room-v1.2",
-  "generated_at_utc": "2026-11-27T21:39:39.005883+00:00",
+  "generated_at_utc": "2026-11-28T02:57:56.540939+00:00",
   "role": "descriptive risk and plumbing context; does not create or reverse COT direction",
   "source_coverage_ratio": 0.692,
   "source_coverage_label": "Partial",
   "existing_macro_latest": {
-    "date": "2026-11-27",
+    "date": "2026-11-28",
     "walcl": 6732.044,
     "tga": 923.563,
     "rrp": 0.35,
@@ -59,8 +59,8 @@
     "treasury_issuance_7d": 0.0,
     "treasury_issuance_28d": 0.0,
     "treasury_issuance_next_7d": 0.0,
-    "liquidity_plumbing_score": 54.671,
-    "liquidity_score": 48.551,
+    "liquidity_plumbing_score": 54.69,
+    "liquidity_score": 48.548,
     "regime_label": "Neutral",
     "sp500_forward_20d": null,
     "sp500_forward_60d": null,
@@ -88,15 +88,15 @@
     "tsp_equity_ift_m": -1657.0,
     "retirement_flow_signal": -3404.0,
     "credit_override": false,
-    "score_net_liquidity": 62.842,
+    "score_net_liquidity": 62.815,
     "score_bank_reserves": 64.112,
     "score_treasury_supply": 76.277,
-    "score_repo_spread": 29.743,
-    "score_slr_load": 27.816,
-    "score_real_yield": 39.426,
-    "score_credit": 31.285,
-    "score_dollar": 33.51,
-    "score_vix": 35.015,
+    "score_repo_spread": 29.905,
+    "score_slr_load": 27.887,
+    "score_real_yield": 39.446,
+    "score_credit": 31.242,
+    "score_dollar": 33.479,
+    "score_vix": 34.918,
     "macro_regime_score": -0.06,
     "macro_regime_score_label": "Neutral / transition",
     "confidence_score": 37,
@@ -128,7 +128,7 @@
       },
       {
         "category": "SSA - Benefits Payments",
-        "private_cash_effect_bn": 32.23
+        "private_cash_effect_bn": 32.22
       },
       {
         "category": "Other",
@@ -322,7 +322,7 @@
   "pillars": {
     "macro_regime": {
       "label": "Macro risk regime",
-      "score": 48.551,
+      "score": 48.548,
       "state": "Neutral"
     },
     "net_liquidity": {
@@ -425,7 +425,7 @@
       "change_short": 0.050000000000000266,
       "change_medium": 0.0,
       "zscore": 1.9228993528091627,
-      "age_days": 2,
+      "age_days": 3,
       "error": null
     },
     {
@@ -442,7 +442,7 @@
       "change_short": 0.06000000000000005,
       "change_medium": 0.29000000000000004,
       "zscore": 0.02904796339729739,
-      "age_days": 2,
+      "age_days": 3,
       "error": null
     },
     {
@@ -459,7 +459,7 @@
       "change_short": 0.020000000000000018,
       "change_medium": 0.010000000000000231,
       "zscore": 1.7922782529420578,
-      "age_days": 3,
+      "age_days": 4,
       "error": null
     },
     {
@@ -476,7 +476,7 @@
       "change_short": 87.25369680308995,
       "change_medium": -5.369539958050154,
       "zscore": 1.2740646201494574,
-      "age_days": 2,
+      "age_days": 3,
       "error": null
     },
     {
@@ -510,7 +510,7 @@
       "change_short": null,
       "change_medium": null,
       "zscore": null,
-      "age_days": 1794,
+      "age_days": 1795,
       "error": null
     },
     {
@@ -527,7 +527,7 @@
       "change_short": -29809.0,
       "change_medium": -30369.0,
       "zscore": -0.8154426405853248,
-      "age_days": 16,
+      "age_days": 17,
       "error": null
     },
     {
@@ -544,7 +544,7 @@
       "change_short": 42322.51239018026,
       "change_medium": 21857.50130590028,
       "zscore": 1.9722112506479987,
-      "age_days": 27,
+      "age_days": 28,
       "error": null
     },
     {
@@ -561,7 +561,7 @@
       "change_short": 136483.06783623993,
       "change_medium": 167900.86570337974,
       "zscore": 1.6246766975302678,
-      "age_days": 27,
+      "age_days": 28,
       "error": null
     },
     {
@@ -578,7 +578,7 @@
       "change_short": -27081.83755259984,
       "change_medium": -110367.76401679986,
       "zscore": -0.3080574078181618,
-      "age_days": 27,
+      "age_days": 28,
       "error": null
     },
     {
@@ -594,8 +594,8 @@
       "latest_value": 923.563,
       "change_short": 31.253000000000043,
       "change_medium": -128.96699999999998,
-      "zscore": -0.2925293709847105,
-      "age_days": 2,
+      "zscore": -0.2690560814832521,
+      "age_days": 3,
       "error": null
     },
     {
@@ -611,8 +611,8 @@
       "latest_value": 69.65,
       "change_short": -62.51100000000015,
       "change_medium": 257.938,
-      "zscore": 1.0792258759184825,
-      "age_days": 2,
+      "zscore": 1.0600665900002895,
+      "age_days": 3,
       "error": null
     },
     {
@@ -629,7 +629,7 @@
       "change_short": 0.01974999999999998,
       "change_medium": -1.0180131007979134,
       "zscore": null,
-      "age_days": 50,
+      "age_days": 51,
       "error": null
     }
   ],
